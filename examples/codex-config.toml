@@ -1,0 +1,8 @@
+[mcp_servers.code_terraform_docs]
+command = "node"
+args = ["/path/to/code-terraform-docs-mcp/src/index.js"]
+enabled_tools = ["search_manual", "get_manual_entry", "list_manual_sections", "get_manual_build", "list_script_targets", "validate_script", "inspect_symbol", "complete_at"]
+default_tools_approval_mode = "writes"
+
+[mcp_servers.code_terraform_docs.env]
+CODE_TERRAFORM_WORKSPACE = "/path/to/your/code-terraform/save/scripts"

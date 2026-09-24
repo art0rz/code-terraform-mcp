@@ -1,0 +1,23 @@
+{
+  "name": "code-terraform-docs-mcp",
+  "version": "1.1.0",
+  "private": true,
+  "description": "Read-only MCP server for Code: Terraform documentation and game-aware script analysis",
+  "type": "module",
+  "bin": {
+    "code-terraform-docs-mcp": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "check": "node --check src/index.js && node --check src/server.js && node --check src/manual-store.js && node --check src/parser.js && node --check src/search.js && node --check src/workspace-store.js && node --check src/language-service.js",
+    "test": "node --test",
+    "verify": "npm run check && npm test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "zod": "^4.6.5"
+  }
+}

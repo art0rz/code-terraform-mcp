@@ -10,11 +10,18 @@ function send(message) {
 
 function onMessage(message) {
   if (message.method === "initialize") {
-    send({ id: message.id, result: { capabilities: { hoverProvider: true, completionProvider: {}, signatureHelpProvider: {}, definitionProvider: true } } });
+    send({ id: message.id, result: { capabilities: { hoverProvider: true, completionProvider: {}, signatureHelpProvider: {}, definitionProvider: true,
+      referencesProvider: true, documentSymbolProvider: true, renameProvider: true,
+      semanticTokensProvider: { legend: { tokenTypes: ["function"], tokenModifiers: ["declaration"] }, full: true } } } });
     return;
   }
   if (message.method === "shutdown") {
     send({ id: message.id, result: null });
+    return;
+  }
+  if (message.method === "initialized") {
+    send({ method: "codeterraform/status", params: { ready: true, analysisVersion: "test-analysis" } });
+    send({ method: "codeterraform/fleet", params: { fleet: { scripts: { pioneer_1: { status: "running" } } } } });
     return;
   }
   if (message.method === "exit") {
@@ -23,6 +30,7 @@ function onMessage(message) {
   }
   if (message.method === "textDocument/didOpen") {
     const { uri, text } = message.params.textDocument;
+    if (text.includes("killserver")) process.exit(1);
     const diagnostics = text.includes("broken") ? [{
       severity: 1,
       message: "Fake broken source",
@@ -49,7 +57,20 @@ function onMessage(message) {
       { label: "move_to", kind: 2, detail: "Navigate", insertText: "move_to" },
       { label: "battery", kind: 10, detail: "Battery" }
     ] } });
+    return;
   }
+  if (message.method === "textDocument/documentSymbol") send({ id: message.id, result: [{ name: "helper", kind: 12,
+    range: { start: { line: 0, character: 0 }, end: { line: 1, character: 1 } },
+    selectionRange: { start: { line: 0, character: 4 }, end: { line: 0, character: 10 } }, children: [] }] });
+  if (message.method === "textDocument/references") send({ id: message.id, result: [{ uri: message.params.textDocument.uri,
+    range: { start: { line: 0, character: 4 }, end: { line: 0, character: 10 } } }] });
+  if (message.method === "textDocument/rename") send({ id: message.id, result: { changes: {
+    [message.params.textDocument.uri]: [{ range: { start: { line: 0, character: 4 }, end: { line: 0, character: 10 } }, newText: message.params.newName }]
+  } } });
+  if (message.method === "textDocument/semanticTokens/full") send({ id: message.id, result: { data: [0, 4, 6, 0, 1] } });
+  if (message.method === "textDocument/formatting") send({ id: message.id, result: [] });
+  if (message.method === "textDocument/codeAction") send({ id: message.id, result: [{ title: "Run", command: { command: "codeterraform.run" } }] });
+  if (message.method === "codeterraform/gameCommand") send({ id: message.id, result: { ok: true, action: message.params.command } });
 }
 
 stdin.on("data", (chunk) => {

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdtemp, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -40,6 +40,19 @@ test("language service validates, inspects, and completes in memory", async (con
   const completed = await service.complete("pioneer_1", "self.", { line: 1, column: 6 }, "move", 10);
   assert.deepEqual(completed.items.map((item) => item.label), ["move_to"]);
 
+  const symbols = await service.documentRequest("pioneer_1", "def helper():\n pass\n", "textDocument/documentSymbol");
+  assert.equal(symbols.result[0].name, "helper");
+  const references = await service.documentRequest("pioneer_1", "helper()\n", "textDocument/references", {
+    position: { line: 0, character: 5 }, context: { includeDeclaration: true }
+  });
+  assert.equal(references.result.length, 1);
+  const command = await service.gameCommand("codeTerraform.run", "pioneer_1", { kind: "script" });
+  assert.deepEqual(command.result, { ok: true, action: "codeTerraform.run" });
+  const overview = await service.gameOverview();
+  assert.equal(overview.status.ready, true);
+  assert.equal(overview.fleet.scripts.pioneer_1.status, "running");
+  await assert.rejects(() => service.gameCommand("codeTerraform.run", "../secret.py", { kind: "script" }), /Unknown script target/);
+
   assert.equal(await (await import("node:fs/promises")).readFile(path.join(root, "pioneer_1.py"), "utf8"), "print('live source')\n");
 });
 
@@ -53,4 +66,25 @@ test("workspace store rejects unregistered and escaping targets", async () => {
     documents: [{ path: "../secret.py", id: "secret", kind: "script" }]
   }));
   await assert.rejects(() => store.load(), /escapes the workspace/);
+});
+
+test("language server failure cannot become a clean validation", async (context) => {
+  const root = await createWorkspace();
+  const service = new LanguageService(new WorkspaceStore(root), { timeoutMs: 2_000 });
+  context.after(() => service.dispose());
+  await assert.rejects(() => service.validate("pioneer_1", "killserver()", 2_000), /language server exited/);
+});
+
+test("state-changing targets cannot follow a registered symlink outside the workspace", async () => {
+  const root = await createWorkspace();
+  const outside = await mkdtemp(path.join(os.tmpdir(), "code-terraform-outside-"));
+  await writeFile(path.join(outside, "external.py"), "pass\n");
+  await symlink(path.join(outside, "external.py"), path.join(root, "linked.py"));
+  await writeFile(path.join(root, "codeterraform-workspace.json"), JSON.stringify({
+    analysisVersion: "test-analysis", server: { path: fixtureServer, analysisVersion: "test-analysis" },
+    documents: [{ path: "linked.py", id: "linked", kind: "script" }]
+  }));
+  const store = new WorkspaceStore(root);
+  const { workspace, document } = await store.resolveTarget("linked");
+  await assert.rejects(() => store.verifyDocumentFile(workspace, document), /outside the workspace/);
 });

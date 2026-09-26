@@ -2,6 +2,7 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { ManualStore, DEFAULT_MANUAL_PATH } from "./manual-store.js";
 import { LanguageService } from "./language-service.js";
+import { DebugService } from "./debug-service.js";
 import { createServer } from "./server.js";
 import { WorkspaceStore } from "./workspace-store.js";
 
@@ -63,10 +64,12 @@ async function main() {
   await store.load();
   const workspaceStore = new WorkspaceStore(options.workspacePath);
   const languageService = new LanguageService(workspaceStore);
-  const server = createServer(store, { workspaceStore, languageService });
+  const debugService = new DebugService(workspaceStore);
+  const server = createServer(store, { workspaceStore, languageService, debugService });
   const transport = new StdioServerTransport();
   const shutdown = async () => {
     await languageService.dispose();
+    await debugService.dispose();
     process.exit(0);
   };
   process.once("SIGINT", shutdown);

@@ -93,6 +93,14 @@ export class WorkspaceStore {
     }
     return { workspace, document: matches[0] };
   }
+
+  async verifyDocumentFile(workspace, document) {
+    const actualPath = await realpath(document.absolutePath);
+    if (!inside(workspace.rootPath, actualPath)) {
+      throw new Error(`Registered document resolves outside the workspace: ${document.path}`);
+    }
+    return actualPath;
+  }
 }
 
 export { MARKER_NAME };

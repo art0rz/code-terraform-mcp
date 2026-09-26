@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { listSections, resolveEntry, searchManual } from "./search.js";
+import { registerExtraTools } from "./extra-tools.js";
 
 const readOnlyAnnotations = {
   readOnlyHint: true,
@@ -56,10 +57,11 @@ function searchSummary(query, results) {
 export function createServer(store, options = {}) {
   const workspaceStore = options.workspaceStore ?? null;
   const languageService = options.languageService ?? null;
+  const debugService = options.debugService ?? null;
   const server = new McpServer(
-    { name: "code-terraform-docs", version: "1.1.0" },
+    { name: "code-terraform-docs", version: "1.2.0" },
     {
-      instructions: "Use search_manual and get_manual_entry for authoritative Code: Terraform APIs and mechanics. When a workspace is configured, use list_script_targets to select the real component context, validate_script after writing or changing game code, and inspect_symbol or complete_at only when contextual type information is needed. Script analysis is in-memory and never edits the live save. All tools are local and read-only."
+      instructions: "Use search_manual and get_manual_entry for authoritative Code: Terraform APIs and mechanics. Use list_script_targets to select a registered owner context. Source analysis is in-memory. get_game_status and list_fleet read game-published state. Run, Stop, Library, and debug control tools change the live game; call them only when the user requests those actions. Debug sessions persist until debug_end or server shutdown."
     }
   );
 
@@ -415,5 +417,6 @@ export function createServer(store, options = {}) {
     }
   );
 
+  registerExtraTools(server, { languageService, debugService });
   return server;
 }

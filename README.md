@@ -1,6 +1,6 @@
 # Code: Terraform MCP
 
-A local, read-only Model Context Protocol server for the Code: Terraform manual and game-aware language service.
+A local Model Context Protocol server for the Code: Terraform manual, game-aware language service, and optional live game control/debugging.
 
 The manual stays as one source file. At startup, the server parses it into logical entries in memory, indexes the entries for lexical search, and reloads the index automatically when the file changes.
 
@@ -18,13 +18,21 @@ When a live save workspace is configured, the server also launches the game's bu
 | `validate_script` | Return game-aware diagnostics for complete supplied source. |
 | `inspect_symbol` | Return hover, signature, and definition information at a position. |
 | `complete_at` | Return a limited, optionally filtered contextual completion list. |
+| `get_game_status`, `list_fleet` | Read the game's published connection, object, and script status snapshots. |
+| `list_script_symbols`, `find_references`, `preview_rename` | Browse symbols and references, or preview rename edits without applying them. |
+| `get_semantic_tokens`, `format_script`, `list_code_actions` | Inspect syntax tokens, preview Ruff formatting edits, and list actions without executing them. |
+| `run_script`, `stop_script` | Start or stop a registered script in the active game. |
+| `create_library`, `import_library`, `rename_library` | Change the active game's Libraries. |
+| `debug_start`, `debug_set_breakpoints`, `debug_control` | Launch a persistent debug session, set breakpoints, pause, continue, or step. |
+| `debug_inspect`, `debug_evaluate`, `debug_events`, `debug_end` | Inspect a halted script, evaluate an expression, read events, or detach. |
 
-All tools are annotated as read-only, idempotent, non-destructive, and closed-world.
+Manual, status, source analysis, and debug inspection tools are read-only. Run, Stop, Library management, breakpoint/control, expression evaluation, and debug-session lifecycle tools change the live game and are annotated accordingly. The MCP never writes source into the save workspace itself; game commands are forwarded through the game's language server or debug adapter.
 
 ## Requirements
 
 - Node.js 20 or newer
-- Python 3 (used only as a transparent stdio relay for the bundled Node language server)
+- Python 3 (transparent stdio relay for the bundled Node language server and debug adapter)
+- Optional: Ruff on PATH or configured through the language server (only for `format_script`)
 - The exported `Code-Terraform-DOCS-Manual.md`
 - Optional: a live save scripts workspace containing `codeterraform-workspace.json`
 
@@ -104,6 +112,10 @@ The workspace path is fixed when the MCP process starts. `list_script_targets` r
 
 The MCP launches its own language-server process instead of connecting to an editor's private stdio session. It automatically restarts that process if the workspace advertises a different server path or analysis version. Requests are serialized so two callers cannot replace the same in-memory document simultaneously.
 
+`run_script` and `stop_script` use the game's `codeterraform/gameCommand` language-server request and the **saved registered source**, not the unsaved source passed to validation. The game must be open and may reject a command when the source has changed, the save session changed, or the command bridge is busy. Library tools use the same game command path.
+
+The debug tools launch the game's bundled `debug-adapter.cjs` as a separate Debug Adapter Protocol process. `debug_start` starts a script if it is idle. `debug_end` detaches the debugger and does not stop the script. Sessions persist in this MCP process until ended, the adapter exits, or the MCP shuts down; at most four sessions are supported. `debug_events` uses a cursor and retains the 100 most recent events. Evaluation can call game APIs and may have side effects.
+
 Positions passed to `inspect_symbol` and `complete_at` are one-based. Diagnostics returned by `validate_script` are also normalized to one-based lines and columns.
 
 If a save is rebuilt, moved, or replaced, update `CODE_TERRAFORM_WORKSPACE` and restart the MCP server. The game must have exported the workspace and bundled language server, but the target script does not need to be running.
@@ -128,6 +140,8 @@ Project structure:
 src/
 ├── index.js          # CLI and STDIO transport
 ├── language-service.js # Isolated LSP lifecycle and normalized results
+├── debug-service.js   # Persistent game DAP sessions
+├── extra-tools.js     # Additional LSP, game-control, and debug tool schemas
 ├── manual-store.js   # File resolution, caching, and live reload
 ├── parser.js         # Markdown-to-entry parser
 ├── search.js         # Ranking, filtering, snippets, and lookup
@@ -136,4 +150,4 @@ src/
 └── workspace-store.js # Registered-target and workspace validation
 ```
 
-The manual and workspace roots are fixed when the process starts. Language tools resolve only game-registered targets, never write supplied source, reject paths outside the workspace, and refuse language-server workspace edits.
+The manual and workspace roots are fixed when the process starts. Language and debug tools resolve only game-registered targets, reject paths outside the workspace, and refuse language-server workspace edits. Game commands and debug controls can alter running scripts and their game state.

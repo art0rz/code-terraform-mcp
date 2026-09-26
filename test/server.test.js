@@ -9,7 +9,7 @@ import { ManualStore } from "../src/manual-store.js";
 import { createServer } from "../src/server.js";
 import { sampleManual } from "./fixtures.js";
 
-test("MCP handshake lists and calls all read-only tools", async (context) => {
+test("MCP handshake lists and calls the manual and language tools", async (context) => {
   const directory = await mkdtemp(path.join(os.tmpdir(), "code-terraform-docs-mcp-protocol-"));
   const manualPath = path.join(directory, "manual.md");
   await writeFile(manualPath, sampleManual);
@@ -41,7 +41,14 @@ test("MCP handshake lists and calls all read-only tools", async (context) => {
       workspace,
       document: workspace.documents[0],
       items: [{ label: "battery", kind: 10, detail: "Battery", documentation: null, insertText: "battery" }]
-    })
+    }),
+    gameOverview: async () => ({ workspace, status: { ready: true }, fleet: { scripts: { pioneer_1: { status: "running", errorLine: null } } } }),
+    documentRequest: async (_target, _source, method) => ({
+      result: method === "textDocument/references" ? [{ uri: "file:///game/save_scripts/pioneer_1.py",
+        range: { start: { line: 0, character: 4 }, end: { line: 0, character: 10 } } }] : [],
+      capabilities: {}
+    }),
+    gameCommand: async () => ({ result: { ok: true } })
   };
   const server = createServer(new ManualStore(manualPath), { workspaceStore, languageService });
   const client = new Client({ name: "test-client", version: "1.0.0" });
@@ -51,11 +58,11 @@ test("MCP handshake lists and calls all read-only tools", async (context) => {
   context.after(async () => client.close());
 
   const listed = await client.listTools();
-  assert.deepEqual(
-    listed.tools.map((tool) => tool.name),
-    ["search_manual", "get_manual_entry", "list_manual_sections", "get_manual_build", "list_script_targets", "validate_script", "inspect_symbol", "complete_at"]
-  );
-  assert.ok(listed.tools.every((tool) => tool.annotations?.readOnlyHint === true));
+  assert.deepEqual(listed.tools.slice(0, 8).map((tool) => tool.name),
+    ["search_manual", "get_manual_entry", "list_manual_sections", "get_manual_build", "list_script_targets", "validate_script", "inspect_symbol", "complete_at"]);
+  assert.ok(listed.tools.some((tool) => tool.name === "debug_start"));
+  assert.equal(listed.tools.find((tool) => tool.name === "run_script").annotations.readOnlyHint, false);
+  assert.equal(listed.tools.find((tool) => tool.name === "find_references").annotations.readOnlyHint, true);
 
   const searched = await client.callTool({
     name: "search_manual",
@@ -91,4 +98,11 @@ test("MCP handshake lists and calls all read-only tools", async (context) => {
 
   const completed = await client.callTool({ name: "complete_at", arguments: { target: "pioneer_1", source: "self.", line: 1, column: 6 } });
   assert.equal(completed.structuredContent.items[0].label, "battery");
+
+  const status = await client.callTool({ name: "get_game_status", arguments: {} });
+  assert.equal(status.structuredContent.data.byStatus.running, 1);
+  const refs = await client.callTool({ name: "find_references", arguments: { target: "pioneer_1", source: "helper", line: 1, column: 5 } });
+  assert.equal(refs.structuredContent.data.references[0].range.start.column, 5);
+  const run = await client.callTool({ name: "run_script", arguments: { target: "pioneer_1" } });
+  assert.equal(run.structuredContent.data.ok, true);
 });

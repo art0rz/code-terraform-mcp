@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -79,6 +80,8 @@ class LspSession {
     this.version = 0;
     this.initialized = false;
     this.expectedExit = false;
+    this.gameStatus = null;
+    this.fleet = null;
   }
 
   async start() {
@@ -92,7 +95,7 @@ class LspSession {
     });
     this.child.on("error", (error) => this.failAll(error));
     this.child.on("exit", (code, signal) => {
-      if (!this.expectedExit && (!this.initialized || code !== 0)) {
+      if (!this.expectedExit) {
         const detail = this.stderr.trim() ? ` ${this.stderr.trim()}` : "";
         this.failAll(new Error(`Code: Terraform language server exited (${code ?? signal}).${detail}`));
       }
@@ -101,7 +104,8 @@ class LspSession {
 
     const initializeResult = await this.request("initialize", {
       processId: process.pid,
-      clientInfo: { name: "code-terraform-docs-mcp", version: "1.1.0" },
+      clientInfo: { name: "code-terraform-docs-mcp", version: "1.2.0" },
+      initializationOptions: { notifications: true },
       locale: "en",
       rootPath: this.workspace.rootPath,
       rootUri: this.workspace.rootUri,
@@ -185,8 +189,10 @@ class LspSession {
       this.latestDiagnostics.set(message.params.uri, diagnostics);
       const waiters = this.diagnosticWaiters.get(message.params.uri) ?? [];
       this.diagnosticWaiters.delete(message.params.uri);
-      for (const resolve of waiters) resolve(diagnostics);
+      for (const waiter of waiters) waiter.resolve(diagnostics);
     }
+    if (message.method === "codeterraform/status") this.gameStatus = message.params ?? null;
+    if (message.method === "codeterraform/fleet") this.fleet = message.params?.fleet ?? null;
   }
 
   handleServerRequest(message) {
@@ -209,19 +215,19 @@ class LspSession {
     for (const pending of this.pending.values()) pending.reject(error);
     this.pending.clear();
     for (const waiters of this.diagnosticWaiters.values()) {
-      for (const resolve of waiters) resolve([]);
+      for (const waiter of waiters) waiter.reject(error);
     }
     this.diagnosticWaiters.clear();
   }
 
   waitForDiagnostics(uri, timeoutMs) {
     this.latestDiagnostics.delete(uri);
-    const promise = new Promise((resolve) => {
+    const promise = new Promise((resolve, reject) => {
       const waiters = this.diagnosticWaiters.get(uri) ?? [];
-      waiters.push(resolve);
+      waiters.push({ resolve, reject });
       this.diagnosticWaiters.set(uri, waiters);
     });
-    return withTimeout(promise, timeoutMs, "diagnostics");
+    return withTimeout(promise, timeoutMs, "diagnostics").finally(() => this.diagnosticWaiters.delete(uri));
   }
 
   open(document, source) {
@@ -232,7 +238,7 @@ class LspSession {
   }
 
   close(document) {
-    this.notify("textDocument/didClose", { textDocument: { uri: document.uri } });
+    if (this.child?.stdin.writable) this.notify("textDocument/didClose", { textDocument: { uri: document.uri } });
   }
 
   async validate(document, source, timeoutMs) {
@@ -301,6 +307,19 @@ class LspSession {
     }
   }
 
+  async documentRequest(document, source, method, params, timeoutMs = this.timeoutMs) {
+    this.open(document, source);
+    try {
+      return await this.request(method, { textDocument: { uri: document.uri }, ...params }, timeoutMs);
+    } finally {
+      this.close(document);
+    }
+  }
+
+  async gameCommand(command, argument) {
+    return this.request("codeterraform/gameCommand", { command, arguments: [argument] }, 25_000);
+  }
+
   async dispose() {
     if (!this.child) return;
     try {
@@ -334,7 +353,7 @@ export class LanguageService {
 
   async sessionFor(workspace) {
     const signature = `${workspace.rootPath}\0${workspace.serverPath}\0${workspace.analysisVersion}`;
-    if (this.session && this.signature !== signature) {
+    if (this.session && (this.signature !== signature || !this.session.initialized)) {
       await this.session.dispose();
       this.session = null;
     }
@@ -368,6 +387,58 @@ export class LanguageService {
       const { workspace, document } = await this.workspaceStore.resolveTarget(target);
       const session = await this.sessionFor(workspace);
       return { workspace, document, items: await session.complete(document, source, position, query, limit) };
+    });
+  }
+
+  async documentRequest(target, source, method, params = {}) {
+    return this.runExclusive(async () => {
+      const { workspace, document } = await this.workspaceStore.resolveTarget(target);
+      const session = await this.sessionFor(workspace);
+      const result = await session.documentRequest(document, source, method, params);
+      return { workspace, document, result, capabilities: session.capabilities };
+    });
+  }
+
+  async gameCommand(command, target, options = {}) {
+    return this.runExclusive(async () => {
+      const { workspace, document } = await this.workspaceStore.resolveTarget(target);
+      if (options.kind && document.kind !== options.kind) throw new Error(`Target ${target} must be a ${options.kind}.`);
+      await this.workspaceStore.verifyDocumentFile(workspace, document);
+      const session = await this.sessionFor(workspace);
+      const result = await session.gameCommand(command, { uri: document.uri, ...options.arguments });
+      return { workspace, document, result };
+    });
+  }
+
+  async createLibrary(name) {
+    return this.runExclusive(async () => {
+      const workspace = await this.workspaceStore.load();
+      const session = await this.sessionFor(workspace);
+      return { workspace, result: await session.gameCommand("codeTerraform.createLibrary", { name }) };
+    });
+  }
+
+  async importLibrary(name, source) {
+    return this.runExclusive(async () => {
+      const workspace = await this.workspaceStore.load();
+      const session = await this.sessionFor(workspace);
+      return { workspace, result: await session.gameCommand("codeTerraform.importLibrary", { name, source }) };
+    });
+  }
+
+  async gameOverview() {
+    return this.runExclusive(async () => {
+      const workspace = await this.workspaceStore.load();
+      const session = await this.sessionFor(workspace);
+      for (let attempt = 0; !session.gameStatus && attempt < 20; attempt += 1) await delay(25);
+      // Notifications can arrive just after initialize; the same published fleet
+      // snapshot is available on disk for an immediate, deterministic response.
+      let fleet = session.fleet;
+      if (!fleet) {
+        try { fleet = JSON.parse(await readFile(path.join(workspace.rootPath, "codeterraform-fleet.json"), "utf8")); }
+        catch { fleet = null; }
+      }
+      return { workspace, status: session.gameStatus, fleet };
     });
   }
 

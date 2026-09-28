@@ -9,7 +9,7 @@
   },
   "scripts": {
     "start": "node src/index.js",
-    "check": "node --check src/index.js && node --check src/server.js && node --check src/extra-tools.js && node --check src/debug-service.js && node --check src/manual-store.js && node --check src/parser.js && node --check src/search.js && node --check src/workspace-store.js && node --check src/language-service.js",
+    "check": "node --check src/index.js && node --check src/server.js && node --check src/extra-tools.js && node --check src/debug-service.js && node --check src/manual-store.js && node --check src/parser.js && node --check src/search.js && node --check src/workspace-store.js && node --check src/language-service.js && node --check src/logger.js && node --check src/heartbeat.js",
     "test": "node --test",
     "verify": "npm run check && npm test"
   },

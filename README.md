@@ -62,7 +62,17 @@ cd /path/to/my-code-terraform-project
 node /path/to/code-terraform-docs-mcp/src/index.js
 ```
 
-STDIO is reserved for MCP protocol messages, so a successful server intentionally prints nothing while waiting for a client.
+The server writes MCP messages to stdout and concise logs to stderr. It logs startup,
+manual reloads, language-server transitions, game-changing tool calls, and failures;
+routine read calls stay quiet. Set `CODE_TERRAFORM_LOG_LEVEL` to `warn`, `error`,
+or `off` to reduce logging (`info` is the default). Successful game-changing
+calls are logged by tool name without their arguments or source text.
+
+Every 60 seconds, a heartbeat logs MCP liveness. With a workspace configured,
+it also sends a read-only document-symbol request to confirm the bundled LSP
+responds and reports the latest status and whether the LSP published a fleet
+snapshot. The first check runs at startup. `ready` is the LSP's reported value;
+it is not a separate live game-connection flag.
 
 Use another manual path with either form:
 

@@ -5,6 +5,8 @@ import { LanguageService } from "./language-service.js";
 import { DebugService } from "./debug-service.js";
 import { createServer } from "./server.js";
 import { WorkspaceStore } from "./workspace-store.js";
+import { logger } from "./logger.js";
+import { Heartbeat } from "./heartbeat.js";
 
 function usage() {
   return `code-terraform-docs-mcp
@@ -20,6 +22,7 @@ Options:
 Environment:
   CODE_TERRAFORM_DOCS_MANUAL  Manual path used when --manual is omitted.
   CODE_TERRAFORM_WORKSPACE    Workspace path used when --workspace is omitted.
+  CODE_TERRAFORM_LOG_LEVEL    stderr log level: info (default), warn, error, or off.
 
 Default:
   ${DEFAULT_MANUAL_PATH}
@@ -67,17 +70,30 @@ async function main() {
   const debugService = new DebugService(workspaceStore);
   const server = createServer(store, { workspaceStore, languageService, debugService });
   const transport = new StdioServerTransport();
+  const heartbeat = new Heartbeat(async () => {
+    if (!workspaceStore.configured) return "MCP alive; workspace not configured.";
+    const status = await languageService.heartbeat();
+    return `${status.responsive ? "LSP responsive" : "LSP initialized; no registered document to probe"}; reported ready=${status.ready ?? "unknown"}; fleet ${status.fleetPublished ? "published" : "not published"}.`;
+  });
+  let shuttingDown = false;
   const shutdown = async () => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    await heartbeat.stop();
+    logger.info("Shutting down.");
     await languageService.dispose();
     await debugService.dispose();
     process.exit(0);
   };
   process.once("SIGINT", shutdown);
   process.once("SIGTERM", shutdown);
+  process.stdin.once("end", shutdown);
   await server.connect(transport);
+  logger.info(`Ready; workspace ${workspaceStore.configured ? "configured" : "not configured"}.`);
+  heartbeat.start();
 }
 
 main().catch((error) => {
-  process.stderr.write(`code-terraform-docs-mcp: ${error instanceof Error ? error.message : String(error)}\n`);
+  logger.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 });

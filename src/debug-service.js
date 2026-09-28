@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { access } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { logger } from "./logger.js";
 
 const PROXY_PATH = fileURLToPath(new URL("./stdio-proxy.py", import.meta.url));
 
@@ -18,6 +19,7 @@ class DebugSession {
     this.eventSequence = 0;
     this.buffer = Buffer.alloc(0);
     this.closed = false;
+    this.expectedExit = false;
     this.stderr = "";
   }
 
@@ -29,8 +31,8 @@ class DebugSession {
     ], { cwd: this.workspace.rootPath, stdio: ["pipe", "pipe", "pipe"] });
     this.child.stdout.on("data", (chunk) => this.onData(chunk));
     this.child.stderr.on("data", (chunk) => { this.stderr = `${this.stderr}${chunk.toString()}`.slice(-4000); });
-    this.child.on("error", (error) => this.fail(error));
-    this.child.on("exit", (code) => this.fail(new Error(`Debug adapter exited (${code}). ${this.stderr}`)));
+    this.child.on("error", (error) => this.fail(error, true));
+    this.child.on("exit", (code) => this.fail(new Error(`Debug adapter exited (${code}). ${this.stderr}`), true));
     try {
       await this.request("initialize", {
         adapterID: "code-terraform", clientID: "code-terraform-docs-mcp", clientName: "Code: Terraform MCP",
@@ -91,8 +93,9 @@ class DebugSession {
     }
   }
 
-  fail(error) {
+  fail(error, unexpected = false) {
     if (this.closed) return;
+    if (unexpected && !this.expectedExit) logger.warn(`Debug session ${this.id} ended unexpectedly: ${error instanceof Error ? error.message : String(error)}`);
     this.closed = true;
     for (const pending of this.pending.values()) {
       clearTimeout(pending.timer);
@@ -115,6 +118,7 @@ class DebugSession {
   }
 
   async end() {
+    this.expectedExit = true;
     if (!this.closed) {
       try { await this.request("disconnect", {}, 5_000); } catch { /* adapter may have exited */ }
     }

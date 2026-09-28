@@ -1,6 +1,7 @@
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { parseManual } from "./parser.js";
+import { logger } from "./logger.js";
 
 export const DEFAULT_MANUAL_PATH = path.resolve(process.cwd(), "Code-Terraform-DOCS-Manual.md");
 
@@ -41,6 +42,7 @@ export class ManualStore {
       byteSize: fileStat.size
     };
     this.#signature = signature;
+    logger.info(`Loaded manual build ${this.#cached.build} (${this.#cached.entryCount} entries).`);
     return this.#cached;
   }
 }

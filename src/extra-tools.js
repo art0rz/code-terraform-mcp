@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { logger } from "./logger.js";
 
 const readOnly = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
 const changesGame = { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false };
@@ -20,8 +21,10 @@ function register(server, name, title, description, inputSchema, callback, mutat
   }, async (args) => {
     try {
       const data = await callback(args);
+      if (mutates) logger.info(`${name} succeeded.`);
       return { structuredContent: { data }, content: [{ type: "text", text: JSON.stringify(data).slice(0, 50_000) }] };
     } catch (error) {
+      logger.warn(`${name} failed: ${error instanceof Error ? error.message : String(error)}`);
       return { isError: true, content: [{ type: "text", text: error instanceof Error ? error.message : String(error) }] };
     }
   });

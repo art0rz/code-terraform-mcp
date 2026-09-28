@@ -51,6 +51,7 @@ test("language service validates, inspects, and completes in memory", async (con
   const overview = await service.gameOverview();
   assert.equal(overview.status.ready, true);
   assert.equal(overview.fleet.scripts.pioneer_1.status, "running");
+  assert.deepEqual(await service.heartbeat(), { responsive: true, ready: true, fleetPublished: true });
   await assert.rejects(() => service.gameCommand("codeTerraform.run", "../secret.py", { kind: "script" }), /Unknown script target/);
 
   assert.equal(await (await import("node:fs/promises")).readFile(path.join(root, "pioneer_1.py"), "utf8"), "print('live source')\n");

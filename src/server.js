@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { listSections, resolveEntry, searchManual } from "./search.js";
 import { registerExtraTools } from "./extra-tools.js";
+import { logger } from "./logger.js";
 
 const readOnlyAnnotations = {
   readOnlyHint: true,
@@ -39,7 +40,8 @@ const diagnosticSchema = z.object({
   source: z.string().optional()
 });
 
-function errorResult(error) {
+function errorResult(tool, error) {
+  logger.warn(`${tool} failed: ${error instanceof Error ? error.message : String(error)}`);
   return {
     isError: true,
     content: [{ type: "text", text: error instanceof Error ? error.message : String(error) }]
@@ -90,7 +92,7 @@ export function createServer(store, options = {}) {
         const structuredContent = { query, build: manual.build, resultCount: results.length, results };
         return { structuredContent, content: [{ type: "text", text: searchSummary(query, results) }] };
       } catch (error) {
-        return errorResult(error);
+        return errorResult("search_manual", error);
       }
     }
   );
@@ -141,7 +143,7 @@ export function createServer(store, options = {}) {
           content: [{ type: "text", text: `Manual build ${manual.build} · entry ${entry.id}\n\n${entry.markdown}` }]
         };
       } catch (error) {
-        return errorResult(error);
+        return errorResult("get_manual_entry", error);
       }
     }
   );
@@ -171,7 +173,7 @@ export function createServer(store, options = {}) {
         const text = sections.map((section) => `- ${section.name}: ${section.entryCount} entries`).join("\n");
         return { structuredContent, content: [{ type: "text", text: `Manual build ${manual.build}\n\n${text}` }] };
       } catch (error) {
-        return errorResult(error);
+        return errorResult("list_manual_sections", error);
       }
     }
   );
@@ -208,7 +210,7 @@ export function createServer(store, options = {}) {
           content: [{ type: "text", text: `Code: Terraform manual build ${manual.build}: ${manual.entryCount} entries, ${manual.byteSize} bytes. Last modified ${manual.modifiedAt}.` }]
         };
       } catch (error) {
-        return errorResult(error);
+        return errorResult("get_manual_build", error);
       }
     }
   );
@@ -265,7 +267,7 @@ export function createServer(store, options = {}) {
           content: [{ type: "text", text: `Code: Terraform analysis ${workspace.analysisVersion}: ${targets.length} of ${matched.length} matching target(s).\n\n${targets.map((target) => `- ${target.id} (${target.kind}${target.ownerType ? `, ${target.ownerType}` : ""}) — ${target.path}`).join("\n")}` }]
         };
       } catch (error) {
-        return errorResult(error);
+        return errorResult("list_script_targets", error);
       }
     }
   );
@@ -309,7 +311,7 @@ export function createServer(store, options = {}) {
           : `${structuredContent.diagnosticCount} diagnostic(s) for ${structuredContent.target}:\n\n${structuredContent.diagnostics.map((diagnostic) => `- ${diagnostic.severity} ${diagnostic.range.start.line}:${diagnostic.range.start.column} — ${diagnostic.message}`).join("\n")}`;
         return { structuredContent, content: [{ type: "text", text: summary }] };
       } catch (error) {
-        return errorResult(error);
+        return errorResult("validate_script", error);
       }
     }
   );
@@ -362,7 +364,7 @@ export function createServer(store, options = {}) {
         if (result.definitions.length) parts.push(`Definitions:\n${result.definitions.map((definition) => `- ${definition.uri}`).join("\n")}`);
         return { structuredContent, content: [{ type: "text", text: parts.join("\n\n") || `No symbol information at ${line}:${column}.` }] };
       } catch (error) {
-        return errorResult(error);
+        return errorResult("inspect_symbol", error);
       }
     }
   );
@@ -412,7 +414,7 @@ export function createServer(store, options = {}) {
           content: [{ type: "text", text: result.items.length ? result.items.map((item) => `- ${item.label}${item.detail ? ` — ${item.detail}` : ""}`).join("\n") : "No matching completions." }]
         };
       } catch (error) {
-        return errorResult(error);
+        return errorResult("complete_at", error);
       }
     }
   );

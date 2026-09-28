@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { logger } from "./logger.js";
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 const MAX_STDERR = 8_000;
@@ -97,6 +98,7 @@ class LspSession {
     this.child.on("exit", (code, signal) => {
       if (!this.expectedExit) {
         const detail = this.stderr.trim() ? ` ${this.stderr.trim()}` : "";
+        logger.warn(`Language server exited unexpectedly (${code ?? signal}).`);
         this.failAll(new Error(`Code: Terraform language server exited (${code ?? signal}).${detail}`));
       }
       this.initialized = false;
@@ -354,6 +356,7 @@ export class LanguageService {
   async sessionFor(workspace) {
     const signature = `${workspace.rootPath}\0${workspace.serverPath}\0${workspace.analysisVersion}`;
     if (this.session && (this.signature !== signature || !this.session.initialized)) {
+      logger.info(`Restarting language server (${this.signature !== signature ? "workspace changed" : "session ended"}).`);
       await this.session.dispose();
       this.session = null;
     }
@@ -361,6 +364,7 @@ export class LanguageService {
       this.session = new LspSession(workspace, this.options);
       await this.session.start();
       this.signature = signature;
+      logger.info(`Language server ready for analysis ${workspace.analysisVersion}.`);
     }
     return this.session;
   }
@@ -439,6 +443,20 @@ export class LanguageService {
         catch { fleet = null; }
       }
       return { workspace, status: session.gameStatus, fleet };
+    });
+  }
+
+  async heartbeat() {
+    return this.runExclusive(async () => {
+      const workspace = await this.workspaceStore.load();
+      const session = await this.sessionFor(workspace);
+      const document = workspace.documents[0];
+      if (document) await session.documentRequest(document, "", "textDocument/documentSymbol", {}, 5_000);
+      return {
+        responsive: Boolean(document),
+        ready: session.gameStatus?.ready ?? null,
+        fleetPublished: session.fleet !== null
+      };
     });
   }
 

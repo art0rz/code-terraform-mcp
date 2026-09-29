@@ -117,7 +117,8 @@ export function createServer(store, options = {}) {
           headings: z.array(z.string()),
           url: z.string(),
           sourceLineStart: z.number().int(),
-          sourceLineEnd: z.number().int()
+          sourceLineEnd: z.number().int(),
+          markdown: z.string()
         })
       },
       annotations: readOnlyAnnotations
@@ -136,7 +137,9 @@ export function createServer(store, options = {}) {
           headings: entry.headings,
           url: entry.url,
           sourceLineStart: entry.sourceLineStart,
-          sourceLineEnd: entry.sourceLineEnd
+          sourceLineEnd: entry.sourceLineEnd,
+          // Clients that surface only structuredContent (the Claude desktop app) would otherwise never see the entry text.
+          markdown: entry.markdown
         };
         return {
           structuredContent: { build: manual.build, entry: metadata },
@@ -420,5 +423,54 @@ export function createServer(store, options = {}) {
   );
 
   registerExtraTools(server, { languageService, debugService });
+  const connect = server.connect.bind(server);
+  server.connect = (transport) => connect(withDialectFreeToolSchemas(transport));
   return server;
+}
+
+/**
+ * Remove the JSON Schema dialect from tools/list responses sent on a transport.
+ *
+ * The SDK converts zod v4 schemas with a hardcoded draft-07 target. Clients
+ * that validate with a 2020-12-only validator (the Claude desktop app) reject
+ * every tool declaring draft-07. The generated schemas use no draft-07-only
+ * keywords, so without the declaration they are valid 2020-12 schemas.
+ * TODO: Remove once @modelcontextprotocol/sdk emits draft-2020-12 for zod v4.
+ *
+ * @param {import("@modelcontextprotocol/sdk/shared/transport.js").Transport} transport
+ * @returns {import("@modelcontextprotocol/sdk/shared/transport.js").Transport}
+ */
+function withDialectFreeToolSchemas(transport) {
+  const send = transport.send.bind(transport);
+  transport.send = (message, options) => send(withoutToolSchemaDialects(message), options);
+  return transport;
+}
+
+/**
+ * @param {object} message JSON-RPC message.
+ * @returns {object} The message, with tool schema dialects removed from a tool list result.
+ */
+function withoutToolSchemaDialects(message) {
+  const tools = message?.result?.tools;
+  if (!Array.isArray(tools)) return message;
+  return {
+    ...message,
+    result: {
+      ...message.result,
+      tools: tools.map((tool) => ({
+        ...tool,
+        inputSchema: withoutDialect(tool.inputSchema),
+        ...(tool.outputSchema && { outputSchema: withoutDialect(tool.outputSchema) })
+      }))
+    }
+  };
+}
+
+/**
+ * @param {object} schema JSON Schema.
+ * @returns {object} The schema without its top-level `$schema` declaration.
+ */
+function withoutDialect(schema) {
+  const { $schema: _dialect, ...rest } = schema;
+  return rest;
 }

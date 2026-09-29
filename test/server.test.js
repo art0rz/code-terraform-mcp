@@ -78,6 +78,7 @@ test("MCP handshake lists and calls the manual and language tools", async (conte
   });
   assert.equal(fetched.structuredContent.entry.title, "Batteries & Charging");
   assert.match(fetched.content[0].text, /self\.charge\(\)/);
+  assert.match(fetched.structuredContent.entry.markdown, /self\.charge\(\)/);
 
   const sections = await client.callTool({ name: "list_manual_sections", arguments: {} });
   assert.equal(sections.structuredContent.entryCount, 3);

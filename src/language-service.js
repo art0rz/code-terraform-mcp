@@ -71,6 +71,8 @@ class LspSession {
     this.pythonPath = options.pythonPath ?? process.env.CODE_TERRAFORM_PYTHON ?? "python3";
     this.proxyPath = options.proxyPath ?? DEFAULT_PROXY_PATH;
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    // The game's server finds Ruff on PATH and in common install locations; this overrides that search.
+    this.ruffPath = options.ruffPath ?? process.env.CODE_TERRAFORM_RUFF ?? null;
     this.child = null;
     this.buffer = Buffer.alloc(0);
     this.nextId = 1;
@@ -107,7 +109,7 @@ class LspSession {
     const initializeResult = await this.request("initialize", {
       processId: process.pid,
       clientInfo: { name: "code-terraform-docs-mcp", version: "1.2.0" },
-      initializationOptions: { notifications: true },
+      initializationOptions: { notifications: true, ...(this.ruffPath && { formatter: { ruffPath: this.ruffPath } }) },
       locale: "en",
       rootPath: this.workspace.rootPath,
       rootUri: this.workspace.rootUri,

@@ -1,5 +1,6 @@
 const { stdin, stdout } = process;
 let buffer = Buffer.alloc(0);
+let initializationOptions = null;
 const keepAlive = setInterval(() => {}, 1_000);
 
 function send(message) {
@@ -10,6 +11,7 @@ function send(message) {
 
 function onMessage(message) {
   if (message.method === "initialize") {
+    initializationOptions = message.params.initializationOptions ?? null;
     send({ id: message.id, result: { capabilities: { hoverProvider: true, completionProvider: {}, signatureHelpProvider: {}, definitionProvider: true,
       referencesProvider: true, documentSymbolProvider: true, renameProvider: true,
       semanticTokensProvider: { legend: { tokenTypes: ["function"], tokenModifiers: ["declaration"] }, full: true } } } });
@@ -20,7 +22,7 @@ function onMessage(message) {
     return;
   }
   if (message.method === "initialized") {
-    send({ method: "codeterraform/status", params: { ready: true, analysisVersion: "test-analysis" } });
+    send({ method: "codeterraform/status", params: { ready: true, analysisVersion: "test-analysis", initializationOptions } });
     send({ method: "codeterraform/fleet", params: { fleet: { scripts: { pioneer_1: { status: "running" } } } } });
     return;
   }

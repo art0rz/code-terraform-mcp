@@ -22,8 +22,8 @@ When a live save workspace is configured, the server also launches the game's bu
 | `list_script_symbols`, `find_references`, `preview_rename` | Browse symbols and references, or preview rename edits without applying them. |
 | `get_semantic_tokens`, `format_script`, `list_code_actions` | Inspect syntax tokens, preview Ruff formatting edits, and list actions without executing them. |
 | `run_script`, `stop_script` | Start or stop a registered script in the active game. |
-| `create_library`, `import_library`, `rename_library` | Change the active game's Libraries. |
-| `debug_start`, `debug_set_breakpoints`, `debug_control` | Launch a persistent debug session, set breakpoints, pause, continue, or step. |
+| `create_library`, `import_library`, `rename_library` | Create or rename the active game's Libraries. Importing never replaces an existing Library; update one by writing its synced `lib/<name>.py` file. |
+| `debug_start`, `debug_set_breakpoints`, `debug_control` | Attach a persistent debug session (optionally starting an idle script), set breakpoints, pause, continue, or step. |
 | `debug_inspect`, `debug_evaluate`, `debug_events`, `debug_end` | Inspect a halted script, evaluate an expression, read events, or detach. |
 
 Manual, status, source analysis, and debug inspection tools are read-only. Run, Stop, Library management, breakpoint/control, expression evaluation, and debug-session lifecycle tools change the live game and are annotated accordingly. The MCP never writes source into the save workspace itself; game commands are forwarded through the game's language server or debug adapter.
@@ -32,7 +32,7 @@ Manual, status, source analysis, and debug inspection tools are read-only. Run, 
 
 - Node.js 20 or newer
 - Python 3 (transparent stdio relay for the bundled Node language server and debug adapter)
-- Optional: Ruff on PATH or configured through the language server (only for `format_script`)
+- Optional: Ruff for `format_script`. The game's server finds it on PATH or in common pipx/uv/cargo locations; set `CODE_TERRAFORM_RUFF` to an executable path otherwise
 - The exported `Code-Terraform-DOCS-Manual.md`
 - Optional: a live save scripts workspace containing `codeterraform-workspace.json`
 
@@ -124,7 +124,7 @@ The MCP launches its own language-server process instead of connecting to an edi
 
 `run_script` and `stop_script` use the game's `codeterraform/gameCommand` language-server request and the **saved registered source**, not the unsaved source passed to validation. The game must be open and may reject a command when the source has changed, the save session changed, or the command bridge is busy. Library tools use the same game command path.
 
-The debug tools launch the game's bundled `debug-adapter.cjs` as a separate Debug Adapter Protocol process. `debug_start` starts a script if it is idle. `debug_end` detaches the debugger and does not stop the script. Sessions persist in this MCP process until ended, the adapter exits, or the MCP shuts down; at most four sessions are supported. `debug_events` uses a cursor and retains the 100 most recent events. Evaluation can call game APIs and may have side effects.
+The debug tools launch the game's bundled `debug-adapter.cjs` as a separate Debug Adapter Protocol process. `debug_start` attaches to a running script by default and never starts an idle one; an idle script ends the session immediately. Pass `runIfIdle: true` to start an idle script. `debug_end` detaches the debugger and does not stop the script. Sessions persist in this MCP process until ended, the adapter exits, or the MCP shuts down; at most four sessions are supported. `debug_events` uses a cursor and retains the 100 most recent events. Evaluation can call game APIs and may have side effects.
 
 Positions passed to `inspect_symbol` and `complete_at` are one-based. Diagnostics returned by `validate_script` are also normalized to one-based lines and columns.
 

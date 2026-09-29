@@ -151,7 +151,9 @@ export function registerExtraTools(server, { languageService, debugService }) {
 
   register(server, "create_library", "Create a game Library", "Create an empty Library in the live game.",
     { name: z.string().min(1).max(100) }, async ({ name }) => ({ name, ...(await requireLanguage().createLibrary(name)).result }), true);
-  register(server, "import_library", "Import a game Library", "Create a Library from supplied complete source in the live game.",
+  register(server, "import_library", "Import a game Library",
+    "Create a new Library from supplied complete source in the live game. Fails with duplicate_name if the Library exists; "
+    + "to update an existing Library, write its synced lib/<name>.py file in the save workspace instead.",
     { name: z.string().min(1).max(100), source: z.string().max(1_000_000) },
     async ({ name, source }) => ({ name, ...(await requireLanguage().importLibrary(name, source)).result }), true);
   register(server, "rename_library", "Rename a game Library", "Rename a registered Library in the live game.",
@@ -159,10 +161,13 @@ export function registerExtraTools(server, { languageService, debugService }) {
     async ({ target, name }) => ({ target, name, ...(await requireLanguage().gameCommand("codeTerraform.renameLibrary", target,
       { kind: "library", arguments: { name } })).result }), true);
 
-  register(server, "debug_start", "Start a game debug session", "Launch a persistent DAP session for a registered script; starts it if idle.", {
-    target: z.string().min(1), breakpoints: z.array(breakpointSchema).max(100).default([])
-  }, async ({ target, breakpoints }) => {
-    const session = await requireDebug().start(target, breakpoints);
+  register(server, "debug_start", "Start a game debug session",
+    "Open a persistent DAP session for a registered script. By default it attaches to a running script and never starts an idle one; "
+    + "an idle script then ends the session at once. Set runIfIdle to start an idle script.", {
+    target: z.string().min(1), breakpoints: z.array(breakpointSchema).max(100).default([]),
+    runIfIdle: z.boolean().default(false).describe("Start the script if it is idle. Defaults to false: inspect only.")
+  }, async ({ target, breakpoints, runIfIdle }) => {
+    const session = await requireDebug().start(target, breakpoints, { runIfIdle });
     return { sessionId: session.id, target: session.document.id, ...session.eventsAfter() };
   }, true);
   register(server, "debug_set_breakpoints", "Set game breakpoints", "Replace breakpoints for a registered script or Library in a debug session.", {

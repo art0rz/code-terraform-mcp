@@ -23,7 +23,14 @@ class DebugSession {
     this.stderr = "";
   }
 
-  async start(breakpoints = []) {
+  /**
+   * Connect to the script through the game's debug adapter.
+   *
+   * @param {Array<object>} breakpoints Initial breakpoints for the script.
+   * @param {{ runIfIdle?: boolean }} [options] `launch` starts an idle script;
+   *   `attach` only inspects a running one and ends the session if it is idle.
+   */
+  async start(breakpoints = [], { runIfIdle = false } = {}) {
     const adapter = path.join(path.dirname(this.workspace.serverPath), "debug-adapter.cjs");
     await access(adapter);
     this.child = spawn(this.options.pythonPath ?? process.env.CODE_TERRAFORM_PYTHON ?? "python3", [
@@ -38,7 +45,7 @@ class DebugSession {
         adapterID: "code-terraform", clientID: "code-terraform-docs-mcp", clientName: "Code: Terraform MCP",
         linesStartAt1: true, columnsStartAt1: true, pathFormat: "path"
       });
-      await this.request("launch", { workspace: this.workspace.rootPath, script: this.document.absolutePath });
+      await this.request(runIfIdle ? "launch" : "attach", { workspace: this.workspace.rootPath, script: this.document.absolutePath });
       if (breakpoints.length) await this.setBreakpoints(this.document, breakpoints);
       await this.request("configurationDone", {});
       return this;
@@ -139,14 +146,14 @@ export class DebugService {
     return session;
   }
 
-  async start(target, breakpoints = []) {
+  async start(target, breakpoints = [], { runIfIdle = false } = {}) {
     for (const [id, session] of this.sessions) if (session.closed) this.sessions.delete(id);
     if (this.sessions.size >= 4) throw new Error("At most four debug sessions are supported.");
     const { workspace, document } = await this.workspaceStore.resolveTarget(target);
     if (document.kind !== "script") throw new Error("Only registered scripts can start a debug session.");
     await this.workspaceStore.verifyDocumentFile(workspace, document);
     const session = new DebugSession(workspace, document, this.options);
-    await session.start(breakpoints);
+    await session.start(breakpoints, { runIfIdle });
     this.sessions.set(session.id, session);
     return session;
   }

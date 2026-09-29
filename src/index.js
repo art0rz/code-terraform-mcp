@@ -23,6 +23,7 @@ Environment:
   CODE_TERRAFORM_DOCS_MANUAL  Manual path used when --manual is omitted.
   CODE_TERRAFORM_WORKSPACE    Workspace path used when --workspace is omitted.
   CODE_TERRAFORM_LOG_LEVEL    stderr log level: info (default), warn, error, or off.
+  CODE_TERRAFORM_RUFF         Ruff executable for format_script when the game's server cannot find it.
 
 Default:
   ${DEFAULT_MANUAL_PATH}

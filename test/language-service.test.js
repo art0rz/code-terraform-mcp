@@ -89,3 +89,20 @@ test("state-changing targets cannot follow a registered symlink outside the work
   const { workspace, document } = await store.resolveTarget("linked");
   await assert.rejects(() => store.verifyDocumentFile(workspace, document), /outside the workspace/);
 });
+
+test("language service passes a configured Ruff path to the game's server", async (context) => {
+  const service = new LanguageService(new WorkspaceStore(await createWorkspace()), { timeoutMs: 5_000, ruffPath: "/opt/ruff/bin/ruff" });
+  context.after(() => service.dispose());
+  const { status } = await service.gameOverview();
+  assert.deepEqual(status.initializationOptions, { notifications: true, formatter: { ruffPath: "/opt/ruff/bin/ruff" } });
+});
+
+test("language service leaves Ruff discovery to the game's server by default", async (context) => {
+  const previous = process.env.CODE_TERRAFORM_RUFF;
+  delete process.env.CODE_TERRAFORM_RUFF;
+  context.after(() => { if (previous !== undefined) process.env.CODE_TERRAFORM_RUFF = previous; });
+  const service = new LanguageService(new WorkspaceStore(await createWorkspace()), { timeoutMs: 5_000 });
+  context.after(() => service.dispose());
+  const { status } = await service.gameOverview();
+  assert.deepEqual(status.initializationOptions, { notifications: true });
+});

@@ -10,10 +10,13 @@ function send(message) {
 
 function handle(message) {
   const command = message.command;
-  if (command === "launch") send({ type: "event", event: "initialized", body: {} });
+  if (command === "launch" || command === "attach") {
+    send({ type: "event", event: "initialized", body: {} });
+    send({ type: "event", event: "output", body: { category: "console", output: `connected via ${command}` } });
+  }
   const responses = {
     initialize: { supportsConfigurationDoneRequest: true },
-    launch: {}, configurationDone: {},
+    launch: {}, attach: {}, configurationDone: {},
     setBreakpoints: { breakpoints: (message.arguments.breakpoints ?? []).map(({ line }) => ({ verified: true, line })) },
     threads: { threads: [{ id: 1, name: "pioneer_1" }] },
     stackTrace: { stackFrames: [{ id: 42, name: "main", line: 3, column: 1 }], totalFrames: 1 },

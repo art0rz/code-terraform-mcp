@@ -2,7 +2,7 @@
 
 *Player Documentation*
 
-Build e618b02
+Build 3b1b03e
 
 ## Contents
 
@@ -55,6 +55,7 @@ Build e618b02
 - Automation Systems / Vehicle Proximity & Service
 - Automation Systems / Earth Orders
 - Automation Systems / Signal Bus
+- Automation Systems / Automations
 - Automation Systems / Data Archive
 - Automation Systems / Map Markers
 - Automation Systems / Drones
@@ -103,6 +104,11 @@ Build e618b02
 - json
 - heapq
 - traceback
+- math
+- itertools
+- operator
+- string
+- collections
 
 **Language**
 
@@ -331,9 +337,11 @@ Build e618b02
 - Orders & Comms / WaitAnyResult
 - Orders & Comms / WaitBroadcastResult
 - Panels / Panel
+- Panels / PanelBounds
 - Panels / PanelClick
 - Panels / PanelKey
 - Panels / PanelMouse
+- Panels / PanelSize
 - Contracts / Contract
 - Contracts / BeatTheSystemContract
 - Contracts / Arbiter
@@ -368,9 +376,15 @@ Build e618b02
 - Contracts / ContractScript
 - Contracts / LatticeProbeResult
 - Contracts / VaultEscapeResult
+- Built-in Types / Counter
+- Built-in Types / defaultdict
+- Built-in Types / deque
 - Built-in Types / dict
+- Built-in Types / float
 - Built-in Types / generator
+- Built-in Types / int
 - Built-in Types / list
+- Built-in Types / OrderedDict
 - Built-in Types / set
 - Built-in Types / slice
 - Built-in Types / str
@@ -389,6 +403,7 @@ Build e618b02
 - Built-in Modules / CacheInfo
 - Built-in Modules / Field
 - Built-in Modules / Match
+- Built-in Modules / Pattern
 - Exploration / CatalogedCreature
 - Exploration / CatalogedFragment
 - Exploration / Marker
@@ -650,7 +665,7 @@ Item flow through machine ports needs **Auto Feeders** research. Until then the 
 ### Building and outposts
 
 **How do I found an outpost?**
-Buying the Outpost Kit is only the material step. You also need **Outpost Construction** and **Constructor Module** research, plus a Pioneer carrying a Nav Module, a Battery Holder with a charged Portable Battery, and a Cargo Rack holding the kit. Place an Outpost blueprint in Plan Mode or with `construction_blueprint.plan_structure("outpost", x, y)`, drive there, brake, and build it. **First Outpost** walks the whole sequence.
+Buying the Outpost Kit is only the material step. You also need **Outpost Construction** and **Constructor Module** research, plus a Pioneer with a Nav Module and a Constructor Module mounted, a Battery Holder with a charged Portable Battery, and a Cargo Rack holding the kit. Place an Outpost blueprint in Plan Mode or with `construction_blueprint.plan_structure("outpost", x, y)`, drive there, brake, and build it. **First Outpost** walks the whole sequence.
 
 **How do I deploy a building at an outpost once it exists?**
 Deploying is not freight, so there is usually nothing to drive out. Buy the shop kit and deploy it from **Inventory** straight into any founded outpost; upgrade packs are consumed into a finished machine the same way. Only constructor-built Planet Map machines, such as Thermal Caps, pumps, and field drills, need a Pioneer to carry the kit and build them in place.
@@ -1263,12 +1278,12 @@ else:
   print("Dangerously cold")
 ```
 
-The first branch whose condition is true runs, and every branch after it is skipped. That is why the order matters: write the most specific condition first. Reversing the chain above would print `Cold` for every temperature below 20, because `temp > -40` is already true by then.
+The first branch whose condition is true runs, and every branch after it is skipped. That is why the order matters: write the most specific condition first. Putting `temp > -40` first would print `Cold` for every temperature above -40, including temperatures that should print `Warm` or `Above freezing`.
 
-`elif` is not the same as a second `if`. A chain picks exactly one branch; separate `if` statements each get tested, so more than one can run.
+`elif` is not the same as a second `if`. A chain runs at most one branch. With `else`, exactly one branch runs; separate `if` statements each get tested, so more than one can run.
 
 ```
-# One of these runs.
+# At most one of these runs.
 if level > 80:
   self.set_throttle(0)
 elif level < 20:
@@ -1402,7 +1417,19 @@ match result:
     warn(reason, message)
 ```
 
-Class patterns such as `case Thing(x):` are not part of the interpreter. Use list, tuple, dict, literal, and field-name patterns instead.
+Class patterns check a value's type and read its attributes:
+
+```
+match shape:
+  case Circle(radius=r):
+    print("circle", r)
+  case Point(0, y):
+    print("on the y axis at", y)
+  case int(n) | float(n):
+    print("a number", n)
+```
+
+Keyword sub-patterns name attributes. Positional ones follow the class's `__match_args__`, which `@dataclass` sets to its fields in order. For built-in types such as `int` and `str`, one positional sub-pattern captures the whole value.
 
 *Guide / Programming*
 
@@ -1485,6 +1512,7 @@ if sector not in visited:
 - `.zfill(width)`, pad with zeros
 - `.center(w)` / `.ljust(w)` / `.rjust(w)`, alignment
 - `.format(args)`, `"Hello {}".format("world")`
+- `%` formatting, `"%d items at %.1f%%" % (count, share)`
 
 *Guide / Programming*
 
@@ -1721,6 +1749,7 @@ These functions are always available.
 - `chr(code)`, `ord(char)`
 - `hex(n)`, `bin(n)`, `oct(n)`, integer to base-prefixed string
 - `repr(value)`, debug-friendly string representation
+- `format(value, spec)`, format one value the way an f-string field does, such as `format(3.14159, ".2f")`
 
 ### Math
 
@@ -1743,11 +1772,11 @@ These functions are always available.
 - `range(stop)` / `range(start, stop, step)`
 - `sorted(sequence, key=fn, reverse=False)`, new sorted list. Pass `key=lambda x: x.value` to sort by a computed field; `reverse=True` for descending.
 - `reversed(sequence)`, new reversed list
-- `enumerate(sequence, start=0)`, list of `(index, value)` pairs
-- `zip(sequence1, sequence2, ..., strict=False)`, combine sequences into pairs; `strict=True` raises if lengths differ
+- `enumerate(sequence, start=0)`, list of `(index, value)` pairs; over a generator it stays lazy, as do `zip`, `map`, and `filter`
+- `zip(sequence1, sequence2, ..., strict=False)`, combine corresponding elements into tuples with one element from each sequence; `strict=True` raises if lengths differ
 - `map(fn, sequence)` / `filter(fn, sequence)` / `reduce(fn, sequence, initializer?)`, transform, select, or fold items
 - `pairwise(sequence)`, neighboring `(a, b)` pairs
-- `batched(sequence, size)`, fixed-size tuple batches
+- `batched(sequence, size)`, group elements into tuples of up to the requested size; the last tuple can be shorter
 - `starmap(fn, sequence)`, call `fn` with tuple/list items unpacked as arguments
 - `flatten(sequence)`, flatten one nested level
 - `count_by(sequence, key_fn?)`, count values or computed keys into a dict
@@ -1764,9 +1793,14 @@ These functions are always available.
 
 ### Modules
 
-- `import random`, random-number helpers
-- `from functools import reduce`, reducer helper as a module import, plus `partial` for pre-bound callables and `lru_cache` / `cache` for memoization
-- `import re`, regular expressions: `search`, `match`, `fullmatch`, `findall`, `sub`, and `split`
+- `import random`, random-number helpers: `choice`, `choices`, `shuffle`, `sample`, `randrange`, `uniform`, `gauss`, and `seed`
+- `import math`, Python's math functions and constants: `gcd`, `lcm`, `factorial`, `comb`, `hypot`, `dist`, `isnan`, `e`, and the rest
+- `import itertools`, lazy iterators: `count`, `cycle`, `repeat`, `islice`, `groupby`, `zip_longest`, `tee`, `takewhile`, `dropwhile`, and the rest of Python's module
+- `import operator`, operators as functions: `add`, `mul`, `itemgetter`, `attrgetter`, `methodcaller`, and the rest
+- `import string`, text constants: `ascii_letters`, `ascii_uppercase`, `digits`, `punctuation`, `whitespace`, plus `capwords`
+- `from collections import Counter, defaultdict, OrderedDict, deque, namedtuple`, counting, dictionaries with a default, ordered dictionaries, double-ended queues and tuples with named fields
+- `from functools import reduce`, reducer helper as a module import, plus `partial` for pre-bound callables, `lru_cache` / `cache` for memoization and `cmp_to_key` to sort with a compare function
+- `import re`, regular expressions: `compile`, `search`, `match`, `fullmatch`, `findall`, `finditer`, `sub`, `subn`, `split`, and `escape`
 - `from dataclasses import dataclass, field`, generated record-class construction and field configuration, plus `asdict`, `astuple`, `fields`, `replace`, `is_dataclass`, and the `MISSING` sentinel
 - `import json`, JSON text: `dumps` and `loads`
 - `import heapq`, priority queues: `heappush`, `heappop`, `heappushpop`, `heapreplace`, `heapify`, `nsmallest`, and `nlargest`
@@ -1975,19 +2009,19 @@ Imports have several precise kinds: executable built-in modules, typing-only sup
 
 ### Executable built-in modules
 
-Use `import random`, then `random.randint(1, 10)`, `import re` for regular expressions, `import json` to turn records into text and back, `import heapq` for priority queues, `import traceback` to find out where an exception you caught came from, `from enum import Enum, IntEnum, StrEnum, Flag, auto` for named sets of constants, `from functools import reduce, partial, lru_cache, cache` for reducer-style algorithms, pre-bound callables and memoization, or `from dataclasses import dataclass, field` for generated record classes, with `asdict`, `astuple`, `fields`, `replace`, `is_dataclass` and the `MISSING` sentinel alongside them. You can also call `random()`, `rand()`, `randint(min, max)`, and `reduce(fn, iterable, initializer?)` directly as global helpers. Everything else stays on its own module so the code says where it came from: regex helpers on `re`, and `dataclass` and `field` likewise require their standard module import.
+Use `import random`, then `random.randint(1, 10)`, `import re` for regular expressions, `import json` to turn records into text and back, `import heapq` for priority queues, `import traceback` to find out where an exception you caught came from, `import math` for Python's math functions and constants such as `math.gcd`, `math.hypot` and `math.pi`, `import itertools` for lazy iterators such as `itertools.count`, `itertools.islice` and `itertools.groupby`, `import operator` for operators as functions such as `operator.add` and `operator.itemgetter`, `import string` for text constants such as `string.ascii_uppercase` and `string.digits`, `from collections import Counter, defaultdict, OrderedDict, deque, namedtuple` for counting, dictionaries with a default, ordered dictionaries, double-ended queues and tuples with named fields, `from enum import Enum, IntEnum, StrEnum, Flag, auto` for named sets of constants, `from functools import reduce, partial, lru_cache, cache, cmp_to_key` for reducer-style algorithms, pre-bound callables, memoization and compare-function sorting, or `from dataclasses import dataclass, field` for generated record classes, with `asdict`, `astuple`, `fields`, `replace`, `is_dataclass` and the `MISSING` sentinel alongside them. You can also call `random()`, `rand()`, `randint(min, max)`, `reduce(fn, iterable, initializer?)` and the common math functions such as `sqrt(x)` and `floor(x)` directly as global helpers. Everything else stays on its own module so the code says where it came from: regex helpers on `re`, and `dataclass` and `field` likewise require their standard module import.
 
 ### Typing and editor support
 
-`typing`, `types`, `collections.abc`, and `user_stubs` provide names for annotations and editor analysis. Their type names are erased while a script runs; they are not a place for executable helpers. `typing.TYPE_CHECKING` is always `False` in the game. `collections` is the package used to reach `collections.abc`. Put executable shared code in a Library instead of `user_stubs.py`.
+`typing`, `types`, `collections.abc`, and `user_stubs` provide names for annotations and editor analysis. Their type names are erased while a script runs; they are not a place for executable helpers. `typing.TYPE_CHECKING` is always `False` in the game. `typing.NamedTuple` is the one that runs: `class Point(NamedTuple):` builds a named tuple class, as `collections.namedtuple` does. `collections.abc` sits inside the executable `collections` module and holds only annotation names. Put executable shared code in a Library instead of `user_stubs.py`.
 
 `from __future__ import annotations` is a compiler directive, not a normal binding. Put future directives at the beginning of a module, after an optional module docstring and before ordinary statements. The directive itself creates no `annotations` name.
 
-`__builtins__` is the explicit import view of the shared interpreter and game root, for example `from __builtins__ import len, get_component`. Script-owner locals such as `self` and `panel` are not part of that shared module. Game type names such as `Smelter`, `Battery`, and `Component` are part of it too, as annotation-only names: `from __builtins__ import Smelter` binds `Smelter` wherever a type is named. An annotation needs no import, because annotations never run; a place that does run, such as a `TypedDict` field dictionary or a type alias, does need it. In an external editor those names are already in scope and need no import at all. Every machine is a `Component` at runtime, so branch on `type_id` when you need to tell one kind from another; there is no per-machine class to pass to `isinstance`. The generated `builtins` and `code_terraform` stubs exist only for external-editor type checking and cannot be imported by a running game script.
+`__builtins__` is the explicit import view of the shared interpreter and game root, for example `from __builtins__ import len, get_component`. Script-owner locals such as `self` and `panel` are not part of that shared module. Game type names such as `Smelter`, `Battery`, and `Component` are part of it too: `from __builtins__ import Smelter` binds the `Smelter` class. An annotation needs no import, because annotations never run; a place that does run, such as an `isinstance` test, a `TypedDict` field dictionary or a type alias, does need it. An external editor has those names in scope without the import, but the game still needs it wherever the name runs. `isinstance(machine, Smelter)` is `True` for a smelter, every machine is also a `Component`, and `issubclass(Smelter, Component)` is `True`; `type_id` names a machine's type as a string. The generated `builtins` and `code_terraform` stubs exist only for external-editor type checking and cannot be imported by a running game script.
 
 ### Player Libraries
 
-After **Ship Computer** and **Shared Library** are researched, open **Ship → Computer → Library** in the left sidebar and click `+ New`. A Library script is shared code: write a helper once, then import it from any machine script.
+After **Ship Computer** and **Shared Library** are researched, open **Ship → Computer → Library** in the left sidebar and click **+ New**. A Library script is shared code: write a helper once, then import it from any machine script.
 
 Create a Library script called `sensors`:
 
@@ -2227,7 +2261,9 @@ print(b < a, a)
 
 A dataclass remains an ordinary user-class instance. It does not become a dict and cannot cross JSON-shaped game boundaries such as the Signal Bus or notebook APIs. Use `TypedDict` for mapping-shaped payloads and cached rows; use a dataclass for methods, validation, generated construction, value equality, or ordering.
 
-The compatibility spellings `frozen=False`, `unsafe_hash=False`, `slots=False`, and `weakref_slot=False` may be passed, but their `True` behavior is not supported. `match_args`, `ClassVar`, `InitVar`, `MISSING`, `KW_ONLY`, `Field`, `FrozenInstanceError`, `is_dataclass`, `asdict`, `astuple`, `replace`, `fields`, `make_dataclass`, and public `__dataclass_fields__` introspection are not supported. Annotation types otherwise stay erased and are not enforced. Canonical `ClassVar` and `InitVar` annotations are recognized only so the decorator can reject those unsupported field forms clearly; all other fields come from executed annotated names.
+Convert a dataclass instance with `dataclasses.asdict()` before sending or storing it as a record. `asdict()` produces a dict and `astuple()` produces a tuple; both recursively convert nested dataclass instances inside lists, tuples, and dictionaries. Those containers are rebuilt; sets receive a shallow copy. Other values stay the same objects rather than being deep-copied. `fields()` accepts a dataclass class or instance and returns its `Field` records in declaration order; `MISSING` marks an absent default or default factory. `is_dataclass()` recognizes dataclass classes and instances. `replace()` creates a new instance with the specified field changes through its constructor, including `__post_init__`.
+
+The compatibility spellings `frozen=False`, `unsafe_hash=False`, `slots=False`, and `weakref_slot=False` may be passed, but their `True` behavior is not supported. `match_args`, `ClassVar`, `InitVar`, `KW_ONLY`, `FrozenInstanceError`, `make_dataclass`, constructing a `Field` directly, and public `__dataclass_fields__` introspection are not supported. Annotation types otherwise stay erased and are not enforced. Canonical `ClassVar` and `InitVar` annotations are recognized only so the decorator can reject those unsupported field forms clearly; all other fields come from executed annotated names.
 
 ### Controlling construction with __new__
 
@@ -2246,7 +2282,7 @@ class Settings:
 print(Settings() is Settings())  # True, always the same object
 ```
 
-`__new__` takes the class as its first parameter (`cls`, not `self`) and must **return** the object. `super().__new__(cls)` makes a fresh one. Return an object of another type and `__init__` is skipped entirely, which is how a constructor can hand back a subclass.
+`__new__` takes the class as its first parameter (`cls`, not `self`) and must **return** the object. `super().__new__(cls)` makes a fresh one. `__init__` is skipped only if the returned value is not an instance of the class being constructed. Returning an instance of that class or a subclass runs the returned object's `__init__`.
 
 > `__new__` must answer immediately: it cannot `sleep()` or take world actions. Allocation only picks the object; put the work in `__init__`, which can still do both.
 
@@ -2308,7 +2344,7 @@ Reasonably-full Python classes, with these deliberate exclusions. Defining any o
 
 ## Code Editor
 
-Each machine with a script slot has a code editor window. Open it by clicking `MANAGE` on the machine card.
+Each machine with a script slot has a code editor window. Open it by clicking **MANAGE** on the machine card.
 
 ### Tabs
 
@@ -2330,7 +2366,7 @@ Each machine with a script slot has a code editor window. Open it by clicking `M
 
 - **Duplicate Variant**, save the current code as a new named variant
 - `🔊` **Mute**, mute this script's console output. Text gets a strikethrough when muted. Muted scripts don't print to the console; errors still show. Useful for silencing background scripts you're not actively working on.
-- `⊞` **Dock**, switch to an IDE-style layout. The editor pins to the left, the console docks to the bottom-right, and the dashboard fills the remaining space. The sidebar hides automatically to maximize content area. Drag the dividers between panels to resize. Your dock layout is remembered between sessions. Click `Undock` to return to floating windows.
+- `⊞` **Dock**, switch to an IDE-style layout. The editor pins to the left, the console docks to the bottom-right, and the dashboard fills the remaining space. The sidebar hides automatically to maximize content area. Drag the dividers between panels to resize. Your dock layout is remembered between sessions. Click **Undock** to return to floating windows.
 - `⤓` **Auto-min**, when enabled (green), the editor minimizes automatically when you run the script. Useful for watching the dashboard while your code executes.
 
 ### Navigating from code to DOCS
@@ -2344,6 +2380,10 @@ The editor can jump straight to matching DOCS entries while you write:
 - **`F2` to rename** a symbol (variable, user function, parameter). Renames every whole-word occurrence in the current script, skipping strings and comments. Reserved names (keywords, `self`, builtins) can't be renamed.
 
 > Hover for signatures. Cmd/Ctrl+click opens the matching DOCS entry without leaving the editor.
+
+### Errors and warnings
+
+The editor checks your code as you type and underlines what would fail or looks wrong. To silence a check you know is fine, end that line with `# type: ignore` or `# noqa`, as in other Python tools. A `# type: ignore` line at the very top of a script, before any code, quiets the whole script. Syntax errors always show, because a script that does not parse cannot run. External editors show the same checks and follow the same comments.
 
 ### Commands tab
 
@@ -2363,7 +2403,7 @@ Scripts run continuously if they contain a `while True:` loop. Otherwise they ru
 
 A script saved as running starts again from the top when you load the game. Its local variables and current line are not restored. A paused script stays paused but also starts from the top when you resume it after loading; a stopped script stays stopped. Persistent world state and machine work remain where they were, so check current cargo, storage, and machine state before repeating actions. Use the **Data Archive** for script progress that must survive reloads.
 
-The console window shows output from all unmuted scripts. Use `CLEAR` to empty it and `AUTO-SCROLL` to follow new output.
+The console window shows output from all unmuted scripts. Use **CLEAR** to empty it and **AUTO-SCROLL** to follow new output.
 
 *Guide / Editor & Tools*
 
@@ -2490,11 +2530,11 @@ Compatible family sharing is explicit machine metadata, not a guess based on nam
 
 ### Unassigned scripts
 
-Undeploying or deconstructing a machine stops its script. Authored code stays in **Computer > Scripts > Unassigned**, with its notes, private Main, selected variant, and run history. **Current** shows assigned scripts by default; **All** includes both views.
+Undeploying or deconstructing a machine, or deleting a Control Room card, stops its script. Authored code stays in **Computer > Scripts > Unassigned**, with its notes, private Main, selected variant, and run history. **Current** shows assigned scripts by default; **All** includes both views.
 
-Unassigned scripts cannot run. Use their actions menu to **Copy to machine**, **Copy to Playground**, or **Delete**. You can select several unassigned scripts for deletion. Deletion removes their private data but keeps shared machine variants.
+Unassigned scripts cannot run. Use their actions menu to **Copy to machine** (**Copy to panel** for a card's script), **Copy to Playground**, or **Delete**. You can select several unassigned scripts for deletion. Deletion removes their private data but keeps shared machine variants.
 
-**Copy to machine** uses a compatible machine slot and keeps its existing ID. It stops the target and preserves the previous code in Variants before replacing Main. Compatibility requires a recorded former machine type and slot; older unassigned scripts without that information can still be reviewed and copied to Playground.
+**Copy to machine** uses a compatible machine slot and keeps its existing ID. It stops the target and preserves the previous code in Variants before replacing Main. Compatibility requires a recorded former machine type and slot; older unassigned scripts without that information can still be reviewed and copied to Playground. **Copy to panel** works the same way on any card you choose, since every card's script uses the same `panel` drawing API.
 
 **Copy to Playground** creates a new named document without replacing Scratch or running the code. The original script stays available with all its metadata. Copied code is unchanged, including machine IDs and `self` references.
 
@@ -2583,7 +2623,7 @@ Debug mode is a read-only-plus-pause tool. Enabling Debug on one script **cannot
 
 ## Control Room
 
-The Control Room is a top-level page for **cards**: script-driven panels that draw live dashboards and can issue commands through shared game APIs. Open the **Control Room** page, click `+ New Card`, and a fresh panel script is bound to a canvas.
+The Control Room is a top-level page for **cards**: script-driven panels that draw live dashboards and can issue commands through shared game APIs. Open the **Control Room** page, click **+ New Card**, and a fresh panel script is bound to a canvas.
 
 A panel script runs every game tick. The pattern is always the same:
 
@@ -2620,19 +2660,22 @@ The data comes from existing APIs; panels provide a canvas and widgets for displ
 
 A radio group, a combo box and a list each take their choices as one list and store one value, so a five-way choice costs the card one saved key rather than five. `combo` and `text_field` open the game's own menu and a real text editor over the card, which is why they stay readable at any card size and why typing into a field has working selection, clipboard and input method.
 
-**Fifteen primitives** for everything the named widgets don't cover:
+**Seventeen primitives** for everything the named widgets don't cover:
 
 - `draw_text` (with optional `wrap`), `draw_icon`
 - `draw_rect` / `fill_rect`, `draw_circle` / `fill_circle`, `draw_line`
 - `draw_polygon` / `fill_polygon`, `polyline`
+- `texture` / `draw_texture`, for pixel art and backgrounds
 - `clip_rect` / `clear_clip`
 - `clear`, `width`, `height`
 
-**Driving the widgets from code:** `set_switch`, `set_slider`, `set_selected` and `set_text` force a control to a value without waiting for a click; `forget` drops one stored value and `clear_inputs` drops them all. Stored keys are never swept for you, because a card that paints one page at a time would lose the other page's state, so a card is capped at 512 of them.
+**Driving the widgets from code:** `set_switch`, `set_slider`, `set_selected` and `set_text` force a control to a value without waiting for a click, and `get_switch`, `get_slider`, `get_selected` and `get_text` read one without drawing it, for a control on a page the card is not showing; `forget` drops one stored value and `clear_inputs` drops them all. Stored keys are never swept for you, because a card that paints one page at a time would lose the other page's state, so a card is capped at 512 of them.
 
-**Reading the player directly:** `mouse()` gives the cursor position on this card, `clicks()` hands you every click that missed a widget so you can hit-test your own drawing, and `capture_keys()` plus `keys()` give a focused card the keyboard. The cursor is sampled once per tick and the card repaints at the same rate, so anything you draw from `mouse()` follows the pointer about a frame behind: right for showing what is under it, wrong for anything that must track it exactly.
+**Reading the player directly:** `mouse()` gives the cursor position on this card and whether the left button went down or came back up since you last asked, which is what dragging needs, `clicks()` hands you every click that missed a widget so you can hit-test your own drawing, and `capture_keys()` plus `keys()` give a focused card the keyboard. The cursor is sampled once per tick and the card repaints at the same rate, so anything you draw from `mouse()` follows the pointer about a frame behind: right for showing what is under it, wrong for anything that must track it exactly.
 
-Every widget that takes a `color` parameter accepts theme tokens: `"accent"`, `"success"`, `"warning"`, `"error"`, `"text-bright"`, `"text-secondary"`, `"text-muted"`, `"text-value"`. Cards can also paint with **surface tokens**, bg-base, bg-surface, bg-panel, border, border-dim. Wrap a `card(x, y, w, h, title)` for the bordered+titled frame, fill zones with `fill_rect(x, y, w, h, "bg-surface")`, and a manage-style row is `status_dot` (green) + `draw_text` (name) + `button` (play/manage). Theme tokens resolve from the active theme whenever the script redraws the card.
+**Laying things out:** a widget is placed by the point you pass, but not every widget uses it the same way. Boxes, bars, pills and controls start at their top-left corner; `draw_text` and `label` are centered on `y`; `counter` stands on `y` as its baseline; circles, dots and gauges are centered on the point. `last_bounds()` gives you the box the last widget took up, top-left whatever it was placed by, so you can put the next thing after it, and `measure_text()` gives you the size of text before you draw it.
+
+Every widget that takes a `color` parameter accepts theme tokens: `"accent"`, `"success"`, `"warning"`, `"error"`, `"text-bright"`, `"text-secondary"`, `"text-muted"`, `"text-value"`. It also accepts any CSS color: hex (`"#ff8800"`), `"rgb(255, 136, 0)"`, `"hsl(30, 100%, 50%)"`, or a name like `"orange"`. Theme tokens follow the player's theme; CSS colors stay exactly as written. Cards can also paint with **surface tokens**, bg-base, bg-surface, bg-panel, border, border-dim. Wrap a `card(x, y, w, h, title)` for the bordered+titled frame, fill zones with `fill_rect(x, y, w, h, "bg-surface")`, and a manage-style row is `status_dot` (green) + `draw_text` (name) + `button` (play/manage). Theme tokens resolve from the active theme whenever the script redraws the card.
 
 See the **Panel** entry in the API reference (left sidebar) for the full method list with live previews of each widget.
 
@@ -2669,7 +2712,7 @@ No `sleep()` needed, the interpreter paces the loop automatically. The panel rep
 
 ### Limits
 
-- **50 cards per save**, max. Past that, `+ New Card` is grayed out. Delete one to make room.
+- **50 cards per save**, max. Past that, **+ New Card** is grayed out. Delete one to make room.
 - **Board density**, choose 2-6 columns from the selector above the board. The untouched default uses 2 for ordinary workspaces, 4 for 4K-class workspaces, and 6 for sufficiently wide ultrawides. A manual choice persists.
 - **Four card sizes**, 1×1, 2×1 (wide), 1×2 (tall), and 2×2 (big), selected directly from the card-size menu. The logical canvas scales with the span, so **draw relative to `width()` / `height()`** and your card reflows at any size.
 - **One script per card.** Want separate concerns? Make multiple cards.
@@ -2721,7 +2764,7 @@ Install the extension once. It is a thin client: the game installs the language 
 
 Game files automatically use the **Code Terraform** language mode. Completion, diagnostics, hover, signature help and Go to Definition use the same analysis as the in-game editor, including each script's own `self` or `panel`. Other Python projects keep their Python tooling.
 
-Save edits to sync them into the game. The VS Code Command Palette includes **Create Library in Game**, **Import File as Game Library**, **Rename Library and Update Imports**, **Run Script in Game** and **Stop Script in Game** under Code Terraform. Unknown files offer an Import action. Save files and resolve in-game source conflicts first. Rename updates game imports and saved variants through the normal game command. Attach and delete scripts in the game. No command runs host Python. Its status item reports context availability; click it to restart the service.
+Save edits to sync them into the game. The VS Code Command Palette includes **Create Library in Game**, **Import File as Game Library**, **Rename Library and Update Imports**, **Apply Library in Game**, **Apply All Libraries in Game**, **Run Script in Game** and **Stop Script in Game** under Code Terraform. Apply deploys saved Library edits and restarts the scripts that import them, the same as Apply in the game; it never runs on save. Unknown files offer an Import action. Save files and resolve in-game source conflicts first. Rename updates game imports and saved variants through the normal game command. Attach and delete scripts in the game. No command runs host Python. Its status item reports context availability; click it to restart the service.
 
 `codeterraform-workspace.json` contains a read-only analysis snapshot. Keep this save open to refresh owners, names and research. Offline analysis uses the most recent snapshot. If the folder was written by a different game build than the server in use, open the save in the game once to refresh both. Do not edit the generated context or the sync manifest.
 
@@ -2729,7 +2772,7 @@ Save edits to sync them into the game. The VS Code Command Palette includes **Cr
 
 Keep this save open and the game unpaused. In VS Code, open a machine, panel, or contract script, set a breakpoint, and press F5. An idle script starts; a running script attaches without restarting. Breakpoints, conditions, logpoints, call stacks, locals, watches, hover inspection, and Step Over/Into/Out use the game's interpreter. Library breakpoints are reached through a script that imports that Library. Each session controls one script.
 
-Shift+F5 or closing the debug session disconnects and leaves the script running. Use **Stop Script in Game** to stop it. Watches and the Debug Console accept read-only expressions; they cannot execute world actions or assign variables. Save your files first. To run changed main-script code, use **Run Script in Game** before attaching again. Apply edited Libraries in the game and resolve any source conflicts. If you enabled **Pause When Inactive**, turn it off when you want execution to continue while the game is minimized.
+Shift+F5 or closing the debug session disconnects and leaves the script running. Use **Stop Script in Game** to stop it. Watches and the Debug Console accept read-only expressions; they cannot execute world actions or assign variables. Save your files first. To run changed main-script code, use **Run Script in Game** before attaching again. Apply edited Libraries, from the editor or in the game, and resolve any source conflicts. If you enabled **Pause When Inactive**, turn it off when you want execution to continue while the game is minimized.
 
 Other editors with a Debug Adapter Protocol client can launch `node /path/to/debug-adapter.cjs`. That file lives beside the installed `server.cjs`. Use a `launch` request to attach and run an idle script, or `attach` to inspect an existing runtime. Set `workspace` to this save's scripts directory and `script` to the script's file path. The adapter uses standard input/output. It needs Node.js 20 or later outside VS Code.
 
@@ -2816,7 +2859,14 @@ The game mirrors visible console output into `<save_id>_scripts/logs/` from the 
 
 ### When edits collide
 
-If an external edit collides with a dirty in-game buffer, the game first saves BOTH sources as distinct named recovery variants. It then asks you to choose **Use External** or **Keep In-Game** for the active source. Neither side is silently discarded: the version you do not activate remains available in the Variants tab. If both recovery variants cannot be created, the editor stays locked and no version is chosen. Free a variant slot if needed, then save the external file again to retry. A clean in-game buffer accepts an external change normally.
+If a script's file changes on disk while you are working on that script in the in-game editor, nothing is replaced and nothing is locked. Your version stays in the editor and keeps saving with the game. A bar at the top of that editor says the script also changed elsewhere and names where the game kept the other version: a variant of the script, or a recovery file in the scripts folder.
+
+- **Keep mine** keeps your version and writes it to the file.
+- **Use other version** switches the editor to the version from disk. Your version stays in the copy the game kept of it.
+- **Merge both** combines the two when they changed different parts of the script. Undo restores what you had.
+- **Compare** opens the Variants tab on the other version.
+
+If no copy of the other version could be saved yet, the game leaves the file alone, because it is the only place that version exists: **Save a copy again** retries, and **Overwrite the file** writes your version over it. Saving and quitting keep working the whole time. If you have no work of your own on that script, the editor simply picks up the change.
 
 ### Use cases
 
@@ -2882,7 +2932,7 @@ Ground vehicles use a forgiving service-area model. You do not need to land on o
 
 - **Near**, the vehicle is inside a machine or outpost service area. It may still be driving through.
 - **Stopped**, live speed is zero. A dead battery can stop a vehicle without canceling its route.
-- **Parked**, the vehicle has no live movement or positive throttle. `self.nav.brake()` parks it immediately.
+- **Parked**, the vehicle is stationary with no powered movement command. A stationary vehicle with no drive energy counts as parked even if its throttle or route remains set. Rescue and charging holds also keep a vehicle parked. `self.nav.brake()` parks it immediately.
 - **Docked**, the vehicle is parked inside the service area required by an outpost, machine, or station.
 - **Connected**, an item endpoint, pipe, or power relationship has been configured. A connection does not prove that a vehicle is docked and does not move cargo by itself.
 
@@ -2907,6 +2957,10 @@ self.nav.brake()
 After `brake()`, cargo transfer, charging, and hardware service can use the matching service area. A timed cargo handoff keeps the vehicle parked until its handling cycle ends; movement commands return `busy` during that cycle.
 
 `fleet.vehicles()` reports current activity separately from docking. `.status` can be `"moving"`, `"charging"`, `"drilling"`, or another activity. `.is_docked` means the ground vehicle was parked at an outpost when that snapshot was created; `.docked_at` gives that outpost id.
+
+### Charging Stations
+
+A parked vehicle is docked at one Vehicle Charging Station at a time. Every station inside an outpost covers the whole outpost, so when an outpost has several, the vehicle's own script picks one with `self.dock("charging_station_2")`. Without a choice, it uses the eligible station with the shortest distance to its station position or its outpost's center, with equal-distance ties broken alphabetically by station id. The choice lasts until the vehicle drives away. `self.current_station()` and the fleet ref's `.current_station` report the station.
 
 Drones use explicit station docking. A drone at a field Mining Drill must have completed its route before it can load ore.
 
@@ -3206,7 +3260,45 @@ print(cleared.status, cleared.count, cleared.message)
 
 Values must be JSON-safe: `None`, booleans, finite numbers, strings, lists/tuples, and dictionaries with string keys. Functions, components, sets, class instances, and dictionaries with non-string keys produce `"invalid_value"`. A payload supports up to **8** nested levels, **1,024** total values, and **4,096** characters in each string or dictionary key.
 
-Channel ids contain **1-64** letters, numbers, `_`, `.`, `:`, or `-`. Reserved object-field names such as `"__proto__"` are rejected. A queue holds up to **64** messages and a save up to **128** channels. The Computer operator uses these same limits. Always branch on the returned `.status`; `.message` is the authoritative reason text.
+Channel ids contain **1-64** letters, numbers, `_`, `.`, `:`, or `-`. Reserved object-field names such as `"__proto__"` are rejected. A queue holds up to **64** messages and a save up to **512** channels. The Computer operator uses these same limits. Always branch on the returned `.status`; `.message` is the authoritative reason text.
+
+*Guide / Automation Systems*
+
+## Automations
+
+### Overview
+
+An automation is a script that belongs to no machine. Use it for work that spans the whole base: managing power, buying from the shop, deploying equipment, planning construction.
+
+Automations unlock with **Automations** research. Open **Ship Computer > Automations** and click **+ New Automation**.
+
+### How it runs
+
+An automation runs whichever page is open. It has no power supply of its own, so a brownout never pauses it, and it restarts with the game like any other running script. Start, stop and edit it from the Automations tab, the Scripts tab, or its editor window.
+
+### What it can do
+
+It reads every component through `get_component()`. It can give orders to the shared systems that accept them from any script: `power_control`, `run_control`, `shop`, `inventory`, `computer`, `construction_blueprint`, `comms`, and the other components whose DOCS entries say so.
+
+```
+power = get_component("power_control")
+
+while True:
+    total = power.total()
+    if total.capacity > 0 and total.stored < total.capacity * 0.2:
+        print("Battery low:", total.stored, "of", total.capacity, "Wh")
+    sleep(60)
+```
+
+### What it cannot do
+
+There is no `self`. A machine's own actions, such as moving a vehicle, mining, or setting a recipe, work only from that machine's script. To have a machine act, send it a message on the Signal Bus and let its script read it.
+
+### Limits
+
+- **50 automations per save.** Past that, **+ New Automation** is grayed out.
+- **One script per automation.** Want separate jobs? Make separate automations.
+- Deleting an automation keeps the code you wrote in **Computer > Scripts > Unassigned**.
 
 *Guide / Automation Systems*
 
@@ -3265,11 +3357,15 @@ print(cleared.status, cleared.count)
 
 `delete()` returns `ActionResult`. `clear()` returns `CountResult`, whose `.count` is the exact number of entries removed.
 
-### Value rules
+### Key rules
 
-Values must be JSON-safe: `None`, booleans, finite numbers, strings, lists/tuples, and dictionaries with string keys. Each stored value may contain up to **8** nested levels, **16,384** total nodes, and **4,096** characters per string or dictionary key. The root value, every contained value, and every list, tuple, or dictionary container each count as one node; dictionary keys do not. The exact result statuses are `"ok"`, `"invalid_key"`, `"entry_limit"`, `"invalid_value"`, `"not_found"`, and `"busy"`; every applicable command returns a precise `.message`. The **512**-entry limit and transaction contention are programmatically distinct.
+A key is 1 to **96** characters: ASCII letters, digits, `_`, `.`, `:`, or `-`. Spaces, `/`, and every other character are rejected, and so are the reserved names `__proto__`, `prototype`, and `constructor`. For such a key, `set()`, `transaction()`, and `delete()` return `.status == "invalid_key"` with the rule in `.message`, and `get()` and `has()` raise `ValueError`. A prefix for `keys()` or `clear()` uses the same characters and length, and an empty prefix matches every key. It matches the start of the key as text, so `clear("test")` also removes `"testing.keep"`; end the prefix with `.` to clear one group, as in `clear("test.")`. An invalid prefix makes `keys()` raise `ValueError`, and `clear()` returns `.status == "invalid_key"`.
 
 Name keys by subsystem, such as `"rover.fuel_table"` or `"plants.recipe_scores"`. Use Signal Bus for live coordination and Data Archive for knowledge you want to keep.
+
+### Value rules
+
+Values must be JSON-safe: `None`, booleans, finite numbers, strings, lists/tuples, and dictionaries with string keys. Each stored value may contain up to **8** nested levels, **16,384** total nodes, and **4,096** characters per string or dictionary key. The root value, every contained value, and every list, tuple, or dictionary container each count as one node; dictionary keys do not. The exact result statuses are `"ok"`, `"invalid_key"`, `"entry_limit"`, `"invalid_value"`, `"not_found"`, and `"busy"`; every applicable command returns a precise `.message`. The **2,048**-entry limit and transaction contention are programmatically distinct.
 
 *Guide / Automation Systems*
 
@@ -4578,7 +4674,7 @@ Every component has `.id` (programmatic identifier) and `.name` (display name). 
 
 Read the current game's build identifier, matching the version at the bottom right of Settings and in feedback reports. Available before boot and from shared Libraries on every platform. Use it to identify an exact build when sharing scripts; build hashes cannot be compared as newer or older versions.
 
-- **Returns** String containing the seven-character commit hash, or `"dev"` in an unstamped development or test environment.
+- **Returns** `str`. The seven-character commit hash, or `"dev"` in an unstamped development or test environment.
 
 ```python
 print(get_game_version())
@@ -4653,7 +4749,7 @@ Access a player-owned entity by its **immutable id** (e.g. `"solar_3"`, `"outpos
 | --- | --- | --- |
 | `name` | `str` | Entity id (machine or outpost) |
 
-- **Returns** Component object
+- **Returns** `Component | None`
 
 ```python
 clock = get_component("clock")
@@ -4671,7 +4767,7 @@ Look up any addressable player-owned component (machine or outpost) by its displ
 | --- | --- | --- |
 | `name` | `str` | The entity's display name |
 
-- **Returns** Component (machine or outpost), or None if no component by that name exists
+- **Returns** `Component | None`. A machine or an outpost. `None` when no component has that name.
 
 ```python
 ore_bin = get_component_by_name("Iron Stockpile")
@@ -4692,7 +4788,7 @@ Look up an infrastructure pipe by id. Returns a live read-only `Pipe` handle, or
 | --- | --- | --- |
 | `pipe_id` | `str` | Pipe id (from `list_pipes()`) |
 
-- **Returns** Live read-only `Pipe` handle or `None`
+- **Returns** `Pipe | None`. A live, read-only handle.
 
 ```python
 pipe = get_pipe("pipe_1")
@@ -4704,7 +4800,7 @@ if pipe != None:
 
 List every infrastructure pipe currently laid (complete or in-progress) as live read-only `Pipe` handles.
 
-- **Returns** List of live read-only `Pipe` handles
+- **Returns** `list[Pipe]`. Live, read-only handles.
 
 ```python
 for pipe in list_pipes():
@@ -4865,6 +4961,33 @@ Read an attribute by string name, exactly like `value.name`. Without `default`, 
 
 - **Returns** `object`
 
+##### `setattr(value: object, name: str, new_value: object, /) → None`
+
+Set the attribute called `name` on `value`, exactly as `value.name = new_value` does, when the name is only known while the script runs: `setattr(state, field, 0)`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `value` | `object` | Object to change |
+| `name` | `str` | Attribute name |
+| `new_value` | `object` | Value to store |
+
+- **Returns** `None`
+
+##### `delattr(value: object, name: str, /) → None`
+
+Remove the attribute called `name` from `value`, exactly as `del value.name` does.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `value` | `object` | Object to change |
+| `name` | `str` | Attribute name |
+
+- **Returns** `None`
+
 ##### `sorted(sequence: Iterable[T], /, *, key: Callable | None = None, reverse: bool = False) → list[T]`
 
 Return a new list sorted using `<` between mutually comparable keys. With `key=None` (the default), each value is its own key. Numeric and boolean keys compare across that family, strings compare lexicographically, and user objects may define the exact rich-comparison slots needed by `<`; unsupported pairs raise. `key=` is called once per item and must be pure: it cannot suspend or mutate game state. `reverse` is truth-tested, and the finite input is handled eagerly within the interpreter's collection limit.
@@ -4893,7 +5016,7 @@ Return a reversed list copy of any finite iterable. This consumes the input full
 
 ##### `enumerate(iterable: Iterable[T], /, start: int = 0) → list[tuple[int, T]]`
 
-List of (index, value) pairs. Optional integer `start=N` shifts the index: `enumerate(items, start=1)` for 1-based indexing. Arbitrarily large integer starts remain exact. `start` may be positional or keyword, but not both.
+List of (index, value) pairs. Optional integer `start=N` shifts the index: `enumerate(items, start=1)` for 1-based indexing. Arbitrarily large integer starts remain exact. `start` may be positional or keyword, but not both. Given a generator, it returns a lazy iterator instead of a list, taking each item only when the loop asks for it.
 
 *Parameters*
 
@@ -4906,7 +5029,7 @@ List of (index, value) pairs. Optional integer `start=N` shifts the index: `enum
 
 ##### `zip(*iterables: Iterable, strict: bool = False) → list[tuple]`
 
-Combine iterables into tuples. With no args, returns empty list. With one arg, returns a list of 1-tuples. Stops at the shortest input unless `strict=True`, which raises if input lengths differ.
+Combine iterables into tuples. With no args, returns empty list. With one arg, returns a list of 1-tuples. Stops at the shortest input unless `strict=True`, which raises if input lengths differ. When an input is a generator, it returns a lazy iterator instead of a list.
 
 *Parameters*
 
@@ -4919,7 +5042,7 @@ Combine iterables into tuples. With no args, returns empty list. With one arg, r
 
 ##### `isinstance(value: object, type_or_tuple: type | tuple, /) → bool`
 
-Check if a value is of the given type. Accepts a builtin type callable (`object`, `int`, `float`, `str`, `list`, `dict`, `set`, `tuple`, `slice`, `bool`), a string type name, a tuple of types, or a type union like `int | float` (matches any). `int` matches whole numbers and booleans, `float` matches fractional / non-finite numbers, and string `"number"` remains the broad numeric family for scripts that intentionally accept either.
+Check if a value is of the given type. Accepts a builtin type callable (`object`, `int`, `float`, `str`, `list`, `dict`, `set`, `tuple`, `slice`, `bool`), a class of your own, a game class imported from `__builtins__` (after `from __builtins__ import Smelter`, a smelter is an instance of `Smelter` and of `Component`), a string type name, a tuple of types, or a type union like `int | float` (matches any). `int` matches whole numbers and booleans, `float` matches fractional / non-finite numbers, and string `"number"` remains the broad numeric family for scripts that intentionally accept either.
 
 *Parameters*
 
@@ -4974,7 +5097,7 @@ Return a proxy that searches the receiver's MRO after a chosen class. Inside a m
 
 ##### `issubclass(cls: type, class_or_tuple: type | tuple, /) → bool`
 
-`True` if `cls` is the given class or a subclass of it (or of any class in the tuple), per the MRO. `issubclass(Dog, Animal)` is `True`; every class is a subclass of `object`.
+`True` if `cls` is the given class or a subclass of it (or of any class in the tuple), per the MRO. `issubclass(Dog, Animal)` is `True`; every class is a subclass of `object`. Game classes imported from `__builtins__` work the same way: `issubclass(Smelter, Component)` and `issubclass(MiningSite, Site)` are `True`.
 
 *Parameters*
 
@@ -5071,7 +5194,7 @@ Convert to integer. With no args returns `0`. Numbers truncate toward zero. Stri
 | Name | Type | Description |
 | --- | --- | --- |
 | `value` | `str \| float` | Number, `True`/`False`, or numeric text to convert |
-| `base` | `int` | Number base for text, from 2 to 36 |
+| `base` | `int` | Number base for text, from 2 to 36, or 0 to detect numeric prefixes |
 
 - **Returns** `int`
 
@@ -5213,6 +5336,19 @@ Developer-readable string for a value, with quotes around strings and nested-rep
 
 - **Returns** `str`
 
+##### `format(value: object, format_spec: str = '', /) → str`
+
+Format one value by a format spec, the same text an f-string field produces: `format(3.14159, ".2f")` → `"3.14"`, `format(42, ">6")` → `"    42"`. With no spec it is `str(value)`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `value` | `object` | Value to format |
+| `format_spec` | `str` | Format spec, such as `".2f"` or `">10"` |
+
+- **Returns** `str`
+
 ### Functional
 
 ##### `total_ordering(cls: type, /) → type`
@@ -5295,7 +5431,7 @@ Round with ties to even. Without `ndigits` (or with `None`), returns the nearest
 
 ##### `pow(base: float, exp: float, mod: int | None = None) → float`
 
-`base` raised to `exp`. Optional `mod` performs exact modular exponentiation and accepts negative exponents when the base has a modular inverse. `base`, `exp`, and `mod` accept positional or keyword form.
+`base` raised to `exp`, exactly like `base ** exp`, so your own classes that define `__pow__` or `__rpow__` work too. Optional `mod` performs exact modular exponentiation and accepts negative exponents when the base has a modular inverse; a class base receives it as `__pow__(exp, mod)`. `base`, `exp`, and `mod` accept positional or keyword form.
 
 *Parameters*
 
@@ -5492,7 +5628,7 @@ Tangent of an angle in radians.
 
 ##### `asin(number: float, /) → float`
 
-Arc sine. Input must be in `-1 to 1`.
+Arc sine. Input must be from `-1` to `1`.
 
 *Parameters*
 
@@ -5504,7 +5640,7 @@ Arc sine. Input must be in `-1 to 1`.
 
 ##### `acos(number: float, /) → float`
 
-Arc cosine. Input must be in `-1 to 1`.
+Arc cosine. Input must be from `-1` to `1`.
 
 *Parameters*
 
@@ -5563,21 +5699,21 @@ Convert degrees to radians.
 
 - **Returns** `float`
 
-##### `sum(iterable: Iterable[float] | Iterable[list], /, start: float | list = 0) → float | list`
+##### `sum(iterable: Iterable[float] | Iterable[list] | Iterable[object], /, start: float | list | object = 0) → float | list`
 
-Sum of every numeric item in an iterable. Optional `start` (number or list): `sum(list_of_lists, [])` flattens. `start` may be positional or keyword, but not both.
+Adds up the items of an iterable with `+`, starting from `start` (default `0`). Works for numbers, lists (`sum(list_of_lists, [])` flattens), tuples, and your own classes that define `__add__` or `__radd__`. Strings are refused: use `"".join(items)`. `start` may be positional or keyword, but not both.
 
 - **Returns** `float | list`
 
 ##### `prod(iterable: Iterable[float], /, start: float = 1) → float`
 
-Product of every numeric item in an iterable. Empty iterables return `start`. `start` may be positional or keyword, but not both.
+Multiplies the items of an iterable with `*`, starting from `start` (default `1`). Works for numbers and for your own classes that define `__mul__` or `__rmul__`. Empty iterables return `start`. `start` may be positional or keyword, but not both.
 
 *Parameters*
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `iterable` | `Iterable[float]` | Numbers to multiply |
+| `iterable` | `Iterable[float]` | Values to multiply |
 | `start` | `float` | Value the product starts from |
 
 - **Returns** `float`
@@ -5628,15 +5764,16 @@ True if any item in the iterable is truthy. Stops at the first truthy item, so g
 
 ### Iteration
 
-##### `iter(iterable: Iterable[T], /) → list | generator`
+##### `iter(iterable: Iterable[T] | Callable, sentinel?: object, /) → list | generator`
 
-Return an iterator. Built-in iterables use a compatibility list-shaped iterator; protocol iterators and generators keep their identity, so `iter(iterator) is iterator`. `for` advances generators and custom iterators one item at a time, so it can break out of an infinite iterator. Consumers that must finish, such as `list(...)`, remain bounded.
+Return an iterator. Built-in iterables use a compatibility list-shaped iterator; protocol iterators and generators keep their identity, so `iter(iterator) is iterator`. `for` advances generators and custom iterators one item at a time, so it can break out of an infinite iterator. Consumers that must finish, such as `list(...)`, remain bounded. With a `sentinel`, `iter(read, None)` calls `read()` for each item and stops at the first result equal to `None`.
 
 *Parameters*
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `iterable` | `Iterable[T]` | Values to iterate |
+| `iterable` | `Iterable[T] \| Callable` | Values to iterate, or a function to call when `sentinel` is given |
+| `sentinel` | `object` | Value that ends the iteration when the function returns it |
 
 - **Returns** `list | generator`
 
@@ -5703,7 +5840,7 @@ Flatten one level of nested iterables into a list. `flatten([[1,2], (3,4)])` →
 
 - **Returns** `list`
 
-##### `count_by(iterable: Iterable, key_fn?: Callable, /) → dict[object, int]`
+##### `count_by(iterable: Iterable[T], key_fn?: Callable, /) → dict[object, int]`
 
 Count items into a dict. Without `key_fn` (or with `None`), counts each item. With a pure `key_fn`, counts the computed key; callbacks cannot suspend the script or mutate game state: `count_by(items, lambda x: x.kind)`. An empty input never inspects or calls the key function.
 
@@ -5711,7 +5848,7 @@ Count items into a dict. Without `key_fn` (or with `None`), counts each item. Wi
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `iterable` | `Iterable` | Values to count |
+| `iterable` | `Iterable[T]` | Values to count |
 | `key_fn` | `Callable` | Optional function that maps each item to the key to count |
 
 - **Returns** `dict[object, int]`
@@ -5730,13 +5867,13 @@ Flattens any number of iterables into one list, in order. `chain([1,2], [3,4])` 
 
 ##### `accumulate(iterable: Iterable[float], /) → list[float]`
 
-Running prefix sum over any finite iterable. `accumulate([1,2,3,4])` → `[1,3,6,10]`. Numeric items only; booleans participate as integers and arbitrarily large integers remain exact.
+Running totals over any finite iterable: the first item, then each total so far plus the next item with `+`. `accumulate([1,2,3,4])` → `[1,3,6,10]`. Works for anything `+` works on, including strings, lists and your own classes that define `__add__`. Arbitrarily large integers remain exact.
 
 *Parameters*
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `iterable` | `Iterable[float]` | Numbers to total as you go |
+| `iterable` | `Iterable[float]` | Values to total as you go |
 
 - **Returns** `list[float]`
 
@@ -5781,7 +5918,7 @@ Cartesian product. `product([0,1], [0,1])` → `[(0,0), (0,1), (1,0), (1,1)]`. E
 
 ##### `map(fn: Callable, iter1: Iterable, iter2?: Iterable, ..., /, strict: bool = False) → list`
 
-Apply pure `fn` to corresponding items of each iterable. Callbacks cannot suspend the script or mutate game state. Single-iter form calls `fn(x)`; multi-iter form calls `fn(x, y, ...)` and stops at the shortest input unless `strict=True`, which raises if input lengths differ. If no row is produced, `fn` is never inspected or called.
+Apply pure `fn` to corresponding items of each iterable. Callbacks cannot suspend the script or mutate game state. Single-iter form calls `fn(x)`; multi-iter form calls `fn(x, y, ...)` and stops at the shortest input unless `strict=True`, which raises if input lengths differ. If no row is produced, `fn` is never inspected or called. When an input is a generator, it returns a lazy iterator instead of a list.
 
 *Parameters*
 
@@ -5796,7 +5933,7 @@ Apply pure `fn` to corresponding items of each iterable. Callbacks cannot suspen
 
 ##### `filter(fn: Callable | None, iterable: Iterable[T], /) → list[T]`
 
-Keep items for which pure `fn(item)` is truthy; callbacks cannot suspend the script or mutate game state. `filter(None, iter)` keeps every truthy item without a callback. An empty input never inspects or calls `fn`.
+Keep items for which pure `fn(item)` is truthy; callbacks cannot suspend the script or mutate game state. `filter(None, iter)` keeps every truthy item without a callback. An empty input never inspects or calls `fn`. Given a generator, it returns a lazy iterator instead of a list.
 
 *Parameters*
 
@@ -6826,6 +6963,99 @@ Initialize random-number generation. Omit `a` or pass `None` to select another a
 
 - **Returns** `None`
 
+##### `random.randrange(start: int, stop: int | None = None, step: int = 1, /) → int`
+
+Random whole number from `range(start, stop, step)`: `randrange(10)` is 0 to 9, `randrange(5, 20, 5)` is 5, 10 or 15. The stop value is never picked.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `start` | `int` | First possible value, or the stop value when it is the only argument |
+| `stop` | `int \| None` | End of the range, never picked |
+| `step` | `int` | Distance between possible values (default 1) |
+
+- **Returns** `int`
+
+##### `random.choice(seq: list[T] | tuple[T, ...] | str, /) → T`
+
+One random item of a list, tuple or string: `random.choice(["iron", "copper"])`. An empty one is an `IndexError`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `seq` | `list[T] \| tuple[T, ...] \| str` | List, tuple or string to pick from |
+
+- **Returns** `T`
+
+##### `random.choices(population: list[T] | tuple[T, ...] | str, weights: Iterable[float] | None = None, *, cum_weights: Iterable[float] | None = None, k: int = 1) → list[T]`
+
+`k` random items picked with repetition, as a list. `weights` makes some items likelier: `random.choices(["ore", "ice"], weights=[3, 1], k=5)`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `population` | `list[T] \| tuple[T, ...] \| str` | List, tuple or string to pick from |
+| `weights` | `Iterable[float] \| None` | How likely each item is, in the same order |
+| `cum_weights` | `Iterable[float] \| None` | Running totals of the weights, instead of `weights` |
+| `k` | `int` | How many items to pick (default 1) |
+
+- **Returns** `list[T]`
+
+##### `random.shuffle(x: list[object], /) → None`
+
+Put a list's items in random order, in place. Returns `None`; the list itself changes.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `x` | `list[object]` | List to reorder |
+
+- **Returns** `None`
+
+##### `random.sample(population: list[T] | tuple[T, ...] | str, k: int, *, counts: Iterable[int] | None = None) → list[T]`
+
+`k` different random items, as a list, never picking one place twice: `random.sample(range(100), 3)`. `counts` repeats items: `counts=[3, 2]` puts the first item in the pool three times and the second twice.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `population` | `list[T] \| tuple[T, ...] \| str` | List, tuple or string to pick from |
+| `k` | `int` | How many items to pick, at most the population size or the expanded pool size when `counts` is supplied |
+| `counts` | `Iterable[int] \| None` | How many times each item is in the pool |
+
+- **Returns** `list[T]`
+
+##### `random.uniform(a: float, b: float, /) → float`
+
+Random decimal number between `a` and `b`: `random.uniform(-1, 1)`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `float` | One end of the range |
+| `b` | `float` | The other end of the range |
+
+- **Returns** `float`
+
+##### `random.gauss(mu: float = 0.0, sigma: float = 1.0) → float`
+
+Random number from a bell curve around `mu` with spread `sigma`: most results fall within `sigma` of `mu`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `mu` | `float` | Center of the bell curve (default 0) |
+| `sigma` | `float` | Spread of the bell curve (default 1) |
+
+- **Returns** `float`
+
 *Built-in Modules*
 
 ## functools
@@ -6893,7 +7123,7 @@ Decorator that remembers what the function returned for each set of arguments, s
 | Name | Type | Description |
 | --- | --- | --- |
 | `maxsize` | `int \| Callable \| None` | How many results to keep, **128** by default. Past that the least recently used one is dropped. `None` asks for no limit, which this game caps anyway so a script that runs all session cannot grow a cache forever. A function here, `lru_cache(f)`, wraps it with the default size |
-| `typed` | `bool` | Treat arguments of different types as different keys, so `f(1)` and `f(1.5)` never share a result |
+| `typed` | `bool` | Also key results by argument type, so arguments that compare equal but have different types never share a result |
 
 - **Returns** `Callable`
 
@@ -6906,6 +7136,18 @@ Decorator that remembers every result, the same as `lru_cache(maxsize=None)`. Th
 | Name | Type | Description |
 | --- | --- | --- |
 | `user_function` | `Callable` | Function to memoize |
+
+- **Returns** `Callable`
+
+##### `functools.cmp_to_key(mycmp: Callable, /) → Callable`
+
+Turn a compare function into a `key=` function: `sorted(items, key=cmp_to_key(compare))`, where `compare(a, b)` returns a negative number when `a` comes first, zero when they tie and a positive number when `b` comes first.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `mycmp` | `Callable` | Compare function taking two items |
 
 - **Returns** `Callable`
 
@@ -6951,7 +7193,31 @@ Short alias for `re.DOTALL`.
 
 - **Returns** `int`
 
-##### `re.search(pattern: str, string: str, flags: int = 0) → Match | None`
+##### `re.VERBOSE: int`
+
+Whitespace and `#` comments in the pattern are layout, so a long pattern can span lines. Short alias: `re.X`.
+
+- **Returns** `int`
+
+##### `re.ASCII: int`
+
+`\d`, `\w` and `\s` match only ASCII characters instead of all Unicode ones. Short alias: `re.A`.
+
+- **Returns** `int`
+
+##### `re.X: int`
+
+Short alias for `re.VERBOSE`.
+
+- **Returns** `int`
+
+##### `re.A: int`
+
+Short alias for `re.ASCII`.
+
+- **Returns** `int`
+
+##### `re.search(pattern: str | Pattern, string: str, flags: int = 0) → Match | None`
 
 Search anywhere in `string` for `pattern`. Returns a `Match` object, or `None` if there is no match. Patterns use the documented safe regular expression subset.
 
@@ -6959,13 +7225,13 @@ Search anywhere in `string` for `pattern`. Returns a `Match` object, or `None` i
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `pattern` | `str` | Regular expression pattern |
+| `pattern` | `str \| Pattern` | Regular expression pattern |
 | `string` | `str` | String to search |
 | `flags` | `int` | Optional flags such as `re.IGNORECASE` |
 
 - **Returns** `Match | None`
 
-##### `re.match(pattern: str, string: str, flags: int = 0) → Match | None`
+##### `re.match(pattern: str | Pattern, string: str, flags: int = 0) → Match | None`
 
 Match `pattern` at the start of `string`. Returns a `Match` object, or `None` if the start does not match.
 
@@ -6973,13 +7239,13 @@ Match `pattern` at the start of `string`. Returns a `Match` object, or `None` if
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `pattern` | `str` | Regular expression pattern |
+| `pattern` | `str \| Pattern` | Regular expression pattern |
 | `string` | `str` | String to check |
 | `flags` | `int` | Optional flags such as `re.IGNORECASE` |
 
 - **Returns** `Match | None`
 
-##### `re.fullmatch(pattern: str, string: str, flags: int = 0) → Match | None`
+##### `re.fullmatch(pattern: str | Pattern, string: str, flags: int = 0) → Match | None`
 
 Match the whole `string` against `pattern`. Returns a `Match` object, or `None` if any part is left unmatched.
 
@@ -6987,13 +7253,13 @@ Match the whole `string` against `pattern`. Returns a `Match` object, or `None` 
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `pattern` | `str` | Regular expression pattern |
+| `pattern` | `str \| Pattern` | Regular expression pattern |
 | `string` | `str` | String to check |
 | `flags` | `int` | Optional flags such as `re.IGNORECASE` |
 
 - **Returns** `Match | None`
 
-##### `re.findall(pattern: str, string: str, flags: int = 0) → list`
+##### `re.findall(pattern: str | Pattern, string: str, flags: int = 0) → list`
 
 Return all non-overlapping matches. With no capture groups, the result is a list of matched strings. With one capture group, the result is that group. With multiple capture groups, the result is tuples.
 
@@ -7001,29 +7267,29 @@ Return all non-overlapping matches. With no capture groups, the result is a list
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `pattern` | `str` | Regular expression pattern |
+| `pattern` | `str \| Pattern` | Regular expression pattern |
 | `string` | `str` | String to search |
 | `flags` | `int` | Optional flags such as `re.IGNORECASE` |
 
 - **Returns** `list`
 
-##### `re.sub(pattern: str, repl: str, string: str, count: int = 0, flags: int = 0) → str`
+##### `re.sub(pattern: str | Pattern, repl: str | Callable, string: str, count: int = 0, flags: int = 0) → str`
 
-Replace matches of `pattern` in `string` with `repl`. `count=0` replaces all matches; a positive count limits replacements. Replacement text supports numeric backreferences like `\1` and `\g<1>`.
+Replace matches of `pattern` in `string` with `repl`. `count=0` replaces all matches; a positive count limits replacements. Replacement text supports backreferences like `\1`, `\g<1>` and `\g<name>`, and `repl` may instead be a function that gets each `Match` and returns its replacement.
 
 *Parameters*
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `pattern` | `str` | Regular expression pattern |
-| `repl` | `str` | Replacement text |
+| `pattern` | `str \| Pattern` | Regular expression pattern |
+| `repl` | `str \| Callable` | Replacement text, or a function from `Match` to text |
 | `string` | `str` | String to transform |
 | `count` | `int` | Maximum replacements; 0 means all |
 | `flags` | `int` | Optional flags such as `re.IGNORECASE` |
 
 - **Returns** `str`
 
-##### `re.split(pattern: str, string: str, maxsplit: int = 0, flags: int = 0) → list`
+##### `re.split(pattern: str | Pattern, string: str, maxsplit: int = 0, flags: int = 0) → list`
 
 Split `string` wherever `pattern` matches. `maxsplit=0` means no limit. Capturing groups are included in the output, matching Python's `re.split` behavior.
 
@@ -7031,12 +7297,73 @@ Split `string` wherever `pattern` matches. `maxsplit=0` means no limit. Capturin
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `pattern` | `str` | Regular expression pattern |
+| `pattern` | `str \| Pattern` | Regular expression pattern |
 | `string` | `str` | String to split |
 | `maxsplit` | `int` | Maximum splits; 0 means all |
 | `flags` | `int` | Optional flags such as `re.IGNORECASE` |
 
 - **Returns** `list`
+
+##### `re.compile(pattern: str | Pattern, flags: int = 0) → Pattern`
+
+Compile `pattern` once into a `Pattern` whose own `search`, `findall`, `sub` and other methods reuse it: `digits = re.compile(r"\d+")`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `pattern` | `str \| Pattern` | Regular expression pattern |
+| `flags` | `int` | Optional flags such as `re.IGNORECASE` |
+
+- **Returns** `Pattern`
+
+##### `re.finditer(pattern: str | Pattern, string: str, flags: int = 0) → Iterator[Match]`
+
+Every non-overlapping match of `pattern` in `string`, one `Match` at a time, for `for m in re.finditer(...)`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `pattern` | `str \| Pattern` | Regular expression pattern |
+| `string` | `str` | String to search |
+| `flags` | `int` | Optional flags such as `re.IGNORECASE` |
+
+- **Returns** `Iterator[Match]`
+
+##### `re.subn(pattern: str | Pattern, repl: str | Callable, string: str, count: int = 0, flags: int = 0) → tuple[str, int]`
+
+Like `re.sub()`, but returns `(new_string, number_of_replacements)`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `pattern` | `str \| Pattern` | Regular expression pattern |
+| `repl` | `str \| Callable` | Replacement text, or a function from `Match` to text |
+| `string` | `str` | String to transform |
+| `count` | `int` | Maximum replacements; 0 means all |
+| `flags` | `int` | Optional flags such as `re.IGNORECASE` |
+
+- **Returns** `tuple[str, int]`
+
+##### `re.escape(pattern: str, /) → str`
+
+Put a backslash before every character that means something in a pattern, so `re.escape("1.5")` matches the text `1.5` exactly.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `pattern` | `str` | Text to match literally |
+
+- **Returns** `str`
+
+##### `re.purge() → None`
+
+Clear the cache of compiled patterns. Patterns are compiled and cached automatically, so this is rarely needed.
+
+- **Returns** `None`
 
 *Built-in Modules*
 
@@ -7050,7 +7377,7 @@ Sentinel telling a field with no default apart from one that defaults to `None`.
 
 - **Returns** `object`
 
-##### `dataclasses.dataclass(cls?: type | None, /, *, init: bool = True, repr: bool = True, eq: bool = True, order: bool = False, kw_only: bool = False, unsafe_hash: bool = False, frozen: bool = False, slots: bool = False, weakref_slot: bool = False) → type`
+##### `dataclasses.dataclass(cls?: type | None, /, *, init: bool = True, repr: bool = True, eq: bool = True, order: bool = False, kw_only: bool = False, match_args: bool = True, unsafe_hash: bool = False, frozen: bool = False, slots: bool = False, weakref_slot: bool = False) → type`
 
 Decorate a class to generate declaration-ordered construction, representation, value equality, and optional ordering. Supports both `@dataclass` and `@dataclass(...)`, inherited fields, `__post_init__`, and explicit-method preservation. Generated behavior is controlled by `init`, `repr`, `eq`, `order`, and `kw_only`. Compatibility flags `unsafe_hash`, `frozen`, `slots`, and `weakref_slot` may be passed only as `False`; their `True` behavior and every unlisted standard-library option are rejected rather than ignored. Dataclass instances remain ordinary user objects and cannot cross JSON-shaped game API boundaries.
 
@@ -7064,6 +7391,7 @@ Decorate a class to generate declaration-ordered construction, representation, v
 | `eq` | `bool` | Generate exact-class __eq__ (default True) |
 | `order` | `bool` | Generate ordering methods (default False) |
 | `kw_only` | `bool` | Make generated constructor fields keyword-only (default False) |
+| `match_args` | `bool` | Set `__match_args__` to the fields `__init__` takes positionally, so `case Point(x, y):` matches them in order (default True) |
 | `unsafe_hash` | `bool` | Compatibility flag; only False is supported |
 | `frozen` | `bool` | Compatibility flag; only False is supported |
 | `slots` | `bool` | Compatibility flag; only False is supported |
@@ -7090,7 +7418,7 @@ Configure one annotated dataclass field. Use `default` for an immutable or hasha
 
 ##### `dataclasses.asdict(obj: object, /) → dict[str, JsonValue]`
 
-Return a record-class instance as a dict, recursing into nested record classes, lists, tuples, dicts and sets. Dict keys are converted too, so a record class used as a key raises `TypeError` here rather than surviving into a result that cannot be sent. This is the bridge out of a class: the result is accepted by `json.dumps()`, `comms.send()` and the Data Archive, which all refuse a class instance. Values that are not containers are placed in the result as they are, not copied, so a shared list stays shared.
+Return a record-class instance as a dict, recursively converting nested record classes, lists, tuples and dicts. Sets are copied as sets with their members unchanged. Dict keys are converted too, so a record class used as a key raises `TypeError` when its converted dict cannot be used as a key. The result can be passed to `json.dumps()`, `comms.send()` or the Data Archive only when its values and keys meet that destination's rules. Lists, tuples and dicts are rebuilt; other leaf values are reused rather than deep-copied.
 
 *Parameters*
 
@@ -7403,11 +7731,11 @@ Returns `(getattr, (cls, name))` for the member. Provided so code written for CP
 
 ## json
 
-Built-in JSON text helpers. Turns records into text and back, using the same value shapes the Signal Bus and Data Archive accept. Works without Shared Library research.
+Built-in JSON text helpers. Turns supported values into text and back. Supported non-string dictionary keys become JSON key text; the Signal Bus and Data Archive instead require string keys and apply their own payload limits. Works without Shared Library research.
 
 ##### `json.dumps(obj: JsonValue, /, *, indent: int | str | None = None, sort_keys: bool = False, ensure_ascii: bool = True, separators: tuple[str, str] | None = None, allow_nan: bool = True, skipkeys: bool = False) → str`
 
-Return `obj` as JSON text. Accepts `None`, booleans, numbers, strings, lists, tuples and dicts whose keys are strings, numbers, booleans or `None`, the same shapes the Signal Bus and Data Archive store. A set, a class instance or a function raises `TypeError`; convert it first, for example with `dataclasses.asdict()`. A container that contains itself raises `ValueError`, and one nested deeper than **256** levels raises `RecursionError`, which is the same depth `loads()` reads back.
+Return `obj` as JSON text. Accepts `None`, booleans, numbers, strings, lists, tuples and dicts whose keys are strings, numbers, booleans or `None`. Those non-string keys are converted to text. The Signal Bus and Data Archive instead require string dictionary keys and apply their own payload limits. A set, a class instance or a function raises `TypeError`; convert it first, for example with `dataclasses.asdict()`. A container that contains itself raises `ValueError`, and one nested deeper than **256** levels raises `RecursionError`, which is the same depth `loads()` reads back.
 
 *Parameters*
 
@@ -7441,7 +7769,7 @@ Read JSON text and return the value: `None`, a boolean, a number, a string, a li
 
 Built-in priority-queue helpers. Keeps an ordinary list arranged so the smallest item is always first. Works without Shared Library research.
 
-##### `heapq.heappush(heap: list, item: object, /) → None`
+##### `heapq.heappush(heap: list[T], item: object, /) → None`
 
 Add `item` to `heap`, keeping the smallest item at `heap[0]`. The heap is an ordinary list, so `len()` and `heap[0]` work as usual, and only the ordering of the rest is the heap's business.
 
@@ -7449,12 +7777,12 @@ Add `item` to `heap`, keeping the smallest item at `heap[0]`. The heap is an ord
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `heap` | `list` | List arranged as a heap by the other heapq functions |
+| `heap` | `list[T]` | List arranged as a heap by the other heapq functions |
 | `item` | `object` | Value to add |
 
 - **Returns** `None`
 
-##### `heapq.heappop(heap: list, /) → T`
+##### `heapq.heappop(heap: list[T], /) → T`
 
 Remove and return the smallest item, keeping the heap arranged. Raises `IndexError` on an empty heap, so check `len(heap)` first.
 
@@ -7462,11 +7790,11 @@ Remove and return the smallest item, keeping the heap arranged. Raises `IndexErr
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `heap` | `list` | List arranged as a heap by the other heapq functions |
+| `heap` | `list[T]` | List arranged as a heap by the other heapq functions |
 
 - **Returns** `T`
 
-##### `heapq.heappushpop(heap: list, item: object, /) → T`
+##### `heapq.heappushpop(heap: list[T], item: object, /) → T`
 
 Add `item` and return the smallest item, in one pass. Faster than a push followed by a pop, and never grows the heap.
 
@@ -7474,12 +7802,12 @@ Add `item` and return the smallest item, in one pass. Faster than a push followe
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `heap` | `list` | List arranged as a heap by the other heapq functions |
+| `heap` | `list[T]` | List arranged as a heap by the other heapq functions |
 | `item` | `object` | Value to add |
 
 - **Returns** `T`
 
-##### `heapq.heapreplace(heap: list, item: object, /) → T`
+##### `heapq.heapreplace(heap: list[T], item: object, /) → T`
 
 Return the smallest item and add `item`, in one pass. The heap keeps its size. Raises `IndexError` on an empty heap.
 
@@ -7487,7 +7815,7 @@ Return the smallest item and add `item`, in one pass. The heap keeps its size. R
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `heap` | `list` | List arranged as a heap by the other heapq functions |
+| `heap` | `list[T]` | List arranged as a heap by the other heapq functions |
 | `item` | `object` | Value to add |
 
 - **Returns** `T`
@@ -7504,7 +7832,7 @@ Rearrange an existing list into a heap, in place. Cheaper than pushing the items
 
 - **Returns** `None`
 
-##### `heapq.nsmallest(n: int, iterable: Iterable, /, key: Callable | None = None) → list[T]`
+##### `heapq.nsmallest(n: int, iterable: Iterable[T], /, key: Callable | None = None) → list[T]`
 
 Return the `n` smallest items as a sorted list. Pass `key=` to compare something derived from each item, exactly as `sorted()` does.
 
@@ -7513,12 +7841,12 @@ Return the `n` smallest items as a sorted list. Pass `key=` to compare something
 | Name | Type | Description |
 | --- | --- | --- |
 | `n` | `int` | How many items to return |
-| `iterable` | `Iterable` | Values to choose from |
+| `iterable` | `Iterable[T]` | Values to choose from |
 | `key` | `Callable \| None` | Optional function called once per item; the returned values are compared instead of the items |
 
 - **Returns** `list[T]`
 
-##### `heapq.nlargest(n: int, iterable: Iterable, /, key: Callable | None = None) → list[T]`
+##### `heapq.nlargest(n: int, iterable: Iterable[T], /, key: Callable | None = None) → list[T]`
 
 Return the `n` largest items as a list, largest first. Pass `key=` to compare something derived from each item, exactly as `sorted()` does.
 
@@ -7527,7 +7855,7 @@ Return the `n` largest items as a list, largest first. Pass `key=` to compare so
 | Name | Type | Description |
 | --- | --- | --- |
 | `n` | `int` | How many items to return |
-| `iterable` | `Iterable` | Values to choose from |
+| `iterable` | `Iterable[T]` | Values to choose from |
 | `key` | `Callable \| None` | Optional function called once per item; the returned values are compared instead of the items |
 
 - **Returns** `list[T]`
@@ -7549,6 +7877,1578 @@ Return the traceback of the exception currently being handled, as a string: the 
 Write the traceback of the exception currently being handled to the console's error output. Same text as `format_exc()`, printed instead of returned. This is the answer to "the message says what broke, but where?" for an exception your own code caught.
 
 - **Returns** `None`
+
+*Built-in Modules*
+
+## math
+
+Python's math functions and constants under `math.`, such as `math.sqrt`, `math.floor`, `math.gcd` and `math.pi`. The common ones also work without the prefix. Works without Shared Library research.
+
+##### `math.pi: float`
+
+Mathematical constant `π ≈ 3.14159`.
+
+- **Returns** `float`
+
+##### `math.tau: float`
+
+Mathematical constant `τ = 2π`.
+
+- **Returns** `float`
+
+##### `math.e: float`
+
+Euler's number, `2.718281828459045`.
+
+- **Returns** `float`
+
+##### `math.inf: float`
+
+Positive infinity, larger than any number.
+
+- **Returns** `float`
+
+##### `math.nan: float`
+
+Not a number: the result of an undefined calculation. Test for it with `math.isnan`, since `nan == nan` is `False`.
+
+- **Returns** `float`
+
+##### `math.acos(number: float, /) → float`
+
+Arc cosine. Input must be from `-1` to `1`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `number` | `float` | Value from -1 to 1 |
+
+- **Returns** `float`
+
+##### `math.asin(number: float, /) → float`
+
+Arc sine. Input must be from `-1` to `1`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `number` | `float` | Value from -1 to 1 |
+
+- **Returns** `float`
+
+##### `math.atan(number: float, /) → float`
+
+Arc tangent.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `number` | `float` | Tangent value |
+
+- **Returns** `float`
+
+##### `math.atan2(y: float, x: float, /) → float`
+
+Arc tangent of `y/x`, correctly choosing the quadrant.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `y` | `float` | Vertical component |
+| `x` | `float` | Horizontal component |
+
+- **Returns** `float`
+
+##### `math.ceil(number: float, /) → int`
+
+Round up to the nearest integer.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `number` | `float` | Number to round up |
+
+- **Returns** `int`
+
+##### `math.cos(radians: float, /) → float`
+
+Cosine of an angle in radians.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `radians` | `float` | Angle in radians |
+
+- **Returns** `float`
+
+##### `math.degrees(radians: float, /) → float`
+
+Convert radians to degrees.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `radians` | `float` | Angle in radians |
+
+- **Returns** `float`
+
+##### `math.exp(number: float, /) → float`
+
+`e` raised to the power of the argument.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `number` | `float` | Power of e to compute |
+
+- **Returns** `float`
+
+##### `math.floor(number: float, /) → int`
+
+Round down to the nearest integer.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `number` | `float` | Number to round down |
+
+- **Returns** `int`
+
+##### `math.isclose(a: float, b: float, rel_tol: float = 0.000000001, abs_tol: float = 0.0) → bool`
+
+Return `True` when two numbers are close enough to treat as equal. `rel_tol` scales with the compared values; `abs_tol` sets a fixed accepted difference in the same unit, useful for values near zero and physical readings such as coordinates. Tolerances must be non-negative. This is the directly available equivalent of Python's `math.isclose()`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `float` | First number |
+| `b` | `float` | Second number |
+| `rel_tol` | `float` | Maximum relative difference |
+| `abs_tol` | `float` | Maximum absolute difference in the values' unit |
+
+- **Returns** `bool`
+
+##### `math.log(number: float, base?: float, /) → float`
+
+Natural log, or log with the given base.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `number` | `float` | Number greater than zero |
+| `base` | `float` | Logarithm base; the natural logarithm when omitted |
+
+- **Returns** `float`
+
+##### `math.log10(number: float, /) → float`
+
+Base-10 logarithm.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `number` | `float` | Number greater than zero |
+
+- **Returns** `float`
+
+##### `math.log2(number: float, /) → float`
+
+Base-2 logarithm.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `number` | `float` | Number greater than zero |
+
+- **Returns** `float`
+
+##### `math.prod(iterable: Iterable[float], /, start: float = 1) → float`
+
+Multiplies the items of an iterable with `*`, starting from `start` (default `1`). Works for numbers and for your own classes that define `__mul__` or `__rmul__`. Empty iterables return `start`. `start` may be positional or keyword, but not both.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `iterable` | `Iterable[float]` | Values to multiply |
+| `start` | `float` | Value the product starts from |
+
+- **Returns** `float`
+
+##### `math.radians(degrees: float, /) → float`
+
+Convert degrees to radians.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `degrees` | `float` | Angle in degrees |
+
+- **Returns** `float`
+
+##### `math.sin(radians: float, /) → float`
+
+Sine of an angle in radians.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `radians` | `float` | Angle in radians |
+
+- **Returns** `float`
+
+##### `math.sqrt(number: float, /) → float`
+
+Square root. Errors on negative input.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `number` | `float` | Number zero or greater |
+
+- **Returns** `float`
+
+##### `math.tan(radians: float, /) → float`
+
+Tangent of an angle in radians.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `radians` | `float` | Angle in radians |
+
+- **Returns** `float`
+
+##### `math.trunc(number: float, /) → int`
+
+Drop the fractional part (round toward zero).
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `number` | `float` | Number to cut toward zero |
+
+- **Returns** `int`
+
+##### `math.fabs(x: float, /) → float`
+
+Absolute value as a float: `math.fabs(-2)` → `2.0`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `x` | `float` | Number |
+
+- **Returns** `float`
+
+##### `math.cbrt(x: float, /) → float`
+
+Cube root, negative numbers included: `math.cbrt(-8)` → `-2.0`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `x` | `float` | Number |
+
+- **Returns** `float`
+
+##### `math.exp2(x: float, /) → float`
+
+`2` raised to `x`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `x` | `float` | Power of two |
+
+- **Returns** `float`
+
+##### `math.expm1(x: float, /) → float`
+
+`e ** x - 1`, accurate even when `x` is tiny.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `x` | `float` | Exponent |
+
+- **Returns** `float`
+
+##### `math.log1p(x: float, /) → float`
+
+Natural log of `1 + x`, accurate even when `x` is tiny.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `x` | `float` | Number above -1 |
+
+- **Returns** `float`
+
+##### `math.sinh(x: float, /) → float`
+
+Hyperbolic sine.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `x` | `float` | Number |
+
+- **Returns** `float`
+
+##### `math.cosh(x: float, /) → float`
+
+Hyperbolic cosine.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `x` | `float` | Number |
+
+- **Returns** `float`
+
+##### `math.tanh(x: float, /) → float`
+
+Hyperbolic tangent, always between `-1` and `1`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `x` | `float` | Number |
+
+- **Returns** `float`
+
+##### `math.asinh(x: float, /) → float`
+
+Inverse hyperbolic sine.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `x` | `float` | Number |
+
+- **Returns** `float`
+
+##### `math.acosh(x: float, /) → float`
+
+Inverse hyperbolic cosine.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `x` | `float` | Number, at least 1 |
+
+- **Returns** `float`
+
+##### `math.atanh(x: float, /) → float`
+
+Inverse hyperbolic tangent.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `x` | `float` | Number between -1 and 1 |
+
+- **Returns** `float`
+
+##### `math.isfinite(x: float, /) → bool`
+
+`True` unless `x` is infinite or `nan`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `x` | `float` | Number |
+
+- **Returns** `bool`
+
+##### `math.isinf(x: float, /) → bool`
+
+`True` when `x` is positive or negative infinity.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `x` | `float` | Number |
+
+- **Returns** `bool`
+
+##### `math.isnan(x: float, /) → bool`
+
+`True` when `x` is `nan`, which is not even equal to itself.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `x` | `float` | Number |
+
+- **Returns** `bool`
+
+##### `math.copysign(x: float, y: float, /) → float`
+
+`x`'s size with `y`'s sign: `math.copysign(3, -0.5)` → `-3.0`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `x` | `float` | Size of the result |
+| `y` | `float` | Number whose sign the result takes |
+
+- **Returns** `float`
+
+##### `math.fmod(x: float, y: float, /) → float`
+
+Remainder with the sign of `x`, unlike `%`, which takes the sign of `y`: `math.fmod(-7, 3)` → `-1.0`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `x` | `float` | Dividend |
+| `y` | `float` | Divisor |
+
+- **Returns** `float`
+
+##### `math.remainder(x: float, y: float, /) → float`
+
+Distance from `x` to the nearest multiple of `y`, which can be negative: `math.remainder(7, 4)` → `-1.0`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `x` | `float` | Dividend |
+| `y` | `float` | Divisor |
+
+- **Returns** `float`
+
+##### `math.pow(x: float, y: float, /) → float`
+
+`x` raised to `y` as a float. Unlike `**`, a negative base with a fractional exponent is a `ValueError`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `x` | `float` | Base |
+| `y` | `float` | Exponent |
+
+- **Returns** `float`
+
+##### `math.modf(x: float, /) → tuple[float, float]`
+
+The fractional and whole parts of `x`, both with its sign: `math.modf(-3.25)` → `(-0.25, -3.0)`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `x` | `float` | Number |
+
+- **Returns** `tuple[float, float]`
+
+##### `math.hypot(*coordinates: float) → float`
+
+Length of the vector from the origin: `math.hypot(3, 4)` → `5.0`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `coordinates` | `float` | Coordinates |
+
+- **Returns** `float`
+
+##### `math.dist(p: Iterable[float], q: Iterable[float], /) → float`
+
+Straight-line distance between two points: `math.dist((0, 0), (3, 4))` → `5.0`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `p` | `Iterable[float]` | First point |
+| `q` | `Iterable[float]` | Second point, same number of coordinates |
+
+- **Returns** `float`
+
+##### `math.fsum(iterable: Iterable[float], /) → float`
+
+Sum of floats without rounding error building up: `math.fsum([0.1] * 10)` → `1.0`, where `sum` gives `0.9999999999999999`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `iterable` | `Iterable[float]` | Numbers to add |
+
+- **Returns** `float`
+
+##### `math.gcd(*integers: int) → int`
+
+Greatest common divisor: `math.gcd(12, 18)` → `6`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `integers` | `int` | Whole numbers |
+
+- **Returns** `int`
+
+##### `math.lcm(*integers: int) → int`
+
+Least common multiple: `math.lcm(4, 6)` → `12`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `integers` | `int` | Whole numbers |
+
+- **Returns** `int`
+
+##### `math.isqrt(n: int, /) → int`
+
+Whole-number square root, rounded down: `math.isqrt(10)` → `3`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `n` | `int` | Whole number, at least 0 |
+
+- **Returns** `int`
+
+##### `math.factorial(n: int, /) → int`
+
+`n!`, the product of `1` to `n`: `math.factorial(5)` → `120`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `n` | `int` | Whole number, at least 0 |
+
+- **Returns** `int`
+
+##### `math.perm(n: int, k: int | None = None, /) → int`
+
+Ways to pick `k` of `n` items in order: `math.perm(5, 2)` → `20`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `n` | `int` | How many items |
+| `k` | `int \| None` | How many to arrange (default all) |
+
+- **Returns** `int`
+
+##### `math.comb(n: int, k: int, /) → int`
+
+Ways to choose `k` of `n` items, order ignored: `math.comb(5, 2)` → `10`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `n` | `int` | How many items |
+| `k` | `int` | How many to choose |
+
+- **Returns** `int`
+
+*Built-in Modules*
+
+## itertools
+
+Python's iterator building blocks under `itertools.`, such as `itertools.count`, `itertools.islice` and `itertools.groupby`. Each returns a lazy iterator, so an endless one is fine in a loop with a `break`. Works without Shared Library research.
+
+##### `itertools.count(start: int | float = 0, step: int | float = 1) → Iterator[int | float]`
+
+Count up forever from `start` by `step`: `for i in count(1):` numbers loop passes from 1. It never ends on its own, so stop with `break` or take a few with `islice`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `start` | `int \| float` | First number |
+| `step` | `int \| float` | Added each time |
+
+- **Returns** `Iterator[int | float]`
+
+##### `itertools.cycle(iterable: Iterable[T], /) → Iterator[T]`
+
+Repeat the items of `iterable` forever, in order: `cycle(["north", "east", "south"])` for a patrol route. An empty input gives nothing.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `iterable` | `Iterable[T]` | Items to repeat |
+
+- **Returns** `Iterator[T]`
+
+##### `itertools.repeat(object: T, times: int | None = None) → Iterator[T]`
+
+Give the same value `times` times, or forever when `times` is `None`: `repeat(0, 5)` yields five zeros.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `object` | `T` | Value to give |
+| `times` | `int \| None` | How many times, or `None` for forever |
+
+- **Returns** `Iterator[T]`
+
+##### `itertools.accumulate(iterable: Iterable[T], func: Callable | None = None, *, initial: T | None = None) → Iterator[T]`
+
+Running totals: `accumulate([1, 2, 3])` yields `1, 3, 6`. Pass `func` to combine with something other than `+`, such as `max` for a running best, and `initial=` to start from a value.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `iterable` | `Iterable[T]` | Values to combine |
+| `func` | `Callable \| None` | Pure function combining the total so far with the next value; `+` when omitted |
+| `initial` | `T \| None` | Value to start from, given first |
+
+- **Returns** `Iterator[T]`
+
+##### `itertools.batched(iterable: Iterable[T], n: int, *, strict: bool = False) → Iterator[tuple[T, ...]]`
+
+Group items into tuples of `n`: `batched("abcdefg", 3)` yields `("a", "b", "c")`, `("d", "e", "f")`, `("g",)`. With `strict=True`, a short last group raises `ValueError`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `iterable` | `Iterable[T]` | Items to group |
+| `n` | `int` | Items per group, at least 1 |
+| `strict` | `bool` | Raise instead of giving a short last group |
+
+- **Returns** `Iterator[tuple[T, ...]]`
+
+##### `itertools.chain(*iterables: Iterable[T]) → Iterator[T]`
+
+Go through several iterables one after another: `chain(ore_sites, ice_sites)`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `iterables` | `Iterable[T]` | Iterables to go through in order |
+
+- **Returns** `Iterator[T]`
+
+##### `itertools.chain.from_iterable(iterable: Iterable[Iterable[T]], /) → Iterator[T]`
+
+Like `chain`, reading the iterables from one iterable: `chain.from_iterable(rows)` flattens rows lazily.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `iterable` | `Iterable[Iterable[T]]` | Iterable of iterables |
+
+- **Returns** `Iterator[T]`
+
+##### `itertools.compress(data: Iterable[T], selectors: Iterable) → Iterator[T]`
+
+Keep the items of `data` whose matching selector is truthy: `compress("abcd", [1, 0, 1, 0])` yields `"a"`, `"c"`. Stops at the shorter input.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `data` | `Iterable[T]` | Items to pick from |
+| `selectors` | `Iterable` | Truth values, one per item |
+
+- **Returns** `Iterator[T]`
+
+##### `itertools.dropwhile(predicate: Callable, iterable: Iterable[T], /) → Iterator[T]`
+
+Skip items while pure `predicate(item)` is truthy, then give every remaining item.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `predicate` | `Callable` | Pure test deciding what to skip at the start |
+| `iterable` | `Iterable[T]` | Items to read |
+
+- **Returns** `Iterator[T]`
+
+##### `itertools.filterfalse(predicate: Callable | None, iterable: Iterable[T], /) → Iterator[T]`
+
+Keep the items for which pure `predicate(item)` is falsy, the opposite of `filter`. With `None`, keeps the falsy items.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `predicate` | `Callable \| None` | Pure test, or `None` to test the items themselves |
+| `iterable` | `Iterable[T]` | Items to read |
+
+- **Returns** `Iterator[T]`
+
+##### `itertools.groupby(iterable: Iterable[T], key: Callable | None = None) → Iterator[tuple[object, Iterator[T]]]`
+
+Group consecutive items that share a key, as `(key, group)` pairs; each group is an iterator over its items. Sort by the same key first to group all equal items together. Reading the next pair ends the previous group.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `iterable` | `Iterable[T]` | Items to group |
+| `key` | `Callable \| None` | Pure function giving each item's key; the item itself when omitted |
+
+- **Returns** `Iterator[tuple[object, Iterator[T]]]`
+
+##### `itertools.islice(iterable: Iterable[T], start: int | None, stop: int | None = None, step: int | None = 1, /) → Iterator[T]`
+
+Take part of an iterator without building a list: `islice(it, 3)` gives the first three items, `islice(it, 2, 10, 2)` every second item from index 2 up to 10. Skipped items are consumed; if `start` is greater than `stop`, it can still consume the first `start` items.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `iterable` | `Iterable[T]` | Items to read |
+| `start` | `int \| None` | With one number, where to stop; otherwise the first index to give |
+| `stop` | `int \| None` | Index to stop before, or `None` for no end |
+| `step` | `int \| None` | Distance between given indexes, at least 1 |
+
+- **Returns** `Iterator[T]`
+
+##### `itertools.pairwise(iterable: Iterable[T], /) → Iterator[tuple[T, T]]`
+
+Neighboring pairs, lazily: `pairwise(route)` yields each `(a, b)` leg of a route.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `iterable` | `Iterable[T]` | Items to pair |
+
+- **Returns** `Iterator[tuple[T, T]]`
+
+##### `itertools.starmap(function: Callable, iterable: Iterable, /) → Iterator[object]`
+
+Call `function` with each item unpacked as its arguments: `starmap(pow, [(2, 3), (3, 2)])` yields `8, 9`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `function` | `Callable` | Pure function to call |
+| `iterable` | `Iterable` | Rows of arguments |
+
+- **Returns** `Iterator[object]`
+
+##### `itertools.takewhile(predicate: Callable, iterable: Iterable[T], /) → Iterator[T]`
+
+Give items while pure `predicate(item)` is truthy, and stop at the first one that is not.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `predicate` | `Callable` | Pure test deciding when to stop |
+| `iterable` | `Iterable[T]` | Items to read |
+
+- **Returns** `Iterator[T]`
+
+##### `itertools.tee(iterable: Iterable[T], n: int = 2, /) → tuple[Iterator[T], ...]`
+
+Split one iterator into `n` independent iterators that each give every item. Use the copies, not the original, afterwards.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `iterable` | `Iterable[T]` | Iterator to split |
+| `n` | `int` | How many copies |
+
+- **Returns** `tuple[Iterator[T], ...]`
+
+##### `itertools.zip_longest(*iterables: Iterable, fillvalue: object = None) → Iterator[tuple]`
+
+Like `zip`, but runs to the longest input and fills the missing places with `fillvalue`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `iterables` | `Iterable` | Iterables to combine |
+| `fillvalue` | `object` | Value for an input that has run out |
+
+- **Returns** `Iterator[tuple]`
+
+##### `itertools.product(*iterables: Iterable, repeat: int = 1) → Iterator[tuple]`
+
+Every combination taking one item from each input, as tuples: `product("ab", [1, 2])` yields `("a", 1)`, `("a", 2)`, `("b", 1)`, `("b", 2)`. `repeat=n` uses the inputs `n` times.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `iterables` | `Iterable` | Inputs to combine |
+| `repeat` | `int` | How many times to use the inputs |
+
+- **Returns** `Iterator[tuple]`
+
+##### `itertools.permutations(iterable: Iterable[T], r: int | None = None) → Iterator[tuple[T, ...]]`
+
+Every ordering of `r` items, as tuples; all items when `r` is omitted. Items are told apart by position, not value.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `iterable` | `Iterable[T]` | Items to order |
+| `r` | `int \| None` | Items per ordering |
+
+- **Returns** `Iterator[tuple[T, ...]]`
+
+##### `itertools.combinations(iterable: Iterable[T], r: int) → Iterator[tuple[T, ...]]`
+
+Every choice of `r` items, in input order and without repeats: `combinations("abc", 2)` yields `("a", "b")`, `("a", "c")`, `("b", "c")`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `iterable` | `Iterable[T]` | Items to choose from |
+| `r` | `int` | Items per choice |
+
+- **Returns** `Iterator[tuple[T, ...]]`
+
+##### `itertools.combinations_with_replacement(iterable: Iterable[T], r: int) → Iterator[tuple[T, ...]]`
+
+Every choice of `r` items where an item may be chosen more than once: `combinations_with_replacement("ab", 2)` yields `("a", "a")`, `("a", "b")`, `("b", "b")`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `iterable` | `Iterable[T]` | Items to choose from |
+| `r` | `int` | Items per choice |
+
+- **Returns** `Iterator[tuple[T, ...]]`
+
+*Built-in Modules*
+
+## operator
+
+Python's operators as functions under `operator.`, such as `operator.add` to pass to `reduce` and `operator.itemgetter` to pass as a `key=`. Works without Shared Library research.
+
+##### `operator.abs(a: object, /) → object`
+
+The built-in `abs(a)`: a number without its sign, or what a class's `__abs__` returns.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Operand |
+
+- **Returns** `object`
+
+##### `operator.lt(a: object, b: object, /) → object`
+
+`a < b` as a function.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Left operand |
+| `b` | `object` | Right operand |
+
+- **Returns** `object`
+
+##### `operator.le(a: object, b: object, /) → object`
+
+`a <= b` as a function.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Left operand |
+| `b` | `object` | Right operand |
+
+- **Returns** `object`
+
+##### `operator.eq(a: object, b: object, /) → object`
+
+`a == b` as a function.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Left operand |
+| `b` | `object` | Right operand |
+
+- **Returns** `object`
+
+##### `operator.ne(a: object, b: object, /) → object`
+
+`a != b` as a function.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Left operand |
+| `b` | `object` | Right operand |
+
+- **Returns** `object`
+
+##### `operator.ge(a: object, b: object, /) → object`
+
+`a >= b` as a function.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Left operand |
+| `b` | `object` | Right operand |
+
+- **Returns** `object`
+
+##### `operator.gt(a: object, b: object, /) → object`
+
+`a > b` as a function.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Left operand |
+| `b` | `object` | Right operand |
+
+- **Returns** `object`
+
+##### `operator.not_(a: object, /) → bool`
+
+`not a` as a function.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Value to test |
+
+- **Returns** `bool`
+
+##### `operator.truth(a: object, /) → bool`
+
+`True` when `a` is truthy, the same test `if a:` makes.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Value to test |
+
+- **Returns** `bool`
+
+##### `operator.is_(a: object, b: object, /) → bool`
+
+`a is b` as a function.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Left operand |
+| `b` | `object` | Right operand |
+
+- **Returns** `bool`
+
+##### `operator.is_not(a: object, b: object, /) → bool`
+
+`a is not b` as a function.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Left operand |
+| `b` | `object` | Right operand |
+
+- **Returns** `bool`
+
+##### `operator.is_none(a: object, /) → bool`
+
+`a is None` as a function.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Value to test |
+
+- **Returns** `bool`
+
+##### `operator.is_not_none(a: object, /) → bool`
+
+`a is not None` as a function.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Value to test |
+
+- **Returns** `bool`
+
+##### `operator.add(a: object, b: object, /) → object`
+
+`a + b` as a function: `reduce(operator.add, [1, 2, 3])` → `6`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Left operand |
+| `b` | `object` | Right operand |
+
+- **Returns** `object`
+
+##### `operator.sub(a: object, b: object, /) → object`
+
+`a - b` as a function.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Left operand |
+| `b` | `object` | Right operand |
+
+- **Returns** `object`
+
+##### `operator.mul(a: object, b: object, /) → object`
+
+`a * b` as a function: `reduce(operator.mul, [2, 3, 4])` → `24`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Left operand |
+| `b` | `object` | Right operand |
+
+- **Returns** `object`
+
+##### `operator.truediv(a: object, b: object, /) → object`
+
+`a / b` as a function.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Left operand |
+| `b` | `object` | Right operand |
+
+- **Returns** `object`
+
+##### `operator.floordiv(a: object, b: object, /) → object`
+
+`a // b` as a function.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Left operand |
+| `b` | `object` | Right operand |
+
+- **Returns** `object`
+
+##### `operator.mod(a: object, b: object, /) → object`
+
+`a % b` as a function.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Left operand |
+| `b` | `object` | Right operand |
+
+- **Returns** `object`
+
+##### `operator.pow(a: object, b: object, /) → object`
+
+`a ** b` as a function.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Left operand |
+| `b` | `object` | Right operand |
+
+- **Returns** `object`
+
+##### `operator.lshift(a: object, b: object, /) → object`
+
+`a << b` as a function.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Left operand |
+| `b` | `object` | Right operand |
+
+- **Returns** `object`
+
+##### `operator.rshift(a: object, b: object, /) → object`
+
+`a >> b` as a function.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Left operand |
+| `b` | `object` | Right operand |
+
+- **Returns** `object`
+
+##### `operator.and_(a: object, b: object, /) → object`
+
+`a & b` as a function.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Left operand |
+| `b` | `object` | Right operand |
+
+- **Returns** `object`
+
+##### `operator.or_(a: object, b: object, /) → object`
+
+`a | b` as a function.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Left operand |
+| `b` | `object` | Right operand |
+
+- **Returns** `object`
+
+##### `operator.xor(a: object, b: object, /) → object`
+
+`a ^ b` as a function.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Left operand |
+| `b` | `object` | Right operand |
+
+- **Returns** `object`
+
+##### `operator.neg(a: object, /) → object`
+
+`-a` as a function.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Operand |
+
+- **Returns** `object`
+
+##### `operator.pos(a: object, /) → object`
+
+`+a` as a function.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Operand |
+
+- **Returns** `object`
+
+##### `operator.invert(a: object, /) → object`
+
+`~a` as a function.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Operand |
+
+- **Returns** `object`
+
+##### `operator.inv(a: object, /) → object`
+
+`~a` as a function, the same as `invert`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Operand |
+
+- **Returns** `object`
+
+##### `operator.index(a: object, /) → int`
+
+`a` as a whole number, the conversion a list index makes: `operator.index(True)` → `1`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Value to convert |
+
+- **Returns** `int`
+
+##### `operator.concat(a: object, b: object, /) → object`
+
+`a + b` for two sequences, such as lists or text.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | First sequence |
+| `b` | `object` | Sequence to add |
+
+- **Returns** `object`
+
+##### `operator.contains(a: object, b: object, /) → bool`
+
+`b in a` as a function. The container comes first.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Container to search |
+| `b` | `object` | Value to look for |
+
+- **Returns** `bool`
+
+##### `operator.countOf(a: Iterable, b: object, /) → int`
+
+How many items of `a` equal `b`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `Iterable` | Items to count in |
+| `b` | `object` | Value to count |
+
+- **Returns** `int`
+
+##### `operator.indexOf(a: Iterable, b: object, /) → int`
+
+Position of the first item of `a` that equals `b`. Raises `ValueError` when none does.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `Iterable` | Items to search |
+| `b` | `object` | Value to find |
+
+- **Returns** `int`
+
+##### `operator.getitem(a: object, b: object, /) → object`
+
+`a[b]` as a function.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Container |
+| `b` | `object` | Index or key |
+
+- **Returns** `object`
+
+##### `operator.setitem(a: object, b: object, c: object, /) → None`
+
+`a[b] = c` as a function.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Container |
+| `b` | `object` | Index or key |
+| `c` | `object` | Value to store |
+
+- **Returns** `None`
+
+##### `operator.delitem(a: object, b: object, /) → None`
+
+`del a[b]` as a function.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `a` | `object` | Container |
+| `b` | `object` | Index or key |
+
+- **Returns** `None`
+
+##### `operator.attrgetter(attr: str, /, *attrs: str) → Callable`
+
+A function that reads the named attribute, for `key=`: `sorted(points, key=attrgetter("x"))`. Several names give a tuple.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `attr` | `str` | Attribute name; a dotted name reads through, such as `"pos.x"` |
+| `*attrs` | `str` | More attribute names |
+
+- **Returns** `Callable`
+
+##### `operator.itemgetter(item: object, /, *items: object) → Callable`
+
+A function that reads the given index or key, for `key=`: `sorted(pairs, key=itemgetter(1))` sorts by each pair's second item. Several keys give a tuple.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `item` | `object` | Index or key |
+| `*items` | `object` | More indexes or keys |
+
+- **Returns** `Callable`
+
+##### `operator.methodcaller(name: str, /, *args: object, **kwargs: object) → Callable`
+
+A function that calls the named method on its argument: `map(methodcaller("strip"), lines)`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `name` | `str` | Method name |
+| `*args` | `object` | Arguments for the method |
+| `**kwargs` | `object` | Keyword arguments for the method |
+
+- **Returns** `Callable`
+
+##### `operator.call(obj: Callable, /, *args: object, **kwargs: object) → object`
+
+`obj(*args, **kwargs)` as a function.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `obj` | `Callable` | Function to call |
+| `*args` | `object` | Arguments |
+| `**kwargs` | `object` | Keyword arguments |
+
+- **Returns** `object`
+
+*Built-in Modules*
+
+## string
+
+Python's text constants under `string.`, such as `string.ascii_uppercase` and `string.digits`, plus `string.capwords`. Works without Shared Library research.
+
+##### `string.ascii_letters: str`
+
+`ascii_lowercase` followed by `ascii_uppercase`.
+
+- **Returns** `str`
+
+##### `string.ascii_lowercase: str`
+
+The letters `abcdefghijklmnopqrstuvwxyz`.
+
+- **Returns** `str`
+
+##### `string.ascii_uppercase: str`
+
+The letters `ABCDEFGHIJKLMNOPQRSTUVWXYZ`.
+
+- **Returns** `str`
+
+##### `string.digits: str`
+
+The text `0123456789`.
+
+- **Returns** `str`
+
+##### `string.hexdigits: str`
+
+The text `0123456789abcdefABCDEF`.
+
+- **Returns** `str`
+
+##### `string.octdigits: str`
+
+The text `01234567`.
+
+- **Returns** `str`
+
+##### `string.punctuation: str`
+
+Every ASCII punctuation character, `!` through `~`.
+
+- **Returns** `str`
+
+##### `string.printable: str`
+
+`digits`, `ascii_letters`, `punctuation` and `whitespace` together.
+
+- **Returns** `str`
+
+##### `string.whitespace: str`
+
+Space, tab, newline, carriage return, vertical tab and form feed.
+
+- **Returns** `str`
+
+##### `string.capwords(s: str, sep: str | None = None) → str`
+
+Capitalize every word: `capwords("hello  world")` → `"Hello World"`. Without `sep`, words split on any whitespace and rejoin with one space; with `sep`, they split and rejoin on it.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `s` | `str` | Text to capitalize |
+| `sep` | `str \| None` | Word separator (default any whitespace) |
+
+- **Returns** `str`
+
+*Built-in Modules*
+
+## collections
+
+Python's container types under `collections.`: `defaultdict`, `Counter`, `OrderedDict`, `deque` and `namedtuple`. `collections.abc` still names the abstract types for annotations. Works without Shared Library research.
+
+##### `collections.Counter(iterable: object = None, /, **kwargs: int) → Counter`
+
+A dict that counts things: `Counter("banana")` counts each letter, and a missing key reads as `0`. `most_common(n)` lists the biggest counts.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `iterable` | `object` | Items to count, or a mapping of counts |
+| `**kwargs` | `int` | Counts by name |
+
+- **Returns** `Counter`
+
+##### `collections.defaultdict(default_factory: Callable | None = None, /, *args: object, **kwargs: object) → defaultdict`
+
+A dict that makes a value for a missing key: with `defaultdict(list)` every new key starts as `[]`, so `groups[key].append(x)` just works.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `default_factory` | `Callable \| None` | Function that makes a missing key's value |
+| `*args` | `object` | A mapping or iterable of pairs to start from |
+| `**kwargs` | `object` | Items by name |
+
+- **Returns** `defaultdict`
+
+##### `collections.OrderedDict(iterable: object = (), /, **kwargs: object) → OrderedDict`
+
+A dict with order-aware extras: `move_to_end(key)` and `popitem(last=False)`, and `==` between two of them also compares their order.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `iterable` | `object` | A mapping or iterable of pairs to start from |
+| `**kwargs` | `object` | Items by name |
+
+- **Returns** `OrderedDict`
+
+##### `collections.deque(iterable: Iterable[T] = (), maxlen: int | None = None) → deque`
+
+A list-like queue with fast adds and removes at both ends: `append`, `appendleft`, `pop`, `popleft`. With `maxlen`, adding past the limit drops from the other end.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `iterable` | `Iterable[T]` | Items to start with |
+| `maxlen` | `int \| None` | Size limit (default none) |
+
+- **Returns** `deque`
+
+##### `collections.namedtuple(typename: str, field_names: str | Iterable[str], *, rename: bool = False, defaults: Iterable | None = None, module: str | None = None) → type`
+
+Make a tuple class with named fields: `Point = namedtuple("Point", "x y")`, then `Point(1, 2).x`. It still indexes and unpacks like a tuple.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `typename` | `str` | Class name |
+| `field_names` | `str \| Iterable[str]` | Field names, as a list or one string such as `"x y"` |
+| `rename` | `bool` | Replace invalid field names with `_0`, `_1` and so on |
+| `defaults` | `Iterable \| None` | Defaults for the last fields |
+| `module` | `str \| None` | Accepted and ignored |
+
+- **Returns** `type`
 
 *Language / Basics*
 
@@ -7779,7 +9679,7 @@ s["scans"] += 1
 
 ## JSON
 
-Import the built-in `json` module to turn a record into text and back. `json.dumps(value)` writes `None`, booleans, numbers, strings, lists, tuples, and dicts with scalar keys, which is exactly the value shape the Signal Bus and the Data Archive accept, so anything that serializes is also something you can send or store. `json.dumps(value, sort_keys=True)` produces the same text for two equal dicts built in a different order, which is what makes it usable as a cache key. `json.loads(text)` reads it back and raises `ValueError` naming the line, column, and character when the text is malformed. A set, a class instance, or a function is refused; convert it first with `dataclasses.asdict()`. Note that a whole number always comes back as an int, because in this language a whole float IS an int.
+Import the built-in `json` module to turn a record into text and back. `json.dumps(value)` writes `None`, booleans, numbers, strings, lists, tuples, and dicts with scalar keys, converting non-string keys to text. The Signal Bus and the Data Archive accept a narrower shape (string dict keys, finite numbers, and their own size and nesting limits), so a value that serializes is not automatically one you can send or store. `json.dumps(value, sort_keys=True)` produces the same text for two equal dicts built in a different order, which is what makes it usable as a cache key. `json.loads(text)` reads it back and raises `ValueError` naming the line, column, and character when the text is malformed. A set, a class instance, or a function is refused; convert it to supported values first. `dataclasses.asdict()` converts a dataclass instance to a dict. Note that a whole number always comes back as an int, because in this language a whole float IS an int.
 
 ```python
 import json
@@ -7825,7 +9725,7 @@ print(double(5))
 
 ## Generators (yield)
 
-A `def` that contains `yield` is a generator: calling it returns a lazy iterator that produces one value each time it is asked, instead of building the whole list up front. Loop over it with `for x in gen():`, pull one value with `next(it)` (raises `StopIteration` when spent, or returns a default with `next(it, fallback)`), or materialize it with `list(gen())`. `yield from other()` re-emits every value from another iterable/generator and evaluates to that generator's `return` value. Advanced control: `gen.send(v)` resumes the paused `yield` with `v`, `gen.throw(error)` raises an exception at that yield, and `gen.close()` stops it (running any `finally`). A generator is one-shot: once exhausted it stays empty. Note: a bare generator expression `(x for x in xs)` is now lazy too, so wrap it in `list(...)` if you need a reusable list. Generators live only in the running script and cannot be sent over the Signal Bus or stored in the Data Archive: `list(...)` them first.
+A `def` that contains `yield` is a generator: calling it returns a lazy iterator that produces one value each time it is asked, instead of building the whole list up front. Loop over it with `for x in gen():`, pull one value with `next(it)` (raises `StopIteration` when spent, or returns a default with `next(it, fallback)`), or materialize it with `list(gen())`. `yield from other()` re-emits every value from another iterable/generator and evaluates to that generator's `return` value. Advanced control: `gen.send(v)` resumes the paused `yield` with `v`, `gen.throw(error)` raises an exception at that `yield`, and `gen.close()` stops it (running any `finally`). A generator is one-shot: once exhausted it stays empty. Note: a bare generator expression `(x for x in xs)` is now lazy too, so wrap it in `list(...)` if you need a reusable list. Generators live only in the running script and cannot be sent over the Signal Bus or stored in the Data Archive: `list(...)` them first.
 
 ```python
 def route(points):
@@ -7883,7 +9783,7 @@ print(c.n)
 
 ## @dataclass
 
-Import `dataclass` and `field` from `dataclasses` to turn annotated class attributes into declaration-ordered constructor fields. `dataclass` supports `init`, `repr`, `eq`, `order`, and `kw_only`; `field` supports `default`, `default_factory`, `init`, `repr`, `compare`, and `kw_only`. Mutable or otherwise unhashable direct defaults are rejected; use `default_factory` to create a separate value for each instance. Generated behavior includes inherited fields, `__init__`, `__repr__`, exact-class equality, optional ordering, and `__post_init__`. The compatibility spellings `frozen=False`, `unsafe_hash=False`, `slots=False`, and `weakref_slot=False` are accepted, but their `True` behavior is not supported. `match_args` and `ClassVar` / `InitVar` field semantics are unsupported; canonical uses receive a clear error. `asdict`, `astuple`, `fields`, `replace`, `is_dataclass`, the `MISSING` sentinel, and the `Field` records `fields()` returns are all available; `asdict()` is the supported bridge from an instance to a JSON-shaped value. `KW_ONLY`, `FrozenInstanceError`, `make_dataclass`, and public `__dataclass_fields__` introspection are unavailable; annotation types stay erased. A dataclass is still an ordinary user-class instance: use it when a record needs methods, validation, value equality, or ordering. Use `TypedDict` when the value is fundamentally a mapping or must cross a JSON-shaped boundary such as the Signal Bus or notebook APIs.
+Import `dataclass` and `field` from `dataclasses` to turn annotated class attributes into declaration-ordered constructor fields. `dataclass` supports `init`, `repr`, `eq`, `order`, `kw_only`, and `match_args`; `field` supports `default`, `default_factory`, `init`, `repr`, `compare`, and `kw_only`. Mutable or otherwise unhashable direct defaults are rejected; use `default_factory` to create a separate value for each instance. Generated behavior includes inherited fields, `__init__`, `__repr__`, `__match_args__`, exact-class equality, optional ordering, and `__post_init__`. The compatibility spellings `frozen=False`, `unsafe_hash=False`, `slots=False`, and `weakref_slot=False` are accepted, but their `True` behavior is not supported. `ClassVar` / `InitVar` field semantics are unsupported; canonical uses receive a clear error. `asdict`, `astuple`, `fields`, `replace`, `is_dataclass`, the `MISSING` sentinel, and the `Field` records `fields()` returns are all available; `asdict()` is the supported bridge from an instance to a JSON-shaped value. `KW_ONLY`, `FrozenInstanceError`, `make_dataclass`, and public `__dataclass_fields__` introspection are unavailable; annotation types stay erased. A dataclass is still an ordinary user-class instance: use it when a record needs methods, validation, value equality, or ordering. Use `TypedDict` when the value is fundamentally a mapping or must cross a JSON-shaped boundary such as the Signal Bus or notebook APIs.
 
 ```python
 from dataclasses import dataclass, field
@@ -8044,23 +9944,23 @@ The ship's clock. It tracks the time of day, the day count, and the sun's positi
 | --- | --- |
 | Type | Infrastructure |
 
-**Returned by:** `get_component("clock")`
+**Access via:** `get_component("clock")`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -8068,50 +9968,50 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 Current time as a **3-element list** `[hours, minutes, seconds]` in 24-hour format. Index with `t[0]`, `t[1]`, `t[2]`. Use for time-of-day branches or to wait for specific hours.
 
-- **Returns** List [hours, minutes, seconds]
+- **Returns** `list[int]`. `[hours, minutes, seconds]`.
 
 ##### `.get_day() → int`
 
 Current day number, starts at **1** and increments when the in-world clock rolls past midnight. Use for daily-budget logic (e.g. reset counters at the start of each day) or to detect day transitions for machines like the Heat Generator whose state changes per day.
 
-- **Returns** Number (day count)
+- **Returns** `int`. The day count.
 
 ##### `.get_time_of_day() → str`
 
 Current daylight phase as a string: `"dawn"`, `"day"`, `"dusk"`, or `"night"`. This is the simulation phase used by solar/day-night logic; the header may further label `"day"` as Morning/Afternoon/Evening for flavor.
 
-- **Returns** String: dawn / day / dusk / night
+- **Returns** `str`
 - **Possible values** `"dawn"`, `"day"`, `"dusk"`, `"night"`
 
 ##### `.get_elevation() → float`
 
 Sun's elevation above the horizon (**0-90** degrees). **0** at night, rises to **90** at solar noon (equator), back to **0** at dusk. Solar panels peak when their tilt complements the current elevation.
 
-- **Returns** Number (0-90 degrees)
+- **Returns** `float`. 0-90 degrees.
 
 ##### `.tick() → int`
 
 Deterministic simulation tick since save start. At normal speed the simulation grants a fresh script step budget every tick (**10 ticks/sec**, so one tick is **0.1** simulation seconds). Use tick deltas for profiling script timing instead of wall-clock milliseconds.
 
-- **Returns** Integer simulation tick since save start. Deterministic; one normal-speed tick is 100 ms of simulation time.
+- **Returns** `int`. Simulation tick since save start. Deterministic; one normal-speed tick is 100 ms of simulation time.
 
 ##### `.elapsed_seconds() → float`
 
 Elapsed simulation seconds since save start. This is the same time base that `sleep(seconds)` waits against, not browser wall-clock time.
 
-- **Returns** Number: elapsed simulation seconds since save start.
+- **Returns** `float`. Elapsed simulation seconds since save start.
 
 ##### `.elapsed_game_hours() → float`
 
 Elapsed world-clock hours since save start. Useful for rate calculations and logs that should follow the compressed day/night cycle instead of real seconds.
 
-- **Returns** Number, elapsed world-clock hours since save start.
+- **Returns** `float`. Elapsed world-clock hours since save start.
 
 ##### `.real_seconds_per_hour() → float`
 
 Number of real seconds in one world-clock hour. The day cycle compresses **24** world-clock hours into a fixed real-time window, so `sleep(clock.real_seconds_per_hour())` waits exactly one world-clock hour and multiplying by **24** waits a full day. Lets scripts express world-time delays without hardcoding the conversion.
 
-- **Returns** Number, real seconds in one world-clock hour. Multiply by `24` for a full day. Use for planet-aware `sleep()` calls (`sleep(clock.real_seconds_per_hour())` waits exactly one world-clock hour regardless of pacing).
+- **Returns** `float`. Real seconds in one world-clock hour. Multiply by `24` for a full day. Use for planet-aware `sleep()` calls (`sleep(clock.real_seconds_per_hour())` waits exactly one world-clock hour regardless of pacing).
 
 *Components / Core Systems*
 
@@ -8119,23 +10019,23 @@ Number of real seconds in one world-clock hour. The day cycle compresses **24** 
 
 Read the player's name and current credits with `get_component("me")` or `get_component("commander")`. Scripts cannot change either value.
 
-**Returned by:** `get_component("commander")`
+**Access via:** `get_component("commander")`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -8143,13 +10043,13 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 Your commander name as a string. Set during initial character creation (or default). Use for personalized dashboard messages.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.get_credits() → int`
 
 Current credit balance. Changes when `shop.buy()` / `shop.sell()` run, Bio Exchanges pay out, contract transmissions succeed, and Orders complete. Use as a gate before expensive `shop.buy()` calls.
 
-- **Returns** Number
+- **Returns** `int`
 
 *Components / Core Systems*
 
@@ -8157,23 +10057,23 @@ Current credit balance. Changes when `shop.buy()` / `shop.sell()` run, Bio Excha
 
 Writes structured script output to the same Console used by `print()`. Access it with `get_component("console")`; no research is required. Messages can have a severity, named channel, color, and timestamp.
 
-**Returned by:** `get_component("console")`
+**Access via:** `get_component("console")`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -8297,7 +10197,7 @@ Print a low-priority debug line, hidden from the ALL view unless the player enab
 
 Return the current game time-of-day as a `"HH:MM:SS"` string, for building your own line prefixes when you want full control over formatting.
 
-- **Returns** String: game time-of-day as `"HH:MM:SS"`.
+- **Returns** `str`. Game time of day as `"HH:MM:SS"`.
 
 ##### `.clear(channel: str = "") → ActionResult`
 
@@ -8329,23 +10229,23 @@ A ship sensor that reports which outpost you're viewing, its name and coordinate
 | --- | --- |
 | Type | Infrastructure |
 
-**Returned by:** `get_component("gps")`
+**Access via:** `get_component("gps")`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -8353,43 +10253,43 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 Returns the current planet component. Use `gps.planet().id` for stable ids such as `"nocturna"` when calling Journal APIs, and `gps.planet().get_name()` for the display name `"Nocturna"`.
 
-- **Returns** `Nocturna` planet component: use `.id` for stable journal ids and `.get_name()` for display.
+- **Returns** `Nocturna`. Use `.id` for stable journal ids and `.get_name()` for display.
 
 ##### `.site_name() → str`
 
 Returns the current outpost's display name. `"Nocturna Base"` for the home outpost (default, players can rename); `"Outpost 1"`, `"Outpost 2"`, ... for player-founded outposts.
 
-- **Returns** String (current outpost name, e.g. "Nocturna Base")
+- **Returns** `str`. The current outpost's name, e.g. `"Nocturna Base"`.
 
 ##### `.coords() → list[int]`
 
 Returns the current outpost's world coordinates as a **2-element list** `[x, y]`. The home outpost sits at `[0, 0]`; founded outposts carry the position the player chose in Plan mode.
 
-- **Returns** List [x, y] (current outpost coordinates)
+- **Returns** `list[int]`. `[x, y]` of the current outpost.
 
 ##### `.buildings_used() → int`
 
 Returns the number of buildings deployed at the **current** outpost. Sensors, mobile units, structural hubs, and POI extraction machines don't count, only shop-purchased deployable buildings.
 
-- **Returns** Number (buildings deployed at the current outpost)
+- **Returns** `int`. Buildings deployed at the current outpost.
 
 ##### `.buildings_capacity() → int`
 
 Returns the soft building threshold at the current outpost. Each counted building above it reduces productive and service throughput. Nocturna Base has a few extra starter slots; founded outposts use the standard threshold.
 
-- **Returns** Number (soft building threshold at the current outpost)
+- **Returns** `int`. Soft building threshold at the current outpost.
 
 ##### `.is_full() → bool`
 
 Returns `True` when the current outpost has reached or exceeded its soft building threshold. The threshold itself does not block ordinary deployment.
 
-- **Returns** Boolean (true if the soft building threshold is reached or exceeded)
+- **Returns** `bool`. `True` if the soft building threshold is reached or exceeded.
 
 ##### `.is_home() → bool`
 
 Returns `True` when the current outpost is the home outpost (the one the player started at, default name `"Nocturna Base"`). Useful for branching on whether you're managing the spawn site versus a remote outpost.
 
-- **Returns** Boolean (true if the current outpost is the home base)
+- **Returns** `bool`. `True` if the current outpost is the home base.
 
 *Components / Core Systems*
 
@@ -8397,23 +10297,23 @@ Returns `True` when the current outpost is the home outpost (the one the player 
 
 Provides stable planet-wide data for Nocturna through `get_component("nocturna")`, including map bounds, biomes, terraforming progress, and permanent map contacts. Hidden weather aftermaths are deliberately absent; their coordinates exist only in the storm packets your station network captures. Sonar discoveries and surveys are stored separately in `get_component("journal")`.
 
-**Returned by:** `get_component("nocturna")`
+**Access via:** `get_component("nocturna")`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -8421,13 +10321,13 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 Display name of this planet, returns `"Nocturna"`. Safe to hardcode, but querying future-proofs scripts against rename or multi-planet expansion.
 
-- **Returns** String (display name)
+- **Returns** `str`. The display name.
 
 ##### `.get_bounds() → Bounds`
 
 Surface coordinate bounds as a `Bounds` object with `.min_x`, `.max_x`, `.min_y`, `.max_y`, all in meters from base. Use to clamp nav targets inside the operational surface, or to generate random valid coordinates: `import random; b = planet.get_bounds(); x = random.randint(b.min_x, b.max_x); y = random.randint(b.min_y, b.max_y)`. See `Bounds`.
 
-- **Returns** `Bounds` object with `.min_x`, `.max_x`, `.min_y`, `.max_y` (meters)
+- **Returns** `Bounds`. In meters.
 
 ##### `.contains(x: float, y: float) → bool`
 
@@ -8440,7 +10340,7 @@ Surface coordinate bounds as a `Bounds` object with `.min_x`, `.max_x`, `.min_y`
 | `x` | `float` | X coordinate in meters |
 | `y` | `float` | Y coordinate in meters |
 
-- **Returns** Boolean: `True` if the point is inside the planet's surface bounds
+- **Returns** `bool`. `True` if the point is inside the planet's surface bounds.
 
 ##### `.biome_at(x: float, y: float) → str`
 
@@ -8453,7 +10353,7 @@ Biome id at the world coordinate `(x, y)`. Returns one of `"frozen"`, `"coastal"
 | `x` | `float` | World x coordinate. |
 | `y` | `float` | World y coordinate. |
 
-- **Returns** Biome id at the coordinate: one of `"frozen"`, `"coastal"`, `"geothermal"`, `"volcanic"`, `"deep"`.
+- **Returns** `str`
 - **Possible values** `"frozen"`, `"coastal"`, `"geothermal"`, `"volcanic"`, `"deep"`
 
 ##### `.life_form_biome(item_id: str) → str | None`
@@ -8466,32 +10366,32 @@ Find the native biome for a life-form item: `"frozen"`, `"coastal"`, `"geotherma
 | --- | --- | --- |
 | `item_id` | `str` | A life-form item id, e.g. `"vent_fungus"`. |
 
-- **Returns** Native biome id for the life form, or `None` for another item type. The value is fixed per species and matches the biome whose Essence Liquifier accepts it.
+- **Returns** `str | None`. Native biome id for the life form, or `None` for another item type. The value is fixed per species and matches the biome whose Essence Liquifier accepts it.
 - **Possible values** `"frozen"`, `"coastal"`, `"geothermal"`, `"volcanic"`, `"deep"`
 
 ##### `.biomes() → list[str]`
 
 Lists every biome id on the planet. Use it for planet-wide loops: `for biome in nocturna.biomes(): print(biome)`. The set never changes during play.
 
-- **Returns** List of every biome id on the planet.
+- **Returns** `list[str]`. Every biome id on the planet.
 
 ##### `.terraform_progress() → float`
 
 Terraform Index progress on a **0-100%** scale: **0** is untouched; **100** means 1,000,000 TP and all six pillars are complete. Atmosphere owns 70% of the Index; biomass, plants, and wildlife each own a separate 10% that cannot substitute for another pillar. Gate progress logic with it: `if nocturna.terraform_progress() >= 50: ...`. For the raw TP value, use `total_tp()`.
 
-- **Returns** Number: Terraform Index progress as a percent (**0-100**).
+- **Returns** `float`. Terraform Index progress as a percent (**0-100**).
 
 ##### `.total_tp() → float`
 
 The finite Terraform Index in TP, in the **0-1,000,000** range. Temperature, oxygen, and pressure together own 700,000 TP; biomass, plants, and wildlife each own a non-substitutable 100,000 TP. Raw metrics may keep growing after their final phase, but a completed pillar contributes no additional Index. The value gates cross-system research.
 
-- **Returns** Number: finite Terraform Index points (**0-1,000,000**) used by cross-system research.
+- **Returns** `float`. Finite Terraform Index points (**0-1,000,000**) used by cross-system research.
 
 ##### `.points_of_interest() → list[PointOfInterest]`
 
 Lists every permanent "?" contact on the Planet Map so scripts can route to real sites. Each `PointOfInterest` has whole-number coordinates, a `scanned` flag, and a `kind` that stays `"unknown"` until a scanner reaches the contact. Filter for `not point.scanned`, travel to its coordinates, and scan with Rover or Pioneer sonar or a drone Bio Scanner. A contact the instrument you brought cannot identify stays unscanned even after a sweep that succeeded, and the sweep lists it in `scan.blocked` with the same coordinates and a reason: record those or your loop reselects the same contact. See `PointOfInterest`.
 
-- **Returns** List of `PointOfInterest` records: every physical map contact (the "?" markers), each with `.x` / `.y` / `.scanned`. `.kind` reads `"unknown"` until you scan the contact.
+- **Returns** `list[PointOfInterest]`. Every physical map contact (the "?" markers). `.kind` reads `"unknown"` until you scan the contact.
 
 *Components / Core Systems*
 
@@ -8499,23 +10399,23 @@ Lists every permanent "?" contact on the Planet Map so scripts can route to real
 
 Checks global research progress through `get_component("research")`. Use the public ids shown on the Research page, such as `"research_auto_feeders"`. Available from the beginning and read-only.
 
-**Returned by:** `get_component("research")`
+**Access via:** `get_component("research")`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -8529,13 +10429,13 @@ Return `True` only when `research_id` is known and unlocked. Known but locked re
 | --- | --- | --- |
 | `research_id` | `str` | Public research id, for example `research_auto_feeders`. |
 
-- **Returns** Boolean. `True` only when the known research is unlocked and available in the current build.
+- **Returns** `bool`. `True` only when the known research is unlocked and available in the current build.
 
 ##### `.unlocked() → list[str]`
 
 Return a fresh list of public research ids that are unlocked and available in the current build. The list follows stable Research-page registry order, contains no internal capability ids, and can be modified without changing game state.
 
-- **Returns** List of public research ids unlocked and available in the current build, in stable research-registry order.
+- **Returns** `list[str]`. Public research ids unlocked and available in the current build, in stable research-registry order.
 
 *Components / Core Systems*
 
@@ -8543,23 +10443,23 @@ Return a fresh list of public research ids that are unlocked and available in th
 
 Buys from and sells to Earth. Use `get_component("shop")` to automate surplus sales or purchases when a threshold is reached. The same catalogue and prices are used by the Shop UI.
 
-**Returned by:** `get_component("shop")`
+**Access via:** `get_component("shop")`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -8653,7 +10553,7 @@ Buy a positive whole-number `quantity` of `item_id`, defaulting to **1**. The co
 
 Every available catalogue entry as a list of `{id, name, cost}` objects. Use to pick a target dynamically or to show a filtered picker in a script. The Earth shop never runs out of catalogue items; entries hidden by tech gates don't appear.
 
-- **Returns** List of {id, name, cost}
+- **Returns** `list[ShopItem]`
 
 *Components / Core Systems*
 
@@ -8661,23 +10561,23 @@ Every available catalogue entry as a list of `{id, name, cost}` objects. Use to 
 
 Sends data to other planets. Use it to report sensor readings to Earth or submit contract answers. Call `connect()` to choose a planet, then `transmit(key, value)` to send data; `disconnect()` clears the connection. A connection lasts only for the current script run, so each transmitting script must connect first. Save `get_component("transmitter")` to a variable and reuse it for both calls.
 
-**Returned by:** `get_component("transmitter")`
+**Access via:** `get_component("transmitter")`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -8685,7 +10585,7 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 Every available transmission destination as a list of `Planet` objects (each with `.id`, `.name`, etc.). Call once at script start to see what is available; pass a returned `.id` to `connect(id)`.
 
-- **Returns** List of Planet objects
+- **Returns** `list[Planet]`
 
 ##### `.connect(planet: str) → ActionResult`
 
@@ -8726,7 +10626,7 @@ Close the current script-run channel. This does not affect contracts or any othe
 
 Current connection status. Returns an object with `.connected` (boolean) and `.target` (connected planet id, or `"none"`). Use as a guard before `transmit()`: `if transmitter.get_info().connected: transmitter.transmit(...)`.
 
-- **Returns** Object { connected, target }
+- **Returns** `TransmitterInfo`
 
 ##### `.transmit(key: str, value: JsonValue) → ActionResult`
 
@@ -8767,23 +10667,23 @@ Send a named value to the connected planet with `transmitter.transmit(key, value
 
 Reports cultivated biomass on the planet, in tons. Updates live as Biomass Mixers produce. Available after the Biosphere research lands; no calibration step.
 
-**Returned by:** `get_component("biomass_sensor")`
+**Access via:** `get_component("biomass_sensor")`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -8791,7 +10691,7 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 Returns total biomass tonnage on the planet as a number. `0` before any Biomass Mixer has produced.
 
-- **Returns** Number (tons of biomass)
+- **Returns** `float`. Tons of biomass.
 
 ```python
 component = get_component("biomass_sensor")
@@ -8809,23 +10709,23 @@ An atmospheric oxygen probe that landed broken. It reports a raw voltage until a
 | --- | --- |
 | Type | Sensors |
 
-**Returned by:** `get_component("oxygen_sensor")`
+**Access via:** `get_component("oxygen_sensor")`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -8833,7 +10733,7 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 Before repair, read raw voltage from the uncalibrated probe as a small decimal value. This is not yet a ppt reading; compare it with a known reference to calculate the calibration factor. After repair, read the current atmospheric oxygen level in ppt directly.
 
-- **Returns** Number (raw voltage before repair; atmospheric oxygen in ppt after repair)
+- **Returns** `float`. Raw voltage before repair; atmospheric oxygen in ppt after repair.
 
 ##### `.calibrate(value: float) → ActionResult`
 
@@ -8874,23 +10774,23 @@ print(value)
 
 Reports permanent vegetated km² produced by the Plant Terraformer fleet. Available after the Biosphere research lands. Field growth alone does not change this value.
 
-**Returned by:** `get_component("plants_sensor")`
+**Access via:** `get_component("plants_sensor")`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -8898,7 +10798,7 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 Returns permanent Plants km² as a number. Plant Terraformers are the only writers; repeated crop cycles, diversity, providers, Fertilizer, and Yield Amplifier increase the physical Forage supply they process.
 
-- **Returns** Number (km² planted)
+- **Returns** `float`. km² planted.
 
 ```python
 component = get_component("plants_sensor")
@@ -8916,23 +10816,23 @@ An atmospheric pressure probe that landed broken. Its readings come out scramble
 | --- | --- |
 | Type | Sensors |
 
-**Returned by:** `get_component("pressure_sensor")`
+**Access via:** `get_component("pressure_sensor")`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -8940,7 +10840,7 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 Current unstable repair reading as an integer. If the value is odd, add **1**; if it is even, use it unchanged. After repair, this method returns real atmospheric pressure in kPa.
 
-- **Returns** Number (unstable repair reading; kPa after repair)
+- **Returns** `int`. An unstable repair reading; kPa after repair.
 
 ##### `.stabilize(value: float) → ActionResult`
 
@@ -8985,23 +10885,23 @@ Always-working surface temperature probe, no calibration needed. Reads the plane
 | --- | --- |
 | Type | Sensors |
 
-**Returned by:** `get_component("thermometer")`
+**Access via:** `get_component("thermometer")`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -9009,7 +10909,7 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 Current surface temperature in **°C** as a number. Safe to call from any script; no repair step needed. This is the display °C, for the heat-units progression metric that research thresholds compare against, read `get_component("atmosphere").get_heat()`.
 
-- **Returns** Number (°C)
+- **Returns** `float`. In °C.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -9027,23 +10927,23 @@ print(value)
 
 Reports total individual fauna across all established Habitat colonies. Available after Biosphere research lands; reads `0` until the first Wildlife colony establishes.
 
-**Returned by:** `get_component("wildlife_sensor")`
+**Access via:** `get_component("wildlife_sensor")`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -9051,7 +10951,7 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 Returns the current Wildlife population count as a number, summed from established Habitat colonies.
 
-- **Returns** Number (individuals)
+- **Returns** `int`. Individuals.
 
 ```python
 component = get_component("wildlife_sensor")
@@ -9065,23 +10965,23 @@ print(value)
 
 Stores sites found or surveyed by sonar and fragments cataloged by Bio Labs. Access it with `get_component("journal")` to plan trips and Bio Orders without scanning again. Records are separated by planet and survive script restarts, vehicle changes, and save/load.
 
-**Returned by:** `get_component("journal")`
+**Access via:** `get_component("journal")`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -9095,7 +10995,7 @@ Lists every site classified by sonar on `planet_id`. Call `journal.discovered_si
 | --- | --- | --- |
 | `planet_id` | `str` | Journal planet id; the current planet is usually "nocturna". |
 
-- **Returns** List of classified `Site` values for that planet. Each concrete type follows `kind()`. Unsurveyed productive sites leave detailed fields as `None`; inert formations are resolved by scanning. Query again for current survey, cycle, and cap data.
+- **Returns** `list[Site]`. Classified sites for that planet; each concrete type follows `kind()`. Unsurveyed productive sites leave detailed fields as `None`; inert formations are resolved by scanning. Query again for current survey, cycle, and cap data.
 
 ##### `.surveyed_sites(planet_id: str) → list[Site]`
 
@@ -9107,7 +11007,7 @@ Every fully-resolved site on `planet_id` as `list[Site]`, same shape as `discove
 | --- | --- | --- |
 | `planet_id` | `str` | Journal planet id; the current planet is usually "nocturna". |
 
-- **Returns** List of fully resolved `Site` snapshots, including inert formations resolved by a scan. Uses the same types as `discovered_sites()`, filtered to `surveyed == True`. Query again for current cycle and cap data.
+- **Returns** `list[Site]`. Fully resolved sites, including inert formations resolved by a scan: `discovered_sites()` filtered to `surveyed == True`. Query again for current cycle and cap data.
 
 ##### `.cataloged_fragments(planet_id: str) → list[CatalogedFragment]`
 
@@ -9119,7 +11019,7 @@ Lists fragments analyzed at a Bio Lab on `planet_id`, newest first. Each `Catalo
 | --- | --- | --- |
 | `planet_id` | `str` | Journal planet id; the current planet is usually "nocturna". |
 
-- **Returns** List of `CatalogedFragment`: every fragment you've analyzed at a Bio Lab on that planet, including its stable `.fragment_id` and player-facing `.name`. Sorted **most-recently-cataloged first**. Returns `[]` for any planet other than the current one.
+- **Returns** `list[CatalogedFragment]`. Every fragment you've analyzed at a Bio Lab on that planet. Sorted **most-recently-cataloged first**. `[]` for any planet other than the current one.
 
 ##### `.cataloged_creatures(planet_id: str) → list[CatalogedCreature]`
 
@@ -9131,7 +11031,7 @@ Lists creatures whose five fragments have all been analyzed on `planet_id`, most
 | --- | --- | --- |
 | `planet_id` | `str` | Journal planet id; the current planet is usually "nocturna". |
 
-- **Returns** List of `CatalogedCreature`: every creature whose five fragments have been analyzed on that planet, with the ids and exact startup supplies needed by a generic Habitat revival script. Sorted **most-recently-completed first**. Returns `[]` for any planet other than the current one.
+- **Returns** `list[CatalogedCreature]`. Every creature whose five fragments have been analyzed on that planet, with the ids and exact startup supplies a generic Habitat revival script needs. Sorted **most-recently-completed first**. `[]` for any planet other than the current one.
 
 ##### `.coord_info(x: int, y: int) → LifeFormScanResult | None`
 
@@ -9144,13 +11044,13 @@ Read the saved `LifeFormScanResult` for a discovered permanent biosite coordinat
 | `x` | `int` | Whole-number world x |
 | `y` | `int` | Whole-number world y |
 
-- **Returns** `LifeFormScanResult` for permanent biosite `(x, y)` if it has been scanned. Returns `None` if untouched or not a biosite. Cheap; no yield.
+- **Returns** `LifeFormScanResult | None`. `None` if `(x, y)` is untouched or not a biosite. Cheap; no yield.
 
 ##### `.biomass_coords() → list[LifeFormScanResult]`
 
 Lists every discovered permanent biosite as a `LifeFormScanResult`. This is the restart-safe route source for harvester drones: inspect `.coord`, each sample's `.remaining_tons`, and `is_ready(x, y)` before dispatching.
 
-- **Returns** List of every discovered permanent biosite as `LifeFormScanResult` snapshots. Use each `.coord`, `.life_forms`, and `.remaining_tons` to schedule drone harvest routes.
+- **Returns** `list[LifeFormScanResult]`. Every discovered permanent biosite. Use each `.coord`, `.life_forms`, and `.remaining_tons` to schedule drone harvest routes.
 
 ##### `.has_scanned(x: int, y: int) → bool`
 
@@ -9163,7 +11063,7 @@ Lists every discovered permanent biosite as a `LifeFormScanResult`. This is the 
 | `x` | `int` | Whole-number world x |
 | `y` | `int` | Whole-number world y |
 
-- **Returns** Boolean: `True` if you've scanned this whole-number coordinate.
+- **Returns** `bool`. `True` if you've scanned this whole-number coordinate.
 
 ##### `.is_empty(x: int, y: int) → bool`
 
@@ -9176,7 +11076,7 @@ Lists every discovered permanent biosite as a `LifeFormScanResult`. This is the 
 | `x` | `int` | Whole-number world x |
 | `y` | `int` | Whole-number world y |
 
-- **Returns** Boolean: `True` only when you scanned this whole-number coordinate and it was not a biosite.
+- **Returns** `bool`. `True` only when you scanned this whole-number coordinate and it was not a biosite.
 
 ##### `.is_ready(x: int, y: int) → bool`
 
@@ -9189,7 +11089,7 @@ Lists every discovered permanent biosite as a `LifeFormScanResult`. This is the 
 | `x` | `int` | Biosite world x |
 | `y` | `int` | Biosite world y |
 
-- **Returns** Boolean: `True` if a discovered biosite has stock or its cooldown has elapsed, and no extraction is currently in progress there.
+- **Returns** `bool`. `True` if a discovered biosite has stock or its cooldown has elapsed, and no extraction is currently in progress there.
 
 ##### `.next_ready_at(x: int, y: int) → float | None`
 
@@ -9202,7 +11102,7 @@ When the extraction cooldown ends, as an absolute hour. A depleted site's timest
 | `x` | `int` | Biosite world x |
 | `y` | `int` | Biosite world y |
 
-- **Returns** Absolute hour when a depleted biosite's extraction cooldown ends. The deadline may already be in the past until extraction replenishes the site. Returns `None` if the site is not recorded, material remains, or it has never been extracted.
+- **Returns** `float | None`. Absolute hour when a depleted biosite's extraction cooldown ends. The deadline may already be in the past until extraction replenishes the site. `None` if the site is not recorded, material remains, or it has never been extracted.
 
 *Components / Exploration*
 
@@ -9210,23 +11110,23 @@ When the extraction cooldown ends, as an absolute hour. A depleted site's timest
 
 Annotates the Planet Map from your scripts. Get it with `get_component("markers")` after Cartography unlocks, then `markers.place("survey.rover_1.empty:120:-40", 120, -40, "No contact", "x")` to drop a marker anywhere in the world, instantly, with no vehicle and no materials. Markers are notes, not blueprints: to actually build somewhere, pass the coordinates to `construction_blueprint.plan_structure(...)`. Store structured data in the Data Archive under the same id.
 
-**Returned by:** `get_component("markers")`
+**Access via:** `get_component("markers")`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -9273,7 +11173,7 @@ Read one marker by id.
 | --- | --- | --- |
 | `id` | `str` | Marker id to look up. |
 
-- **Returns** The `Marker` with that id, or `None` when no marker uses it.
+- **Returns** `Marker | None`. `None` when no marker uses that id.
 
 *Raises*
 
@@ -9291,7 +11191,7 @@ Read markers as a list sorted by id. Pass a prefix such as `"build."` to read on
 | --- | --- | --- |
 | `prefix` | `str` | Optional id prefix such as `"survey.rover_1."`. |
 
-- **Returns** List of `Marker` values sorted by id, optionally narrowed to one id prefix. Empty prefix returns every marker.
+- **Returns** `list[Marker]`. Sorted by id, optionally narrowed to one id prefix. An empty prefix returns every marker.
 
 *Raises*
 
@@ -9353,23 +11253,23 @@ Reveals the sectors of the Harvester grid around base so the Harvester knows whe
 | --- | --- |
 | Type | Harvesting |
 
-**Returned by:** `get_component("scanner_1")`
+**Access via:** `get_component("scanner_1")`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -9404,7 +11304,7 @@ Scan one local sector with `self.scan("E14")`. The scan takes a few ticks and pa
 
 Every previously scanned sector as a fresh dict `{sector_id: ScanResult}`. Iterate with `.keys()` / `.values()` / `.items()`, or index by sector id: `self.get_scanned()["E14"]`. A sector only needs to be physically scanned once, and that history persists across script runs. Each `get_scanned()` call reflects the current contents of those sectors, including items collected or dropped since the last call. A dict or `ScanResult` already saved in your script does not update itself, so call `get_scanned()` again before choosing another target. Returns an empty dict if nothing has been scanned yet.
 
-- **Returns** A dict (sector ID → ScanResult)
+- **Returns** `dict[str, ScanResult]`. Keyed by sector id.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -9425,29 +11325,29 @@ Base-station energy storage. It fills on its own when generation runs a surplus 
 
 1. Buy from the Shop for 300 cr.
 
-**Returned by:** `get_component(id)`
+**Access via:** `get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ### Methods
 
@@ -9455,13 +11355,13 @@ The outpost where this building is deployed. The returned `OutpostRef` includes 
 
 Current stored energy in watt-hours (**Wh**). Drops when consumption exceeds generation, rises when generation exceeds consumption, and stays level when they are equal. Approaching **0** is a red flag, the grid is about to brown out.
 
-- **Returns** Number (Wh)
+- **Returns** `float`. In Wh.
 
 ##### `.get_capacity() → float`
 
 Total battery capacity in watt-hours (**Wh**). Queryable rather than hardcoded so future upgrades don't break scripts. Use with `get_level()` for charge percent.
 
-- **Returns** Number (Wh)
+- **Returns** `float`. In Wh.
 
 *Components / Power*
 
@@ -9481,35 +11381,35 @@ A **4,000 Wh** emergency reserve that catches lightning within **600 m** and dis
 2. Fabricate a **Lightning Rod** on a **Fabricator**: 1× Machine Frame, 4× Battery Cell, and 2× Circuit Panel.
 3. Deploy it from your Inventory.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `.input: InputSlot`
 
 The rod's material slot. Feed it Storm Glass with your ordinary logistics, then spend one with `repair()` to restore full condition.
 
-- **Returns** `InputSlot`: `connect()`, `take()`, `eject()`, `flush()`, `count()`, `capacity()`, `connected_to()`. Holds the Storm Glass that `repair()` spends.
+- **Returns** `InputSlot`. Holds the Storm Glass that `repair()` spends.
 
 ### Methods
 
@@ -9517,25 +11417,25 @@ The rod's material slot. Feed it Storm Glass with your ordinary logistics, then 
 
 Wh currently banked, **0** up to `capacity()`. Rises only when a strike lands within catch range of this rod; falls automatically when its grid is short and the batteries are empty. It never charges from grid surplus.
 
-- **Returns** Number: Wh currently banked, **0** up to `capacity()`. Fills only when a thunderstorm strike lands within catch range of this rod; drains automatically when its grid runs short and the batteries are empty. Never charges from grid surplus.
+- **Returns** `float`. Wh currently banked, from **0** up to `capacity()`. Fills only when a thunderstorm strike lands within catch range of this rod; drains automatically when its grid runs short and the batteries are empty. Never charges from grid surplus.
 
 ##### `.capacity() → float`
 
 Bank capacity in Wh, several times a base battery. Query this instead of hardcoding the number.
 
-- **Returns** Number: bank capacity in Wh.
+- **Returns** `float`. Bank capacity, in Wh.
 
 ##### `.last_strike() → float`
 
 Hour timestamp of the last strike from which this rod accepted energy, or **-1** if none. A strike that adds no energy, for example when the bank is full or integrity is zero, does not update this record. Compare with the clock's current time to see how long it has been since energy was last captured.
 
-- **Returns** Number: hour timestamp of the last strike from which this rod accepted energy, or **-1** if none. A strike that adds no energy, for example when the bank is full or integrity is zero, does not update this record.
+- **Returns** `float`. Hour timestamp of the last strike from which this rod accepted energy, or **-1** if none. A strike that adds no energy, for example when the bank is full or integrity is zero, does not update this record.
 
 ##### `.integrity() → float`
 
 This rod's condition from **0** to **1**, which is also its capture efficiency. Continuous corrosion lowers it by **0.05 per day**; strikes do not cause separate damage. A rod at **0.5** banks half of every strike it catches, and one at **0** banks nothing while still standing and still repairable.
 
-- **Returns** Number (**0-1**): this rod's condition, which is also its capture efficiency. A rod at **0.5** banks half of every strike it catches; at **0** it banks nothing and still stands.
+- **Returns** `float`. This rod's condition (**0-1**), which is also its capture efficiency. A rod at **0.5** banks half of every strike it catches; at **0** it banks nothing and still stands.
 
 ##### `.repair() → ActionResult` *(self only)*
 
@@ -9574,35 +11474,35 @@ Burns oil into strong buffered bridge power. Oil wells pulse between active and 
 1. Requires the **Oil Generator** research (Temperature 1,500).
 2. Buy from the Shop for 2,000 cr.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `.oil_in: FluidPort`
 
-Input flow port for oil. Wire with `self.oil_in.connect("Liquid Tank 1")` (recommended) or directly to an `Oil Pump`. See `FluidPort`.
+Input flow port for oil. Wire with `self.oil_in.connect("Liquid Tank 1")` (recommended) or directly to an Oil Pump. See `FluidPort`.
 
-- **Returns** `FluidPort`: `connect()`, `connected_to()`, `level()`, `capacity()`, `flow_rate()`.
+- **Returns** `FluidPort`
 
 ### Methods
 
@@ -9610,19 +11510,19 @@ Input flow port for oil. Wire with `self.oil_in.connect("Liquid Tank 1")` (recom
 
 Watts fed to the grid on the last power tick. **0** when throttled to 0 OR oil_in buffer is starved. The generator scales output proportionally to available oil, so a partially-starved generator produces partial power. Updates once per power tick, a fresh `set_throttle(...)` is reflected on the next tick.
 
-- **Returns** Number (watts) currently fed to the grid. **0** when idle (throttle=0) or starved (no oil in buffer).
+- **Returns** `float`. Watts currently fed to the grid. **0** when idle (throttle=0) or starved (no oil in buffer).
 
 ##### `.oil_consumption() → float`
 
 Actual oil consumed on the last power tick, in t/h. With enough oil supplied, demand scales linearly with throttle from **0 t/h** at 0 to **8 t/h** at 1. Partial or total oil starvation lowers the actual rate.
 
-- **Returns** Number: oil consumed in t/h. **0** when idle.
+- **Returns** `float`. Oil consumed, in t/h. **0** when idle.
 
 ##### `.throttle() → float`
 
 Current throttle (**0-1**). **0** by default, generator idles until scripted.
 
-- **Returns** Number (**0-1**).
+- **Returns** `float`. The throttle setting (**0-1**).
 
 ##### `.set_throttle(rate: float) → ActionResult` *(self only)*
 
@@ -9666,41 +11566,41 @@ Generates up to **5,000 W** from Fuel Rods and cooling water. One rod lasts **72
 1. Requires the **Nuclear Program** research (Terraform Index 650,000).
 2. Buy from the Shop for 750,000 cr.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `.water_in: FluidPort`
 
 Automatic cooling-water input. The reactor consumes **0.5-1 t/h** while heating and pauses safely if the supply runs dry.
 
-- **Returns** `FluidPort`: the automatic cooling-water input. Supports `connect()`, `level()`, `capacity()`, `flow_rate()`, and `connected_to()`.
+- **Returns** `FluidPort`. The automatic cooling-water input.
 
 ##### `.input: InputSlot`
 
 Normal Fuel Rod input. Rods arrive from a Lead Cask, and the reactor takes the next one automatically when needed.
 
-- **Returns** `InputSlot`: ordinary Fuel Rod supply. Supports `connect()`, `take()`, `eject()`, `flush()`, `count()`, `capacity()`, and `connected_to()`. The reactor seats a rod automatically when needed. Fuel Rod recovery must target a compatible local Lead Cask.
+- **Returns** `InputSlot`. Ordinary Fuel Rod supply. The reactor seats a rod automatically when needed. Fuel Rod recovery must target a compatible local Lead Cask.
 
 ### Methods
 
@@ -9728,31 +11628,31 @@ Set reactor heat from **0-1**. Values outside the range are clamped. The setting
 
 Current heat setting from **0-1**.
 
-- **Returns** Number **0-1**: the current heat setting.
+- **Returns** `float`. The current heat setting (**0-1**).
 
 ##### `.temperature() → float`
 
 Current temperature in °C. Output begins at **300**, peaks at **900**, then falls back to zero across the **900-950** red band. **950** triggers an automatic overheat shutdown.
 
-- **Returns** Number: reactor temperature in °C this tick. Output starts at **300**, peaks at **900**, falls back to zero across the **900-950** red band, and **950** overheats.
+- **Returns** `float`. Reactor temperature this tick, in °C. Output starts at **300**, peaks at **900**, falls back to zero across the **900-950** red band, and **950** overheats.
 
 ##### `.fuel_level() → float`
 
 Active Fuel Rod life from **0-1**. One full rod lasts **72 hours** at heat **1.0**; lower heat extends it proportionally. The next rod is taken automatically from `input`.
 
-- **Returns** Number **0-1**: the active Fuel Rod's remaining life.
+- **Returns** `float`. The active Fuel Rod's remaining life (**0-1**).
 
 ##### `.power_output() → float`
 
 Watts on the grid this tick.
 
-- **Returns** Number: watts produced this tick (**0-5,000**).
+- **Returns** `float`. Watts produced this tick (**0-5,000**).
 
 ##### `.status() → str`
 
 Current operating state: `running`, `overheated`, `no_fuel`, or `no_coolant`. Shutdowns recover automatically after cooling or supplies return.
 
-- **Returns** `"running"` / `"overheated"` / `"no_fuel"` / `"no_coolant"`. Overheat cools and recovers automatically; restored supplies resume automatically.
+- **Returns** `str`. Overheat cools and recovers automatically; restored supplies resume automatically.
 - **Possible values** `"running"`, `"overheated"`, `"no_fuel"`, `"no_coolant"`
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
@@ -9774,29 +11674,29 @@ Turns sunlight into up to **50 W** for the grid when a script tracks the Sun. Po
 
 1. Buy from the Shop for 500 cr.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ### Methods
 
@@ -9824,13 +11724,13 @@ Set the panel tilt angle in degrees. Range is **0°** (flat) to **90°** (vertic
 
 Current panel tilt setpoint in degrees (**0-90**). Returns the value the script last wrote via `self.set_tilt(...)`, or the default rest angle for an idle panel. Use to verify your sweep loop or to step a tilt search against the previous value.
 
-- **Returns** Number (degrees, 0-90): the current panel tilt setpoint.
+- **Returns** `float`. The current panel tilt setpoint, 0-90 degrees.
 
 ##### `.get_output() → float`
 
 Current power output in watts for this specific generator. Returns **0** if powered off. Computed live from sun elevation vs panel tilt, use it to verify the tracker is holding peak (compare current output against the panel's rated max).
 
-- **Returns** Number (watts)
+- **Returns** `float`. In watts.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -9853,35 +11753,35 @@ Produces up to 108 W from 90 t/h Steam. Its script-owned throttle scales both co
 1. Requires the **Steam Turbine** research (Pressure 3).
 2. Buy from the Shop for 7,500 cr.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `.steam_in: FluidPort`
 
 Input flow port accepting steam from a Thermal Cap or Gas Tank. Call `self.steam_in.connect(...)` with the source's stable machine id or display name. A local source transfers directly; a remote source also needs a completed conflict-free Gas Pipe route between both locations. `self.steam_in.level()` shows the buffer, low = about to run dry; full = source is backpressured. See `FluidPort`.
 
-- **Returns** `FluidPort`: `connect()`, `connected_to()`, `level()`, `capacity()`, `flow_rate()`.
+- **Returns** `FluidPort`
 
 ### Methods
 
@@ -9889,25 +11789,25 @@ Input flow port accepting steam from a Thermal Cap or Gas Tank. Call `self.steam
 
 Watts fed to the grid on the last power tick. Scales with `throttle()` and the steam actually available. **0** when idle or steam-starved. Updates once per power tick, a fresh `set_throttle(...)` is reflected on the next tick, not the same one. Use for live dashboards or to compare against Oxygen / Heat consumption to balance the power budget.
 
-- **Returns** Number (watts) currently fed to the grid.
+- **Returns** `float`. Watts currently fed to the grid.
 
 ##### `.efficiency() → float`
 
 Fraction of the throttle's desired steam actually drawn on the last power tick (**0.0-1.0**). **1.0** = the turbine got all the steam its throttle asked for. Below **1** means steam-starved (vent dormant, or upstream can't keep up). Use to detect whether the turbine is being fed enough.
 
-- **Returns** Number (**0-1**): fraction of the throttle's desired steam actually drawn (below **1** means steam-starved).
+- **Returns** `float`. Fraction of the throttle's desired steam actually drawn (**0-1**); below **1** means steam-starved.
 
 ##### `.is_stalled() → bool`
 
 `True` when the throttle is up but no steam is arriving (the vent is dormant or the steam line is disconnected). Check `self.steam_in.level()` (upstream) and the feeding Cap's vent phase to diagnose. There is no water side to back up anymore.
 
-- **Returns** Boolean: `True` when the throttle is up but no steam is arriving (vent dormant or disconnected).
+- **Returns** `bool`. `True` when the throttle is up but no steam is arriving (vent dormant or disconnected).
 
 ##### `.throttle() → float`
 
 Current throttle setting (**0.0-1.0**). **0** = off, the turbine consumes no steam and produces nothing (the default; idle until `set_throttle()` is called). Higher values draw more steam and produce more power, up to the peak at **1.0**. Read-only view of what `set_throttle()` last committed.
 
-- **Returns** Number (**0-1**): current throttle setting.
+- **Returns** `float`. Current throttle setting (**0-1**).
 
 ##### `.set_throttle(t: float) → ActionResult` *(self only)*
 
@@ -9950,37 +11850,37 @@ Grid-powered fleet charging: Mk I provides **1 bay / 30 W**, Mk II **2 bays / 12
 1. Requires the **Vehicle Charging Station** research (Oxygen 9).
 2. Buy from the Shop for 1,200 cr.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ### Methods
 
 ##### `.get_docked() → list[str]`
 
-List of vehicle instance ids parked inside the station's local service pad plus its **~2 m** margin, or inside the owning Outpost's common service area. Returns ids, not vehicles; dereference each via `get_component(id)` to read battery state, cargo, or anything else. Empty list means no vehicles docked. Call each iteration; the list can change between ticks as vehicles drive in or out.
+List of vehicle instance ids parked inside the station's local service pad plus its **~2 m** margin, or inside the owning Outpost's common service area. Each parked vehicle is docked at one station only: the one it picked with its own `dock()`, otherwise the eligible station with the shortest distance to its station position or its outpost's center, with equal-distance ties broken alphabetically by station id. Returns ids, not vehicles; dereference each via `get_component(id)` to read battery state, cargo, or anything else. Empty list means no vehicles docked. Call each iteration; the list can change between ticks as vehicles drive in or out.
 
-- **Returns** List of vehicle instance ids docked at this station. Read each vehicle's state via `get_component(id)`.
+- **Returns** `list[str]`. Instance ids of the vehicles docked at this station. Read each vehicle's state via `get_component(id)`.
 
 ##### `.charge(vehicle_id: str, target_level: float = 1.0) → ActionResult` *(self only)*
 
@@ -10049,13 +11949,13 @@ Clear every queued charge job on this station. Rescue-drone missions are separat
 
 List of vehicle ids currently occupying active charging bays. Mk I returns at most one id, Mk II two, Mk III four. These are the vehicles sharing the station's pooled budget this tick.
 
-- **Returns** List of vehicle ids currently occupying charging bays
+- **Returns** `list[str]`. Ids of the vehicles currently occupying charging bays.
 
 ##### `.get_queue() → list[str]`
 
 List of vehicle ids in charge-queue order. The first `get_bay_count()` entries are the ones that can be active right now, assuming they are still docked and below their target.
 
-- **Returns** List of queued vehicle ids in order; the first `get_bay_count()` entries can be active
+- **Returns** `list[str]`. Queued vehicle ids in order; the first `get_bay_count()` entries can be active.
 
 ##### `.status(vehicle_id: str) → dict[str, JsonValue]`
 
@@ -10067,25 +11967,25 @@ Detailed status for one vehicle: a dict with `state` (`"charging"`, `"queued"`, 
 | --- | --- | --- |
 | `vehicle_id` | `str` | Display name or id of a vehicle |
 
-- **Returns** A dict with `state`, `target_level`, `battery_wh`, `capacity_wh`, `rate_w`, `bay_index`, `queue_index`
+- **Returns** `dict[str, JsonValue]`. Keys: `state`, `target_level`, `battery_wh`, `capacity_wh`, `rate_w`, `bay_index`, `queue_index`.
 
 ##### `.tier() → int`
 
 Permanently installed Charging Station tier as an integer (**1-3**). Mk II raises bay count and bay rate; Mk III raises bay count again.
 
-- **Returns** Integer: permanently installed Charging Station tier (**1-3**).
+- **Returns** `int`. Permanently installed Charging Station tier (**1-3**).
 
 ##### `.get_bay_count() → int`
 
 Number of simultaneous vehicle charging bays. Mk I is **1**, Mk II **2**, Mk III **4**.
 
-- **Returns** Number of simultaneous vehicle charging bays
+- **Returns** `int`. How many vehicles can charge at once.
 
 ##### `.get_bay_rate() → float`
 
 Watts pushed by a single bay (**30 W** Mk I, **60 W** Mk II/III). With bay pooling a lone vehicle draws every idle bay, so its actual rate is up to `get_bay_count() × get_bay_rate()`, read `get_charge_rate(id)` for what a specific vehicle is really getting. The station's total grid draw is `get_bay_count() × get_bay_rate()` whenever any vehicle is charging, plus rescue-drone draw if a rescue is out.
 
-- **Returns** Watts pushed by each active bay
+- **Returns** `float`. Watts pushed by each active bay.
 
 ##### `.get_charge_rate(vehicle_id: str) → float`
 
@@ -10097,7 +11997,7 @@ Actual watts being pushed into the specified vehicle right now, the station's to
 | --- | --- | --- |
 | `vehicle_id` | `str` | Display name or id of a docked vehicle |
 
-- **Returns** Number (W currently being pushed into that vehicle)
+- **Returns** `float`. Watts currently being pushed into that vehicle.
 
 ##### `.dispatch_rescue(vehicle_name: str, target_level: float = 1.0) → ActionResult` *(self only)*
 
@@ -10143,13 +12043,13 @@ Recall this station's active field-service drone. If the drone was outbound or t
 
 `True` while a rescue drone is deployed (out, at the target, or returning). A recalled drone still counts as rescuing until it reaches the station, but the target vehicle is released as soon as `cancel_rescue()` succeeds. Use before `dispatch_rescue()` to avoid the `"already_dispatched"` rejection: `if not self.is_rescuing(): self.dispatch_rescue(name)`. Exactly one drone at a time, queue rescues manually if you need more.
 
-- **Returns** Boolean
+- **Returns** `bool`
 
 ##### `.get_rescue_target() → str`
 
 Display name of the vehicle currently being rescued, or empty string if the drone is idle. Use for dashboards ("rescuing Rover 1") or to decide whether to wait vs send a different vehicle to pick up slack.
 
-- **Returns** String (display name of the vehicle being rescued, or empty)
+- **Returns** `str`. Display name of the vehicle being rescued, or empty.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -10161,23 +12061,23 @@ Read commands you send from the editor's **Commands** tab while this script runs
 
 Planetary atmosphere, read gas composition, pressure, temperature, and the planet's heat-units progression metric (`get_heat()`). Oxygen and pressure reads require their sensors to be repaired.
 
-**Returned by:** `get_component("atmosphere")`
+**Access via:** `get_component("atmosphere")`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -10185,37 +12085,37 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 Current CO2 level in parts per thousand (ppt). Oxygen generation consumes CO2 **1:1**, so this value falls as oxygen rises. CO2 is returned to the atmosphere by burning oil (Oil Generator), incinerating items (Waste Processor), and, at scale, by wildlife respiration (established colonies exhale CO2). A small volcanic outgassing trickle replenishes CO2 when reserves are low.
 
-- **Returns** Number (ppt)
+- **Returns** `float`. In ppt.
 
 ##### `.get_o2() → float`
 
 Current oxygen level in parts per thousand (ppt). Requires the oxygen sensor to be repaired.
 
-- **Returns** Number (ppt)
+- **Returns** `float`. In ppt.
 
 ##### `.get_n2() → float`
 
 Current nitrogen level in parts per thousand (ppt).
 
-- **Returns** Number (ppt)
+- **Returns** `float`. In ppt.
 
 ##### `.get_pressure() → float`
 
 Current atmospheric pressure in kPa. Requires the pressure sensor to be repaired.
 
-- **Returns** Number (kPa)
+- **Returns** `float`. In kPa.
 
 ##### `.get_temperature() → float`
 
 Current surface temperature in °C. This is a **display value**, a non-linear transform of the heat-units metric. For terraforming progress or heat cutoffs, use `get_heat()`, not this.
 
-- **Returns** Number (°C)
+- **Returns** `float`. In °C.
 
 ##### `.get_heat() → float`
 
 Current accumulated **heat units**, the temperature pillar's progression metric, the exact value temperature research and phase thresholds compare against (the Research page shows the current targets). Gate heat cutoffs on this, the way `get_o2()` / `get_pressure()` work for those pillars. Unlike `get_temperature()` (surface °C, a non-linear display value), a difference in heat units IS terraforming progress. Starts at **0**.
 
-- **Returns** Number (heat units): the temperature pillar's progression metric, what research/phase thresholds compare against
+- **Returns** `float`. In heat units: the temperature pillar's progression metric, which research and phase thresholds compare against.
 
 *Components / Terraforming*
 
@@ -10237,53 +12137,53 @@ Forges a volcanic fragment by holding the crucible in a target temperature band 
 1. Requires the **Volcanic Forge-Casting** research (Oxygen 350).
 2. Buy from the Shop for 150,000 cr.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `self.input: InputSlot`
 
 The multi-material `InputSlot` for both the raw volcanic sample and fabricated materials. Connect Inventory only at Nocturna Base; at another outpost connect a same-outpost Storage Bin/Warehouse. Call `take(...)` for every required item.
 
-- **Returns** `InputSlot` for the raw Volcanic sample and fabricated materials. Inventory is available only at home; at remote outposts route freight through local storage. Before `cast()`, recover a mistaken sample or material with `eject(...)`.
+- **Returns** `InputSlot`. For the raw Volcanic sample and fabricated materials. Inventory is available only at home; at remote outposts route freight through local storage. Before `cast()`, recover a mistaken sample or material with `eject(...)`.
 
 ##### `self.output: OutputSlot`
 
 The `OutputSlot` for Forged samples and non-destructively ejected items. Exact item properties are preserved.
 
-- **Returns** `OutputSlot` for Forged samples and non-destructively ejected items.
+- **Returns** `OutputSlot`. For Forged samples and non-destructively ejected items.
 
 ##### `self.steam_in: FluidPort`
 
 Supplies the Caster's heat control through a **20 t** steam buffer. Call `self.steam_in.connect(...)` with a Thermal Cap or steam Gas Tank's stable machine id or display name. A local source transfers directly; a remote source also needs a completed conflict-free Gas Pipe route between both locations. The connection remains while idle, full, or powered off. See `FluidPort` for level, capacity, and flow queries.
 
-- **Returns** The Caster's **20 t** steam buffer as a `FluidPort`. Call `connect(...)` with the provider's stable machine id or display name; completed gas-pipe networks carry steam between outposts.
+- **Returns** `FluidPort`. The Caster's **20 t** steam buffer. Call `connect(...)` with the provider's stable machine id or display name; completed gas-pipe networks carry steam between outposts.
 
 ##### `self.water_in: FluidPort`
 
 Supplies the Caster's cooling control through a **20 t** water buffer. Call `self.water_in.connect(...)` with a Water Pump, Steam Condenser, water Liquid Tank, or Large Liquid Tank's stable machine id or display name. A local source transfers directly; a remote source also needs a completed conflict-free Liquid Pipe route between both locations. The connection remains while idle, full, or powered off. See `FluidPort` for level, capacity, and flow queries.
 
-- **Returns** The Caster's **20 t** water buffer as a `FluidPort`. Call `connect(...)` with the provider's stable machine id or display name; completed liquid-pipe networks carry water between outposts.
+- **Returns** `FluidPort`. The Caster's **20 t** water buffer. Call `connect(...)` with the provider's stable machine id or display name; completed liquid-pipe networks carry water between outposts.
 
 ### Methods
 
@@ -10291,7 +12191,7 @@ Supplies the Caster's cooling control through a **20 t** water buffer. Call `sel
 
 List all 16 forge recipes without changing the selected recipe, `self.list_recipes()`. Each `BioCasterRecipe` includes its fragment id, tier, exact material shopping list, and target temperature range. The read works through `get_component(...)`, so another machine can plan supplies without possessing every fragment.
 
-- **Returns** List of all 16 `BioCasterRecipe` objects. Each exposes `.fragment_id`, `.tier`, `.materials`, and `.temperature_range` for read-only production planning.
+- **Returns** `list[BioCasterRecipe]`. All 16 recipes, for read-only production planning.
 
 ##### `self.find_recipe(fragment_id: str) → BioCasterRecipe | None`
 
@@ -10303,13 +12203,13 @@ Look up one forge recipe by volcanic fragment id without selecting it, `self.fin
 | --- | --- | --- |
 | `fragment_id` | `str` | Volcanic fragment id from `catalog()`. |
 
-- **Returns** The matching `BioCasterRecipe`, or `None` for an unknown fragment id.
+- **Returns** `BioCasterRecipe | None`. `None` for an unknown fragment id.
 
 ##### `self.catalog() → list[str]`
 
 The 16 forgeable volcanic fragment ids, `self.catalog()`. Pass one to `set_recipe(...)`, or use `list_recipes()` when you also need every recipe's material and temperature requirements. Fixed hardware; read it once.
 
-- **Returns** List of the 16 forgeable Volcanic fragment ids. Use `list_recipes()` when you also need material and temperature requirements.
+- **Returns** `list[str]`. The 16 forgeable Volcanic fragment ids. Use `list_recipes()` when you also need material and temperature requirements.
 
 ##### `self.recipe_tier(fragment_id: str) → int | None`
 
@@ -10321,7 +12221,7 @@ Derived production tier for one recipe from `catalog()`. Returns `None` for an u
 | --- | --- | --- |
 | `fragment_id` | `str` | Volcanic fragment id from `catalog()`. |
 
-- **Returns** Derived production tier for this Bio Caster recipe, or `None` for an unknown fragment id.
+- **Returns** `int | None`. Derived production tier for this Bio Caster recipe, or `None` for an unknown fragment id.
 
 ##### `self.set_recipe(fragment_id: str) → ActionResult` *(self only)*
 
@@ -10350,64 +12250,64 @@ Select which volcanic fragment to forge, `self.set_recipe("sd_tail_barb")`. Afte
 
 The recipe you've selected, `self.recipe()` returns the volcanic fragment id you're set to forge (also the raw fragment to `load`), or `None` if none is set.
 
-- **Returns** The selected recipe = the Volcanic fragment id this Caster will forge (also the raw fragment to `load`), or `None` if no recipe is set.
+- **Returns** `str | None`. The selected recipe = the Volcanic fragment id this Caster will forge (also the raw fragment to `load`), or `None` if no recipe is set.
 - **Possible values** `"ma_chitinous_seta"`, `"st_beak"`, `"ms_abdomen_sclerite"`, `"mh_chitin_node"`, `"gm_abdominal_sheath"`, `"vm_tail_barb"`, `"vc_walking_leg"`, `"oc_ink_sac"`, `"bw_hindlimb"`, `"vd_photophore"`, `"hs_abdomen_segment"`, `"hc_beak"`, `"fs_oral_tegmen"`, `"ce_great_appendage"`, `"gw_jaw_fang"`, `"sd_tail_barb"`
 
 ##### `self.required_range() → list[float] | None`
 
 The selected recipe's target band `[low, high]` in °C, `self.required_range()`. `cast()` must fire with `temperature()` inside it (inclusive). `None` if no recipe is set.
 
-- **Returns** The selected recipe's target temperature band `[low, high]` in °C: `cast()` must fire with `temperature()` inside it (inclusive). `None` if no recipe is set.
+- **Returns** `list[float] | None`. The selected recipe's target temperature band `[low, high]` in °C: `cast()` must fire with `temperature()` inside it (inclusive). `None` if no recipe is set.
 
 ##### `self.required_materials() → dict[str, int]`
 
 Lists the fabricated materials required by the selected recipe as `{item_id: count}`. Load exactly those amounts before casting. Iterate with `.items()`. Returns an empty dict when no recipe is selected.
 
-- **Returns** A dict `{item_id: count}` of the fabricated materials the selected recipe needs: load EXACTLY these (no more, no less) before `cast()`. `{}` if no recipe is set. Iterate with `.items()`.
+- **Returns** `dict[str, int]`. `{item_id: count}` of the fabricated materials the selected recipe needs: load EXACTLY these (no more, no less) before `cast()`. `{}` if no recipe is set. Iterate with `.items()`.
 
 ##### `self.required_fragment() → str | None`
 
 The raw fragment id the recipe consumes, `self.required_fragment()` (identical to `recipe()`). `None` if no recipe is set.
 
-- **Returns** The raw Volcanic fragment id the selected recipe consumes (identical to `recipe()`). `None` if no recipe is set.
+- **Returns** `str | None`. The raw Volcanic fragment id the selected recipe consumes (identical to `recipe()`). `None` if no recipe is set.
 - **Possible values** `"ma_chitinous_seta"`, `"st_beak"`, `"ms_abdomen_sclerite"`, `"mh_chitin_node"`, `"gm_abdominal_sheath"`, `"vm_tail_barb"`, `"vc_walking_leg"`, `"oc_ink_sac"`, `"bw_hindlimb"`, `"vd_photophore"`, `"hs_abdomen_segment"`, `"hc_beak"`, `"fs_oral_tegmen"`, `"ce_great_appendage"`, `"gw_jaw_fang"`, `"sd_tail_barb"`
 
 ##### `self.temperature() → float`
 
 Current crucible temperature in °C, `self.temperature()`, ranging **100** (cold baseline) to **1000** (max). Drive it into `required_range()` with the knobs before casting.
 
-- **Returns** Current crucible temperature in °C (**100-1,000**). Drive it into `required_range()` with the knobs before casting.
+- **Returns** `float`. Current crucible temperature in °C (**100-1,000**). Drive it into `required_range()` with the knobs before casting.
 
 ##### `self.temp_rate() → float`
 
 Net temperature change in °C/h right now, `self.temp_rate()`. Positive = heating and negative = cooling. Full heat is +2400 °C/h and full cool is -2400 °C/h; with both knobs at 0, an unlocked crucible above baseline cools naturally at -20 °C/h. Returns 0 at the 100 °C baseline or while a cast is in progress.
 
-- **Returns** Current net temperature rate in °C/h, signed: positive = heating and negative = cooling. Full heat is +2400 °C/h and full cool is -2400 °C/h. With both knobs at 0, an unlocked crucible above baseline returns -20 °C/h for passive cooling; returns 0 at baseline or during a cast.
+- **Returns** `float`. Current net temperature rate in °C/h, signed: positive = heating and negative = cooling. Full heat is +2400 °C/h and full cool is -2400 °C/h. With both knobs at 0, an unlocked crucible above baseline returns -20 °C/h for passive cooling; returns 0 at baseline or during a cast.
 
 ##### `self.heat() → float`
 
 Current heat-knob setting **0-100 %**, `self.heat()`. At 100 % temperature rises **+2400 °C/h** (burning steam); use a lower setting near the target band.
 
-- **Returns** Current heat-knob setting, **0-100%**. At 100 % temperature rises **+2400 °C/h** (burning steam); use a lower setting near the target band.
+- **Returns** `float`. Current heat-knob setting, **0-100%**. At 100 % temperature rises **+2400 °C/h** (burning steam); use a lower setting near the target band.
 
 ##### `self.cool() → float`
 
 Current cool-knob setting **0-100 %**, `self.cool()`. At 100 % temperature falls **-2400 °C/h** (burning water); use a lower setting near the target band.
 
-- **Returns** Current cool-knob setting, **0-100%**. At 100 % temperature falls **-2400 °C/h** (burning water); use a lower setting near the target band.
+- **Returns** `float`. Current cool-knob setting, **0-100%**. At 100 % temperature falls **-2400 °C/h** (burning water); use a lower setting near the target band.
 
 ##### `self.fragment() → str | None`
 
 The raw fragment id loaded in the chamber, `self.fragment()`, or `None` if the chamber is empty.
 
-- **Returns** The raw Volcanic fragment id currently in the chamber (from `load`), or `None` if the chamber is empty.
+- **Returns** `str | None`. The raw Volcanic fragment id currently in the chamber (from `load`), or `None` if the chamber is empty.
 - **Possible values** `"ma_chitinous_seta"`, `"st_beak"`, `"ms_abdomen_sclerite"`, `"mh_chitin_node"`, `"gm_abdominal_sheath"`, `"vm_tail_barb"`, `"vc_walking_leg"`, `"oc_ink_sac"`, `"bw_hindlimb"`, `"vd_photophore"`, `"hs_abdomen_segment"`, `"hc_beak"`, `"fs_oral_tegmen"`, `"ce_great_appendage"`, `"gw_jaw_fang"`, `"sd_tail_barb"`
 
 ##### `self.materials() → dict[str, int]`
 
 The materials currently loaded in the crucible, `self.materials()` returns `{item_id: count}`. Compare against `required_materials()` before `cast()`. Iterate with `.items()`.
 
-- **Returns** A dict `{item_id: count}` of the fabricated materials currently loaded in the crucible. Compare against `required_materials()` before `cast()`. Iterate with `.items()`.
+- **Returns** `dict[str, int]`. `{item_id: count}` of the fabricated materials currently loaded in the crucible. Compare against `required_materials()` before `cast()`. Iterate with `.items()`.
 
 ##### `self.set_heat(pct: float) → ActionResult` *(self only)*
 
@@ -10541,35 +12441,35 @@ Automates the Collect step of the biology loop, fetching a field specimen into i
 
 1. Buy from the Shop for 3,000 cr.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `self.cargo: Specimen | None`
 
 The collected `Specimen` waiting for transfer, or `None` if the slot is empty. Pre-analyze, `cargo.fragment_id` / `cargo.rarity` / `cargo.recipe` are `None`; `cargo.coords` and `cargo.distance` are always available.
 
-- **Returns** The collected `Specimen`, or `None` if empty. Cleared when a Bio Lab takes it with `self.take_from(collector)`.
+- **Returns** `Specimen | None`. `None` if empty. Cleared when a Bio Lab takes it with `self.take_from(collector)`.
 
 ### Methods
 
@@ -10577,7 +12477,7 @@ The collected `Specimen` waiting for transfer, or `None` if the slot is empty. P
 
 Lists fragment locations in this outpost's biome, nearest first. Each `FragmentLocation` includes `coords`, distance, and whether it has been cataloged. Cataloged locations also reveal their fragment id, name, and rarity; unknown locations leave those details as `None`. To identify an unknown location, collect it with `bio_collector.collect(location.coords)` and analyze it at a Bio Lab. Recipes and creature identity are not revealed here. Analyzed fragments also appear in `journal.cataloged_fragments(...)`.
 
-- **Returns** List of `FragmentLocation`: every fragment in this outpost's biome with coords, straight-line distance, and `cataloged` (`True` after that fragment has been analyzed). Cataloged results expose `.fragment_id`, `.name`, and `.rarity`; unknown results keep them as `None`. Recipes and creature identity stay hidden. Sorted nearest-first.
+- **Returns** `list[FragmentLocation]`. Every fragment in this outpost's biome, nearest first. A fragment's identity stays `None` until it has been analyzed; recipes and creature identity stay hidden.
 
 ##### `self.collect(coords: list[float]) → ActionResult` *(self only)*
 
@@ -10641,41 +12541,41 @@ Inspects a deep-biome fragment against a fixed rulebook, quizzing your script on
 1. Requires the **Deep-Sea Conditioning** research (Temperature 1,200).
 2. Buy from the Shop for 225,000 cr.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `self.input: InputSlot`
 
 The `InputSlot` for raw deep samples. It holds one sample item id at a time and stays latched to that id until `load()` consumes the remaining units or `flush()` discards them. `stacks()` lists property-distinct variants and does not mean the port accepts multiple sample types. Inventory is a source only at Nocturna Base; remote Conditioners use a same-outpost Storage Bin/Warehouse.
 
-- **Returns** `InputSlot` for raw Deep samples. Recover a mistaken property variant to an explicit local destination with `eject(...)` before loading it into the chamber.
+- **Returns** `InputSlot`. For raw Deep samples. Recover a mistaken property variant to an explicit local destination with `eject(...)` before loading it into the chamber.
 
 ##### `self.output: OutputSlot`
 
 The `OutputSlot` for Conditioned or ejected samples. Exact sample properties are preserved.
 
-- **Returns** `OutputSlot` for Conditioned or ejected samples with exact properties.
+- **Returns** `OutputSlot`. For Conditioned or ejected samples with exact properties.
 
 ### Methods
 
@@ -10683,45 +12583,45 @@ The `OutputSlot` for Conditioned or ejected samples. Exact sample properties are
 
 The loaded fragment's full condition report, `self.report()` returns `{property: value}` for all 10 properties (`glow`, `brightness`, `smell`, `gunk`, `cracks`, `feel`, `twitch`, `bugs`, `weight`, `sound`). Read the whole thing: the combo rules need siblings (brightness reads glow, weight reads gunk, sound reads cracks). Word properties are strings, numbers are numbers. `{}` if nothing is loaded. Iterate with `.items()` or index `report["gunk"]`.
 
-- **Returns** A dict of all ten condition properties for the loaded fragment, or `{}` when empty. Word values are strings and numeric values are numbers. Read the full report because brightness uses glow, weight uses gunk, and sound uses cracks.
+- **Returns** `dict[str, JsonValue]`. All ten condition properties for the loaded fragment, or `{}` when empty. Word values are strings and numeric values are numbers. Read the full report because brightness uses glow, weight uses gunk, and sound uses cracks.
 
 ##### `self.properties() → list[str]`
 
-Lists the ten property ids in their fixed inspection order, from `"glow"` through `"sound"`. The order is the same for every Deep fragment, making it suitable for a general inspection loop.
+Lists all ten property ids in a fixed catalog order, from `"glow"` through `"sound"`. The list is the same for every Deep fragment. Each inspection quizzes five properties in a random order; use `self.current()` to identify the property at each stage.
 
-- **Returns** List of the 10 property ids in their fixed order (`glow`, `brightness`, … `sound`). The inspection rubric is the same for every Deep fragment.
+- **Returns** `list[str]`. The 10 property ids in their fixed order (`glow`, `brightness`, … `sound`). The inspection rubric is the same for every Deep fragment.
 
 ##### `self.fragment() → str | None`
 
 The raw deep fragment id loaded in the chamber, `self.fragment()`, or `None` if empty.
 
-- **Returns** The raw Deep fragment id currently loaded in the chamber (from `load`), or `None` if empty.
+- **Returns** `str | None`. The raw Deep fragment id currently loaded in the chamber (from `load`), or `None` if empty.
 - **Possible values** `"gw_spinal_vertebra"`, `"vc_eye_stalk"`, `"oc_lens_eye"`, `"bw_tail_spike"`, `"vd_tendril"`, `"mh_stigmatic_disc"`, `"hs_compound_eye"`, `"ms_eye_cluster"`, `"hc_tentacle_crown"`, `"ma_luminous_ring"`, `"gm_antennal_whip"`, `"fs_holdfast_rootlet"`, `"sd_talon"`, `"ce_cephalic_photophore"`, `"st_carapace_neural"`, `"vm_ventral_photophore"`
 
 ##### `self.stage() → int`
 
 The current QC stage, `self.stage()` returns **1-5** while a run is live, or **0** when none is active (nothing loaded, or the run just resolved). Each stage quizzes one property.
 
-- **Returns** The current QC stage, **1-5** while a run is live, or **0** when no run is active (nothing loaded, or the run just resolved). Each stage quizzes one property.
+- **Returns** `int`. The current QC stage, **1-5** while a run is live, or **0** when no run is active (nothing loaded, or the run just resolved). Each stage quizzes one property.
 
 ##### `self.current() → str | None`
 
 The property this stage is quizzing, `self.current()` returns one of the 10 ids (look its value up in `report()`, apply its rule, then `accept()`/`reject()`), or `None` if no run is active. You can't predict which 5 of the 10 come up, so encode every rule.
 
-- **Returns** The property id this stage is quizzing (one of the 10): look its value up in `report()`, apply its rule, then `accept()` or `reject()`. `None` if no run is active. You can't predict which 5 of the 10 you'll be quizzed on, so know every rule.
+- **Returns** `str | None`. The property id this stage is quizzing (one of the 10): look its value up in `report()`, apply its rule, then `accept()` or `reject()`. `None` if no run is active. You can't predict which 5 of the 10 you'll be quizzed on, so know every rule.
 - **Possible values** `"glow"`, `"brightness"`, `"smell"`, `"gunk"`, `"cracks"`, `"feel"`, `"twitch"`, `"bugs"`, `"weight"`, `"sound"`
 
 ##### `self.lights() → list[str]`
 
 The 5 stage results so far, `self.lights()` returns a list of `"green"` (correct call), `"red"` (a miss, run over), and `"pending"` (not reached). They light one at a time as you answer.
 
-- **Returns** List of the 5 stage results so far: `"green"` (a correct call), `"red"` (a miss: the run is over), or `"pending"` (not reached yet). Lights up one at a time as you answer.
+- **Returns** `list[str]`. The 5 stage results so far: `"green"` (a correct call), `"red"` (a miss: the run is over), or `"pending"` (not reached yet). Lights up one at a time as you answer.
 
 ##### `self.is_running() → bool`
 
 `True` while a 5-stage run is live (a fragment is loaded with stages left), `self.is_running()`. Drive the gauntlet with `while cond.is_running(): prop = cond.current(); ...`. Goes `False` when the run finishes, burns, or nothing is loaded.
 
-- **Returns** `True` while a 5-stage run is in progress (a fragment is loaded and stages remain). Loop on it: `while cond.is_running(): ...`. Goes `False` when the run finishes, burns, or nothing is loaded.
+- **Returns** `bool`. `True` while a 5-stage run is in progress (a fragment is loaded and stages remain). Loop on it: `while cond.is_running(): ...`. Goes `False` when the run finishes, burns, or nothing is loaded.
 
 ##### `self.load(fragment_id: str, properties: ItemProperties | None = None, property_match: str | None = None) → ActionResult` *(self only)*
 
@@ -10828,41 +12728,41 @@ Delivers biology samples to fulfill a Bio Order, the biology counterpart to the 
 
 1. Buy from the Shop for 4,000 cr.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `self.input: InputSlot`
 
 The `InputSlot` for `deliver()` samples. Holds one item id until emptied by `deliver()` or `eject()`. `stacks()` lists property variants, not multiple fragment types. Connect local storage: Inventory at home, a Storage Bin or Warehouse elsewhere. Exact sample properties are preserved. Recover unused samples with `self.input.eject(destination, item_id, count, properties, "exact")`; the destination must be local. Active deliveries keep their samples reserved.
 
-- **Returns** `InputSlot` for property-bearing samples. Inventory is available only at Nocturna Base; remote Exchanges use local freight. Recover an unused exact sample with `eject(destination, item_id, count, properties, "exact")`.
+- **Returns** `InputSlot`. For property-bearing samples. Inventory is available only at Nocturna Base; remote Exchanges use local freight. Recover an unused exact sample with `eject(destination, item_id, count, properties, "exact")`.
 
 ##### `self.output: OutputSlot`
 
 The `OutputSlot` that safely receives a surplus in-transit sample when another Exchange completes the shared order first. Drain it with `send(...)`; exact sample properties are preserved.
 
-- **Returns** `OutputSlot` for a surplus in-transit sample returned because another Exchange completed the shared order first.
+- **Returns** `OutputSlot`. For a surplus in-transit sample returned because another Exchange completed the shared order first.
 
 ### Methods
 
@@ -10870,7 +12770,7 @@ The `OutputSlot` that safely receives a surplus in-transit sample when another E
 
 Lists every `BioOrder`, including orders you cannot fill yet. Each order includes its id, biome, requirements, reward, status, delivered samples, samples already `in_transit`, completion percent, and any required `target_glow`. Progress is shared by every Bio Exchange serving that order. Use `requires - delivered - in_transit` to avoid making samples that are already committed, then pass the chosen `order.id` to `set_order(...)`. From another script, call `get_component("bio_exchange_1").orders()`. `get_component("orders")` is for Earth Orders.
 
-- **Returns** List of every `BioOrder`. Delivered and in-transit counts are shared across all Bio Exchanges. Other scripts can query a deployed Exchange; Earth Orders come from `get_component("orders")` instead.
+- **Returns** `list[BioOrder]`. Every Bio Order. Delivered and in-transit counts are shared across all Bio Exchanges. Other scripts can query a deployed Exchange; Earth Orders come from `get_component("orders")` instead.
 
 ##### `self.set_order(order_id: str) → ActionResult` *(self only)*
 
@@ -10914,7 +12814,7 @@ Clear this Exchange's active Bio Order assignment. Already delivered progress st
 
 A snapshot of the active `BioOrder` object, its `requires`, completed `delivered` progress, live `in_transit` commitments, `percent`, and `target_glow` (coastal infusion target) at the moment you call it, or `None` if no order is set. `in_transit` includes qualifying samples already staged in serving Exchange inputs plus active timed deliveries. Call `active_order()` again to read fresh progress.
 
-- **Returns** A snapshot of the active `BioOrder` object, or `None` if no order is set. Re-query it to read fresh `delivered`, committed `in_transit`, and `percent` progress.
+- **Returns** `BioOrder | None`. A snapshot, or `None` if no order is set. Re-query it to read fresh `delivered`, committed `in_transit`, and `percent` progress.
 
 ##### `self.matches_order(item_id: str, properties: ItemProperties | None = None) → bool`
 
@@ -10927,7 +12827,7 @@ Check whether one exact item matches this Exchange's active Bio Order without mo
 | `item_id` | `str` | Candidate fragment id from an `ItemStack`. |
 | `properties` | `ItemProperties \| None` | Exact property dict from the same `ItemStack`, or None for a propertyless sample. |
 
-- **Returns** Boolean. `True` when this exact item-property identity satisfies the active Bio Order's current sample contract. Use it while iterating a storage component's `stacks()` before calling `self.input.take(..., properties, "exact")`. Returns `False` with no active order, for completed orders, or for an invalid/wrong variant.
+- **Returns** `bool`. `True` when this exact item-property identity satisfies the active Bio Order's current sample contract. Use it while iterating a storage component's `stacks()` before calling `self.input.take(..., properties, "exact")`. `False` with no active order, for completed orders, or for an invalid or wrong variant.
 
 ##### `self.deliver() → ActionResult` *(self only)*
 
@@ -10952,7 +12852,7 @@ Send one matching sample from `self.input` toward the active Bio Order. `self.de
 
 Total credits this Exchange has earned across every completed Bio Order.
 
-- **Returns** Total credits this Exchange has earned across every completed Bio Order.
+- **Returns** `int`. Total credits this Exchange has earned across every completed Bio Order.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -10975,53 +12875,53 @@ Automates the Analyze and Extract steps of the biology loop, studying a specimen
 
 1. Buy from the Shop for 5,000 cr.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `self.specimen: Specimen | None`
 
 The `Specimen` in the lab chamber right now, exposed as `self.specimen`, or `None`. Read `self.specimen.stage` to distinguish `"collected"` from `"analyzed"`. Before analysis its identifying fields are hidden; after analysis its `fragment_id`, `rarity`, and `recipe` are populated.
 
-- **Returns** The `Specimen` currently in the chamber, with `.stage` `"collected"` or `"analyzed"`, or `None` if empty.
+- **Returns** `Specimen | None`. The specimen in the chamber, at `.stage` `"collected"` or `"analyzed"`, or `None` if empty.
 
 ##### `self.loaded_reagents: dict[str, int]`
 
 A dict `{reagent_id: qty}` of reagents staged for the next `extract()`. Iterate `.items()` to inspect.
 
-- **Returns** A dict `{reagent_id: qty}` of reagents staged for the next `extract()`.
+- **Returns** `dict[str, int]`. `{reagent_id: qty}` of reagents staged for the next `extract()`.
 
 ##### `self.input: InputSlot`
 
 The `InputSlot` for scripted reagent routing. It holds one reagent item id at a time and stays latched to that id until `load()` consumes the remaining units or `flush()` discards them. `stacks()` lists property-distinct variants and does not mean the port accepts multiple reagent types. Connect Inventory only at Nocturna Base; at another outpost connect a same-outpost Storage Bin/Warehouse. Call `take(...)` before `load(...)`.
 
-- **Returns** `InputSlot` for scripted reagent routing. Inventory is available only at Nocturna Base; remote Labs use a local Storage Bin or Warehouse. Recover an unneeded staged reagent with `eject(...)`.
+- **Returns** `InputSlot`. For scripted reagent routing. Inventory is available only at Nocturna Base; remote Labs use a local Storage Bin or Warehouse. Recover an unneeded staged reagent with `eject(...)`.
 
 ##### `self.output: OutputSlot`
 
 The `OutputSlot` for extracted property-bearing samples and unloaded reagents. Connect any eligible local item store and drain it with `send(...)`.
 
-- **Returns** `OutputSlot` holding extracted samples and unloaded reagents with exact properties intact.
+- **Returns** `OutputSlot`. Holds extracted samples and unloaded reagents with exact properties intact.
 
 ### Methods
 
@@ -11177,47 +13077,47 @@ Tints a coastal fragment's glow to a target color using three built-in colored l
 1. Requires the **Bioluminescent Infusion** research (Temperature 90).
 2. Buy from the Shop for 60,000 cr.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `self.chamber: ChamberSample | None`
 
 The `ChamberSample` loaded right now, exposed as `self.chamber`, or `None`. Read `.glow` for its starting color and `.fragment_id` for its item id.
 
-- **Returns** The `ChamberSample` in the chamber with `.fragment_id` and `.glow`, or `None` if empty.
+- **Returns** `ChamberSample | None`. `None` if the chamber is empty.
 
 ##### `self.input: InputSlot`
 
 The `InputSlot` for raw coastal samples. It holds one sample item id at a time and stays latched to that id until `load()` consumes the remaining units or `flush()` discards them. `stacks()` lists property-distinct variants and does not mean the port accepts multiple sample types. Inventory is a source only at Nocturna Base; remote Luminizers use a same-outpost Storage Bin/Warehouse.
 
-- **Returns** `InputSlot` for raw coastal samples. Recover a mistaken property variant to an explicit local destination with `eject(...)` before loading it into the chamber.
+- **Returns** `InputSlot`. For raw coastal samples. Recover a mistaken property variant to an explicit local destination with `eject(...)` before loading it into the chamber.
 
 ##### `self.output: OutputSlot`
 
 The `OutputSlot` for Luminous or ejected samples. Exact sample properties are preserved.
 
-- **Returns** `OutputSlot` for Luminous or ejected samples, preserving exact properties.
+- **Returns** `OutputSlot`. For Luminous or ejected samples, preserving exact properties.
 
 ### Methods
 
@@ -11260,13 +13160,13 @@ The RGB-per-unit `[r,g,b]` a lamp adds per brightness step, its impurity. `self.
 | --- | --- | --- |
 | `channel` | `str` | Lamp channel: `"red"`, `"green"`, or `"blue"`. |
 
-- **Returns** The lamp's RGB-per-unit `[r,g,b]` (its impurity) for `channel` `"red"` / `"green"` / `"blue"`, or `None` for an unknown channel. Fixed hardware: read once and reuse.
+- **Returns** `list[int] | None`. The lamp's RGB-per-unit `[r,g,b]` (its impurity) for `channel` `"red"` / `"green"` / `"blue"`, or `None` for an unknown channel. Fixed hardware: read once and reuse.
 
 ##### `self.glow() → list[int] | None`
 
 The chamber's **current** resulting glow `[r,g,b]` given the lamps set right now, it reflects `set_lamps(...)` immediately, so use it to verify your solve before committing: `if self.glow() == target: self.infuse()`. `None` when the chamber is empty.
 
-- **Returns** The chamber's **current** resulting glow `[r,g,b]` given the lamps set right now (reflects `set_lamps` immediately), or `None` if the chamber is empty. Compare against the order's `target_glow` before `infuse()`.
+- **Returns** `list[int] | None`. The chamber's **current** resulting glow `[r,g,b]` given the lamps set right now (reflects `set_lamps` immediately), or `None` if the chamber is empty. Compare against the order's `target_glow` before `infuse()`.
 
 ##### `self.set_lamps(r: int, g: int, b: int) → ActionResult` *(self only)*
 
@@ -11294,7 +13194,7 @@ Set the three lamp brightnesses, `self.set_lamps(7, 13, 4)`. Each is a **whole n
 
 ##### `self.infuse() → ActionResult` *(self only)*
 
-Produce a **Luminous** sample at the current glow in `self.output`, preserving every existing property and adding the tuned glow.
+Produce a **Luminous** sample in `self.output`, preserving its other properties and replacing its previous glow with the tuned glow.
 
 - **Returns** `ActionResult`
 - **Result fields** `.status`, `.message`
@@ -11348,47 +13248,47 @@ Splices genes into geothermal fragments so they carry what an order needs. You w
 1. Requires the **Gene Sequencing** research (Pressure 120).
 2. Buy from the Shop for 100,000 cr.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `self.chamber: ChamberFragment | None`
 
 The `ChamberFragment` loaded right now, exposed as `self.chamber`, or `None`. Read `.genes` and `.spliced`; a second splice destroys an already-spliced sample.
 
-- **Returns** The `ChamberFragment` with `.fragment_id`, `.genes`, and `.spliced`, or `None` if empty.
+- **Returns** `ChamberFragment | None`. `None` if the chamber is empty.
 
 ##### `self.input: InputSlot`
 
 The `InputSlot` for geothermal samples. It holds one sample item id at a time and stays latched to that id until `load()` consumes the remaining units or `flush()` discards them. `stacks()` lists property-distinct variants and does not mean the port accepts multiple sample types. Inventory is a source only at Nocturna Base; remote Sequencers use a same-outpost Storage Bin/Warehouse.
 
-- **Returns** `InputSlot` for geothermal samples. Recover a mistaken property variant to an explicit local destination with `eject(...)` before loading it into the chamber.
+- **Returns** `InputSlot`. For geothermal samples. Recover a mistaken property variant to an explicit local destination with `eject(...)` before loading it into the chamber.
 
 ##### `self.output: OutputSlot`
 
 The `OutputSlot` for spliced or ejected samples. Exact sample properties are preserved.
 
-- **Returns** `OutputSlot` for spliced or ejected samples, preserving every property.
+- **Returns** `OutputSlot`. For spliced or ejected samples, preserving every property.
 
 ### Methods
 
@@ -11425,13 +13325,13 @@ Pull a geothermal sample of `fragment_id` from `self.input` into the chamber, `s
 
 Lists the genes currently carried by the chambered fragment, such as `["cold_tolerance", "pressure_tolerance"]`, or returns `None` when empty. `splice()` takes time. On completion, the fragment moves to output and the chamber becomes empty. If output is full, the spliced fragment stays in the chamber until space is available.
 
-- **Returns** The genes currently carried by the chambered fragment, e.g. `["cold_tolerance", "pressure_tolerance"]`, or `None` if the chamber is empty. `splice()` takes time. Successful delivery empties the chamber; a completed splice waiting for output space retains its new genes in the chamber.
+- **Returns** `list[str] | None`. The genes currently carried by the chambered fragment, e.g. `["cold_tolerance", "pressure_tolerance"]`, or `None` if the chamber is empty. `splice()` takes time. Successful delivery empties the chamber; a completed splice waiting for output space retains its new genes in the chamber.
 
 ##### `self.gene_catalog() → list[str]`
 
 Every gene id the machine can splice, `self.gene_catalog()` returns the full list (e.g. `["heat_resistance", "acid_resistance", "cold_tolerance", "pressure_tolerance", "toxin_resistance", "radiation_shield"]`), the valid values to pass to `splice()`.
 
-- **Returns** The full list of gene ids the machine can splice (e.g. `["heat_resistance", "acid_resistance", "cold_tolerance", ...]`): the valid values for `splice()`.
+- **Returns** `list[str]`. Every gene id the machine can splice (e.g. `["heat_resistance", "acid_resistance", "cold_tolerance", ...]`): the valid values for `splice()`.
 
 ##### `self.splice(genes: list[str]) → ActionResult` *(self only)*
 
@@ -11500,41 +13400,41 @@ Crafts the creature feeds that Habitat colonies eat, working like the Fabricator
 1. Requires the **Wildlife** research (Plants 2,250,000).
 2. Buy from the Shop for 50,000 cr.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `.input: InputSlot`
 
 Loads forage and life forms into the Feed Maker. Connect a source with `self.input.connect("Forage Bin")`, then pull materials with `self.input.take("forage", 8)`. See `InputSlot`.
 
-- **Returns** `InputSlot`: load forage + life-forms: `self.input.connect("Forage Bin")` then `self.input.take("forage", 8)`. This is a multi-material stockpile; use `eject(...)` to recover a staged material while the machine is idle.
+- **Returns** `InputSlot`. Load forage and life-forms: `self.input.connect("Forage Bin")` then `self.input.take("forage", 8)`. This is a multi-material stockpile; use `eject(...)` to recover a staged material while the machine is idle.
 
 ##### `.output: OutputSlot`
 
 Sends finished feed to a bin or Habitat supply chain. Connect a destination with `self.output.connect("Feed Bin")`, then send feed with `self.output.send("feed_salt_tortoise", 10)`. See `OutputSlot`.
 
-- **Returns** `OutputSlot`: push finished feed onward: `self.output.connect("Feed Bin")` then `self.output.send("feed_salt_tortoise", 10)`.
+- **Returns** `OutputSlot`. Push finished feed onward: `self.output.connect("Feed Bin")` then `self.output.send("feed_salt_tortoise", 10)`.
 
 ### Methods
 
@@ -11542,13 +13442,13 @@ Sends finished feed to a bin or Habitat supply chain. Connect a destination with
 
 The machine's upgrade tier: 1 for Mk I or 2 for Mk II.
 
-- **Returns** Number: 1 for Mk I or 2 for Mk II.
+- **Returns** `int`. **1** for Mk I or **2** for Mk II.
 
 ##### `.list_recipes() → list[Recipe]`
 
 Lists the feed recipes unlocked through Bio Lab orders, one `Recipe` per creature whose feed you can craft. Locked recipes do not appear. Each recipe includes its tier, id, name, inputs, output, duration, and power draw. Use `for recipe in self.list_recipes(): print(recipe.tier, recipe.id)` to discover what is available.
 
-- **Returns** List of unlocked `Recipe` objects (one per creature feed whose recipe a Biolab order has unlocked). Each has `.tier`, `.id`, `.name`, `.inputs`, `.output_item`, `.output_count`, `.duration_game_hours`, `.power_draw`.
+- **Returns** `list[Recipe]`. One per creature feed whose recipe a Biolab order has unlocked.
 
 ##### `.find_recipe(recipe_id: str) → Recipe | None`
 
@@ -11560,7 +13460,7 @@ Find one unlocked feed recipe by id without looping through `list_recipes()`. Re
 | --- | --- | --- |
 | `recipe_id` | `str` | Feed Maker recipe id |
 
-- **Returns** The matching unlocked `Recipe`, or `None` if this Feed Maker cannot currently run that id.
+- **Returns** `Recipe | None`. `None` if this Feed Maker cannot currently run that id.
 
 ##### `.set_recipe(recipe_or_id: str | Recipe | IdRecord) → ActionResult` *(self only)*
 
@@ -11607,50 +13507,50 @@ Unset the selected feed recipe and leave the Feed Maker idle. The input stockpil
 
 Returns the current recipe id, or `""` when none is set (or the set recipe is no longer unlocked). Use to check state before re-setting: `if self.get_recipe() == "": self.set_recipe(...)`.
 
-- **Returns** String: the current recipe id, or `""` when none is set (or the set one is no longer unlocked).
+- **Returns** `str`. Empty when no recipe is set, or when the set one is no longer unlocked.
 - **Possible values** `""`, `"craft_feed_salt_tortoise"`, `"craft_feed_magmatic_annelid"`, `"craft_feed_mycelial_husk"`, `"craft_feed_mantle_strider"`, `"craft_feed_glasswing_mantis"`, `"craft_feed_veil_mantle"`, `"craft_feed_vault_crab"`, `"craft_feed_tidal_cephalopod"`, `"craft_feed_bone_walker"`, `"craft_feed_vent_drifter"`, `"craft_feed_hive_sentinel"`, `"craft_feed_hollow_choir"`, `"craft_feed_ferric_sea_lily"`, `"craft_feed_crustal_echo"`, `"craft_feed_glacial_wyrm"`, `"craft_feed_spire_drake"`
 
 ##### `.get_recipe_inputs() → dict[str, int]`
 
 A dict mapping each input `item_id` → units consumed per craft for the current recipe (empty dict if no recipe set). Iterate it to know what to stock: `for item, qty in self.get_recipe_inputs().items(): self.input.take(item, qty * 5)`.
 
-- **Returns** A dict (`item_id` → count consumed per craft), or an empty dict if no recipe is set. Iterate it to stock the right life-forms + forage.
+- **Returns** `dict[str, int]`. `{item_id: count}` consumed per craft, or empty if no recipe is set. Iterate it to stock the right life-forms and forage.
 
 ##### `.get_stockpile() → dict[str, int]`
 
 A dict mapping each `item_id` currently in the input stockpile → its unit count. Read it to see what's loaded before crafting.
 
-- **Returns** A dict (`item_id` → units currently in the input stockpile).
+- **Returns** `dict[str, int]`. `{item_id: count}` currently in the input stockpile.
 
 ##### `.get_stockpile_used() → int`
 
 Total units across every material in the input stockpile. Compare to `get_stockpile_capacity()` to avoid overfilling.
 
-- **Returns** Number: total units across every material in the input stockpile.
+- **Returns** `int`. Total units across every material in the input stockpile.
 
 ##### `.get_stockpile_capacity() → int`
 
 Combined unit cap across all materials in the input stockpile. The cap is shared, many materials sum against one limit.
 
-- **Returns** Number: combined unit cap across all materials in the input stockpile.
+- **Returns** `int`. Combined unit cap across all materials in the input stockpile.
 
 ##### `.is_running() → bool`
 
 `True` while a craft is actively advancing this tick (recipe set, inputs present, output has room). `False` when starved, output-full, idle, or powered off. Poll to detect a stalled line.
 
-- **Returns** Boolean: `True` while a craft is actively advancing this tick.
+- **Returns** `bool`. `True` while a craft is actively advancing this tick.
 
 ##### `.get_progress() → float`
 
 Fraction **0-1** through the current craft. Resets to 0 each time a craft completes (a batch of feed lands in the output bin) and starts again if inputs remain.
 
-- **Returns** Number (**0-1**): progress through the current craft.
+- **Returns** `float`. Progress through the current craft (**0-1**).
 
 ##### `.get_output_count() → int`
 
 Completed feed units waiting in the output bin for pickup. Push them onward with `self.output.send(...)` before the bin fills (a full output bin stalls crafting).
 
-- **Returns** Number: completed feed units waiting in the output bin for pickup.
+- **Returns** `int`. Completed feed units waiting in the output bin for pickup.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -11675,53 +13575,53 @@ Revives one species from Biology reagents staged in this Habitat's dedicated loc
 1. Requires the **Wildlife** research (Plants 2,250,000).
 2. Buy from the Shop for 100,000 cr.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `.gas_in: FluidPort`
 
 Supplies the Habitat with gas. Connect a Gas Tank with `self.gas_in.connect("gas_tank_1")`, then use `set_gas_intake(...)` to meter gas from this port into the enclosure. See `FluidPort` for level, capacity, flow, and connection queries.
 
-- **Returns** `FluidPort`: `connect()`, `connected_to()`, `level()`, `capacity()`, `flow_rate()`. Wire to a Gas Tank: `self.gas_in.connect("gas_tank_1")`. The tank fills this port; `set_gas_intake(...)` meters it into the enclosure.
+- **Returns** `FluidPort`. Wire to a Gas Tank: `self.gas_in.connect("gas_tank_1")`. The tank fills this port; `set_gas_intake(...)` meters it into the enclosure.
 
 ##### `.liquid_in: FluidPort`
 
 Supplies the Habitat with liquid. Connect a Liquid Tank with `self.liquid_in.connect("liquid_tank_1")`. See `FluidPort` for level, capacity, flow, and connection queries.
 
-- **Returns** `FluidPort`: `connect()`, `connected_to()`, `level()`, `capacity()`, `flow_rate()`. Wire to a Liquid Tank: `self.liquid_in.connect("liquid_tank_1")`.
+- **Returns** `FluidPort`. Wire to a Liquid Tank: `self.liquid_in.connect("liquid_tank_1")`.
 
 ##### `.input: InputSlot`
 
 Stores feed for the colony. Connect a source with `self.input.connect("Feed Bin")`, then pull feed with `self.input.take("feed_salt_tortoise", 20)`. Compare `self.input.stacks()` with `required_feed()` after revival; only the colony's own feed item is useful. See `InputSlot`.
 
-- **Returns** `InputSlot`: `connect()`, `take()`, `eject()`, `count()`, `capacity()`, `stacks()`, `connected_to()`. Stock the colony's feed: `self.input.connect("Feed Bin")` then `self.input.take("feed_salt_tortoise", 20)`. Compare `stacks()` with `required_feed()` after revival; recover the wrong feed to local freight with `eject(...)`.
+- **Returns** `InputSlot`. Stock the colony's feed: `self.input.connect("Feed Bin")` then `self.input.take("feed_salt_tortoise", 20)`. Compare `stacks()` with `required_feed()` after revival; recover the wrong feed to local freight with `eject(...)`.
 
 ##### `.reagents: InputSlot`
 
 Dedicated local `InputSlot` for revival reagents. Select a revival target, then connect a Storage Bin or Warehouse at this Habitat's outpost and stage all five Bio Lab reagents shown on the card before `revive()`. A Habitat at Nocturna Base may connect Base Inventory; a remote Habitat cannot.
 
-- **Returns** Dedicated local `InputSlot` for the five Biology reagents consumed by `revive()`. Select a target, then connect a store at this Habitat's outpost and stage the rarity-scaled quantity shown on the card. Base Inventory is a valid source only for a Habitat at Nocturna Base. Recover unused reagents with `eject(...)`.
+- **Returns** `InputSlot`. A dedicated local input for the five Biology reagents consumed by `revive()`. Select a target, then connect a store at this Habitat's outpost and stage the rarity-scaled quantity shown on the card. Base Inventory is a valid source only for a Habitat at Nocturna Base. Recover unused reagents with `eject(...)`.
 
 ### Methods
 
@@ -11911,221 +13811,221 @@ Permanently purchase one node from this creature's tree. Pass a node id from `ge
 
 Permanently installed Habitat tier as an integer (**1-2**). Mk II doubles carrying capacity only; breeding speed and biological costs come from adaptations.
 
-- **Returns** Integer: permanently installed Habitat tier (**1-2**).
+- **Returns** `int`. Permanently installed Habitat tier (**1-2**).
 
 ##### `.population() → int`
 
 Current colony head count (individuals). Reads **0** for an empty Habitat OR one still in the Founded rearing window, a colony only counts (here and on the Wildlife sensor) once it's established. Breeds up toward `carrying_capacity()` and never falls.
 
-- **Returns** Number: current colony head count (individuals). **0** for an empty Habitat or one still in the Founded rearing window (not yet established / counted on the sensor).
+- **Returns** `int`. Current colony head count (individuals). **0** for an empty Habitat or one still in the Founded rearing window (not yet established or counted on the sensor).
 
 ##### `.species() → str`
 
 The housed creature id (e.g. `"glacial_wyrm"`), or `""` when the Habitat is empty. Use to look the creature up or branch your regulator per species.
 
-- **Returns** String: the housed creature id, or `""` when the Habitat is empty.
+- **Returns** `str`. The housed creature id, or `""` when the Habitat is empty.
 - **Possible values** `""`, `"salt_tortoise"`, `"magmatic_annelid"`, `"mycelial_husk"`, `"mantle_strider"`, `"glasswing_mantis"`, `"veil_mantle"`, `"vault_crab"`, `"tidal_cephalopod"`, `"bone_walker"`, `"vent_drifter"`, `"hive_sentinel"`, `"hollow_choir"`, `"ferric_sea_lily"`, `"crustal_echo"`, `"glacial_wyrm"`, `"spire_drake"`
 
 ##### `.revival_target() → str`
 
 The creature id explicitly selected with `set_revival_target(...)`, or `""` before selection and after establishment. Failed setup checks and rearing attempts retain this value, while `species()` remains empty until revival actually starts.
 
-- **Returns** String: the creature id explicitly selected for preparation, or `""` when no target is selected or the colony is established. A failed setup check or rearing attempt keeps the target selected.
+- **Returns** `str`. The creature id explicitly selected for preparation, or `""` when no target is selected or the colony is established. A failed setup check or rearing attempt keeps the target selected.
 - **Possible values** `""`, `"salt_tortoise"`, `"magmatic_annelid"`, `"mycelial_husk"`, `"mantle_strider"`, `"glasswing_mantis"`, `"veil_mantle"`, `"vault_crab"`, `"tidal_cephalopod"`, `"bone_walker"`, `"vent_drifter"`, `"hive_sentinel"`, `"hollow_choir"`, `"ferric_sea_lily"`, `"crustal_echo"`, `"glacial_wyrm"`, `"spire_drake"`
 
 ##### `.life_stage() → str`
 
-The colony's stage as a string: `"empty"`, `"founded"`, `"first_breeding"`, `"self_sustaining"`, `"thriving"`, or `"abundant"`. The colony climbs as its own population crosses each stage threshold; each climb opens a harder requirement and raises the ceiling. Branch on it to scale up your supply: `if self.life_stage() == "thriving": self.set_liquid_intake(...)`.
+The colony's stage as a string: `"empty"`, `"founded"`, `"first_breeding"`, `"self_sustaining"`, `"thriving"`, or `"abundant"`. The colony advances as its population crosses each stage threshold. Later stages can change support requirements; earlier advances raise base capacity, but entering Abundant does not. Branch on the stage to scale up your supply: `if self.life_stage() == "thriving": self.set_liquid_intake(...)`.
 
-- **Returns** String: one of `"empty"`, `"founded"`, `"first_breeding"`, `"self_sustaining"`, `"thriving"`, `"abundant"`. The colony climbs as its own population crosses each stage threshold.
+- **Returns** `str`. The colony climbs as its own population crosses each stage threshold.
 - **Possible values** `"empty"`, `"founded"`, `"first_breeding"`, `"self_sustaining"`, `"thriving"`, `"abundant"`
 
 ##### `.is_established() → bool`
 
 `True` once the colony cleared the Founded rearing window and is counting on the sensor; `False` during rearing or when empty. Gate breeding logic on it: `if self.is_established(): regulate()`.
 
-- **Returns** Boolean: `True` once the colony cleared the Founded rearing window and counts on the sensor; `False` during rearing or when empty.
+- **Returns** `bool`. `True` once the colony cleared the Founded rearing window and counts on the sensor; `False` during rearing or when empty.
 
 ##### `.rearing_progress() → float`
 
 Fraction **0-1** of the Founded rearing window held in-band. Climbs only while every active band is satisfied; reaches **1.0** to establish. Reads **0** when empty/established, and resets to 0 if a band is lost (rearing fails). Watch it during a fresh revive to confirm your regulator is holding.
 
-- **Returns** Number in **0-1**: fraction of the Founded rearing window held in-band. Reaches **1.0** to establish. **0** when empty/established. Resets to 0 on a band loss (rearing fails: see `rearing_failed()`).
+- **Returns** `float`. Fraction of the Founded rearing window held in-band (**0-1**). Reaches **1.0** to establish. **0** when empty or established. Resets to 0 on a band loss (rearing fails: see `rearing_failed()`).
 
 ##### `.rearing_failed() → bool`
 
 `True` after a rearing attempt lost its bands and reverted the Habitat to preparation. The genome and selected target are kept, fix your regulator and call `revive()` again. Clears when a target is selected or revival restarts.
 
-- **Returns** Boolean: `True` after a rearing attempt lost its bands and reverted the Habitat to preparation. The genome and selected target are kept; fix your regulator and call `revive()` again. Clears when a target is selected or revival restarts.
+- **Returns** `bool`. `True` after a rearing attempt lost its bands and reverted the Habitat to preparation. The genome and selected target are kept; fix your regulator and call `revive()` again. Clears when a target is selected or revival restarts.
 
 ##### `.brood_size() → int`
 
 Whole individuals produced by the next completed breeding cycle. Normally **1**; brood bonuses build toward a guaranteed extra individual and periodically make it **2**. Reads **0** without an established colony or carrying-capacity space.
 
-- **Returns** Whole individuals produced by the next completed breeding cycle. Normally **1**; brood bonuses build toward a guaranteed extra individual and periodically make it **2**. Reads **0** without an established colony or carrying-capacity space.
+- **Returns** `int`. Whole individuals produced by the next completed breeding cycle. Normally **1**; brood bonuses build toward a guaranteed extra individual and periodically make it **2**. Reads **0** without an established colony or carrying-capacity space.
 
 ##### `.breeding_rate() → float`
 
 Expected individuals/h at the current population, remaining capacity (headroom), life support, rarity, adaptation effects, and available local inputs. Population adds less and less extra speed above 10 individuals, while brood yield and purchased speed effects stay within their overall limits. This is the rate readout; `breeding_efficiency()` is only the life-support factor.
 
-- **Returns** Expected individuals/h at current conditions. **0** before establishment or while blocked.
+- **Returns** `float`. Expected individuals/h at current conditions. **0** before establishment or while blocked.
 
 ##### `.feed_level() → float`
 
 Usable feed units remaining after partial consumption. Feed is consumed automatically only when individuals are born. Top it up with `self.input.take(...)`; over-stocking is harmless.
 
-- **Returns** Number: usable feed units remaining after partial consumption. Feed is drawn automatically only when individuals are born. Keep it above the next birth's cost; over-stocking is harmless.
+- **Returns** `float`. Usable feed units remaining after partial consumption. Feed is drawn automatically only when individuals are born. Keep it above the next birth's cost; over-stocking is harmless.
 
 ##### `.gas_level() → float`
 
 Current gas held in the enclosure, in **tons**. Compare it with `gas_band()` and meter `set_gas_intake(...)` to hold it inside the window. It drops as the colony consumes gas while breeding and rises with intake.
 
-- **Returns** Number: current gas held in the enclosure, in tons. Compare to `gas_band()`; meter `set_gas_intake(...)` to hold it inside the window.
+- **Returns** `float`. Gas held in the enclosure now, in tons. Compare to `gas_band()`; meter `set_gas_intake(...)` to hold it inside the window.
 
 ##### `.liquid_level() → float`
 
 Current liquid held in the enclosure, in **tons**. Compare it with `liquid_band()` and meter `set_liquid_intake(...)` to hold the window.
 
-- **Returns** Number: current liquid held in the enclosure, in tons. Compare to `liquid_band()`; meter `set_liquid_intake(...)` to hold it inside the window.
+- **Returns** `float`. Liquid held in the enclosure now, in tons. Compare to `liquid_band()`; meter `set_liquid_intake(...)` to hold it inside the window.
 
 ##### `.get_insight() → HabitatInsight`
 
 Read the shared Wildlife Insight balance and this colony's current and lifetime contribution. Insight accrues directly from positive population change. Static population and elapsed time alone produce nothing.
 
-- **Returns** `HabitatInsight`: the shared balance, this colony's current production rate, and its lifetime contribution.
+- **Returns** `HabitatInsight`. The shared balance, this colony's current production rate, and its lifetime contribution.
 
 ##### `.get_bonus_tree() → HabitatBonusTree`
 
 Read this creature's species-only Adaptation and all-species Breakthrough, including each node's `.scope`, `.source_species`, permanent purchase state, current effect activity, Insight cost, and unmet requirements. The tree appears after selecting a revival target and its nodes remain visible while locked.
 
-- **Returns** `HabitatBonusTree`: one species-only Adaptation and one all-species Breakthrough, with scope, source species, costs, gate, activity, and purchase state.
+- **Returns** `HabitatBonusTree`. One species-only Adaptation and one all-species Breakthrough, with scope, source species, costs, gate, activity, and purchase state.
 
 ##### `.get_active_bonuses() → list[HabitatBonusNode]`
 
 Read every purchased node currently affecting this Habitat, including global Breakthroughs earned from other species. Each result exposes `.scope` and `.source_species`. A conditional node disappears while its local condition is unmet; use its source Habitat's `get_bonus_tree()` to inspect permanent ownership.
 
-- **Returns** List of purchased `HabitatBonusNode` objects currently affecting this Habitat, including global Breakthroughs earned from other species.
+- **Returns** `list[HabitatBonusNode]`. Purchased bonuses currently affecting this Habitat, including global Breakthroughs earned from other species.
 
 ##### `.gas_band() → list[float]`
 
 Safe gas-inventory range `[low, high]` in **tons** for the colony's current stage. Breeding receives full gas support inside the range; too little starves the colony and too much is toxic. Returns an empty list before gas is required. Read it each loop because the range tightens as the colony grows.
 
-- **Returns** List `[low, high]` (tons): the safe gas-inventory window for the colony's CURRENT life-stage. `gas_level()` inside `[low, high]` = breeding at 100% for gas; outside (too low OR too high) throttles. Empty list `[]` when gas isn't an active requirement yet (early stages).
+- **Returns** `list[float]`. `[low, high]` in tons: the safe gas-inventory window for the colony's CURRENT life-stage. `gas_level()` inside `[low, high]` = breeding at 100% for gas; outside (too low OR too high) throttles. `[]` when gas isn't an active requirement yet (early stages).
 
 ##### `.liquid_band() → list[float]`
 
 Safe liquid-inventory range `[low, high]` in **tons** for the colony's current stage. Returns an empty list before liquid is required. Read it each loop because the range tightens as the colony grows.
 
-- **Returns** List `[low, high]` (tons): the safe liquid-inventory window for the colony's CURRENT life-stage. Empty list `[]` when liquid isn't an active requirement yet.
+- **Returns** `list[float]`. `[low, high]` in tons: the safe liquid-inventory window for the colony's CURRENT life-stage. `[]` when liquid isn't an active requirement yet.
 
 ##### `.feed_ok() → bool`
 
 `True` when the feed named by `required_feed()` is stocked. Feed is consumed automatically as individuals are born. `False` means the bin is empty or contains the wrong feed. Missing feed stalls breeding but does not reduce the established population.
 
-- **Returns** Boolean: `True` when the feed named by `required_feed()` is stocked. Feed is consumed automatically as individuals are born. `False` (✗ on the card) means the bin is empty or holds the wrong feed.
+- **Returns** `bool`. `True` when the feed named by `required_feed()` is stocked. Feed is consumed automatically as individuals are born. `False` (✗ on the card) means the bin is empty or holds the wrong feed.
 
 ##### `.gas_ok() → bool`
 
 `True` when gas requirements are met or gas is not required yet. `False` means the level is outside `gas_band()` or the enclosure holds the wrong gas. If the level is inside the range, compare `gas_fluid()` with `required_gas()`.
 
-- **Returns** Boolean: `True` when gas is in-band (or not yet required). `False` means EITHER `gas_level()` is outside `gas_band()` (adjust `set_gas_intake(...)`) OR the enclosure holds the wrong gas (`gas_fluid()` ≠ `required_gas()`: re-pipe the right exotic). Check both.
+- **Returns** `bool`. `True` when gas is in-band (or not yet required). `False` means EITHER `gas_level()` is outside `gas_band()` (adjust `set_gas_intake(...)`) OR the enclosure holds the wrong gas (`gas_fluid()` ≠ `required_gas()`: re-pipe the right exotic). Check both.
 
 ##### `.liquid_ok() → bool`
 
 `True` when liquid requirements are met or liquid is not required yet. `False` means the level is outside `liquid_band()` or the enclosure holds the wrong liquid. Compare `liquid_fluid()` with `required_liquid()` to tell which.
 
-- **Returns** Boolean: `True` when liquid is in-band (or not yet required). `False` means EITHER `liquid_level()` is outside `liquid_band()` OR the wrong liquid is held (`liquid_fluid()` ≠ `required_liquid()`). Check both.
+- **Returns** `bool`. `True` when liquid is in-band (or not yet required). `False` means EITHER `liquid_level()` is outside `liquid_band()` OR the wrong liquid is held (`liquid_fluid()` ≠ `required_liquid()`). Check both.
 
 ##### `.breeding_efficiency() → float`
 
 Current life-support multiplier from **0-100%**, not the population growth rate. The weakest active input sets it; **100%** means every input is ready. Growth also scales with population momentum, rarity, and bonuses. Capacity stops growth only when full and never slows breeding beforehand. Poor conditions never reduce population.
 
-- **Returns** Life-support multiplier from **0-100%**, not the population growth rate. The weakest active input sets it; **100%** means every input is ready. Growth also scales with population momentum, rarity, and bonuses. Capacity stops growth only when full and never slows breeding beforehand. Poor conditions never reduce population.
+- **Returns** `float`. Life-support multiplier from **0-100%**, not the population growth rate. The weakest active input sets it; **100%** means every input is ready. Growth also scales with population momentum, rarity, and bonuses. Capacity stops growth only when full and never slows breeding beforehand. Poor conditions never reduce population.
 
 ##### `.gas_fluid() → str`
 
 The exotic gas currently held in the enclosure, such as `"chlorine"`, or `""` when empty. It must equal `required_gas()` for the gas range to count. If `gas_level()` is in range but `gas_ok()` is `False`, the enclosure holds the wrong gas.
 
-- **Returns** String: the exotic gas currently HELD in the enclosure (the fluid you piped in), or `""` when empty. The band only counts when this equals `required_gas()`; if `gas_level()` reads in-band but `gas_ok()` is `False`, you're holding the WRONG gas: compare these two to spot it.
+- **Returns** `str`. The exotic gas currently HELD in the enclosure (the fluid you piped in), or `""` when empty. The band only counts when this equals `required_gas()`; if `gas_level()` reads in-band but `gas_ok()` is `False`, you're holding the WRONG gas: compare these two to spot it.
 - **Possible values** `""`, `"steam"`, `"ammonia"`, `"swamp_gas"`, `"raw_sulfur_gas"`, `"sulfur_gas"`, `"raw_chlorine"`, `"chlorine"`
 
 ##### `.liquid_fluid() → str`
 
 The exotic liquid currently held in the enclosure, or `""` when empty. It must equal `required_liquid()` for the liquid range to count.
 
-- **Returns** String: the exotic liquid currently HELD in the enclosure, or `""` when empty. Must equal `required_liquid()` for the band to count; compare them to diagnose a wrong-liquid supply.
+- **Returns** `str`. The exotic liquid currently HELD in the enclosure, or `""` when empty. Must equal `required_liquid()` for the band to count; compare them to diagnose a wrong-liquid supply.
 - **Possible values** `""`, `"water"`, `"oil"`, `"frozen_essence"`, `"coastal_essence"`, `"geothermal_essence"`, `"volcanic_essence"`, `"deep_essence"`, `"brine"`, `"raw_cryofluid"`, `"cryofluid"`, `"raw_quicksilver"`, `"quicksilver"`
 
 ##### `.required_feed() → str`
 
 The exact feed item id required by the selected revival target or housed creature, or `""` when neither exists. Compare it with `self.input.stacks()` while staging or diagnosing feed.
 
-- **Returns** String: the exact feed item id required by the selected revival target or housed creature, or `""` when neither exists. Compare it with `self.input.stacks()` while staging or diagnosing feed.
+- **Returns** `str`. The exact feed item id required by the selected revival target or housed creature, or `""` when neither exists. Compare it with `self.input.stacks()` while staging or diagnosing feed.
 - **Possible values** `""`, `"feed_salt_tortoise"`, `"feed_magmatic_annelid"`, `"feed_mycelial_husk"`, `"feed_mantle_strider"`, `"feed_glasswing_mantis"`, `"feed_veil_mantle"`, `"feed_vault_crab"`, `"feed_tidal_cephalopod"`, `"feed_bone_walker"`, `"feed_vent_drifter"`, `"feed_hive_sentinel"`, `"feed_hollow_choir"`, `"feed_ferric_sea_lily"`, `"feed_crustal_echo"`, `"feed_glacial_wyrm"`, `"feed_spire_drake"`
 
 ##### `.required_gas() → str`
 
 The exotic gas required at the colony's current stage, such as `"swamp_gas"`, or `""` before gas is needed. The requirement becomes more demanding at later stages, so check it again as the colony grows. Other gases do not satisfy the required range.
 
-- **Returns** String: the exotic gas this creature needs at its CURRENT stage (some species switch to a deeper exotic at later stages, e.g. `"sulfur_gas"` → `"chlorine"`; a purchased Adaptation may retain the base gas instead), or `""` when gas isn't required yet. Pipe exactly this fluid; `gas_fluid()` must match it.
+- **Returns** `str`. The exotic gas this creature needs at its CURRENT stage (some species switch to a deeper exotic at later stages, e.g. `"sulfur_gas"` → `"chlorine"`; a purchased Adaptation may retain the base gas instead), or `""` when gas isn't required yet. Pipe exactly this fluid; `gas_fluid()` must match it.
 - **Possible values** `""`, `"swamp_gas"`, `"ammonia"`, `"sulfur_gas"`, `"chlorine"`
 
 ##### `.required_liquid() → str`
 
 The exotic liquid this creature needs at its current stage, e.g. `"brine"`; escalates at later stages (`"brine"` → `"cryofluid"` → `"quicksilver"`). `liquid_fluid()` must match it. `""` when liquid isn't required yet.
 
-- **Returns** String: the exotic liquid this creature needs at its current stage (some species switch to a deeper exotic at later stages, e.g. `"cryofluid"` → `"quicksilver"`; a purchased Adaptation may retain the base liquid instead), or `""` when liquid isn't required yet. `liquid_fluid()` must match it.
+- **Returns** `str`. The exotic liquid this creature needs at its current stage (some species switch to a deeper exotic at later stages, e.g. `"cryofluid"` → `"quicksilver"`; a purchased Adaptation may retain the base liquid instead), or `""` when liquid isn't required yet. `liquid_fluid()` must match it.
 - **Possible values** `""`, `"brine"`, `"cryofluid"`, `"quicksilver"`
 
 ##### `.next_required_gas() → str`
 
 The gas required after the next life-stage transition, or `""` if the next stage needs no gas or there is no next stage. Read it with `next_gas_band()` before the population reaches the threshold.
 
-- **Returns** String, the exact gas required immediately AFTER the next life-stage transition, or `""` when that next stage has no gas requirement or no next stage exists. Pair with `next_gas_band()` to prepare before crossing.
+- **Returns** `str`. The exact gas required immediately AFTER the next life-stage transition, or `""` when that next stage has no gas requirement or no next stage exists. Pair with `next_gas_band()` to prepare before crossing.
 - **Possible values** `""`, `"swamp_gas"`, `"ammonia"`, `"sulfur_gas"`, `"chlorine"`
 
 ##### `.next_required_liquid() → str`
 
 The liquid required after the next life-stage transition, or `""` if the next stage needs no liquid or there is no next stage. Read it with `next_liquid_band()` before the population reaches the threshold.
 
-- **Returns** String, the exact liquid required immediately AFTER the next life-stage transition, or `""` when that next stage has no liquid requirement or no next stage exists. Pair with `next_liquid_band()`.
+- **Returns** `str`. The exact liquid required immediately AFTER the next life-stage transition, or `""` when that next stage has no liquid requirement or no next stage exists. Pair with `next_liquid_band()`.
 - **Possible values** `""`, `"brine"`, `"cryofluid"`, `"quicksilver"`
 
 ##### `.next_gas_band() → list[float]`
 
 The next life stage's exact gas window as `[low, high]` in **tons**. Returns `[]` if that stage needs no gas or the colony is already Abundant. Pair with `next_required_gas()` to prepare the correct supply and regulator in advance.
 
-- **Returns** List `[low, high]` (tons), the exact gas band immediately AFTER the next life-stage transition. Empty list `[]` when that stage has no gas requirement or no next stage exists.
+- **Returns** `list[float]`. `[low, high]` in tons, the exact gas band immediately AFTER the next life-stage transition. `[]` when that stage has no gas requirement or no next stage exists.
 
 ##### `.next_liquid_band() → list[float]`
 
 The next life stage's exact liquid window as `[low, high]` in **tons**. Returns `[]` if that stage needs no liquid or the colony is already Abundant. Pair with `next_required_liquid()`.
 
-- **Returns** List `[low, high]` (tons), the exact liquid band immediately AFTER the next life-stage transition. Empty list `[]` when that stage has no liquid requirement or no next stage exists.
+- **Returns** `list[float]`. `[low, high]` in tons, the exact liquid band immediately AFTER the next life-stage transition. `[]` when that stage has no liquid requirement or no next stage exists.
 
 ##### `.carrying_capacity() → int`
 
-The colony's ceiling at its current life stage. Population breeds toward it and plateaus there; a maxed colony consumes nothing. Life-stage advancement raises the base ceiling, and Habitat Mk II doubles it. Adaptations never change capacity. Reads **0** when empty.
+The colony's current ceiling. Population breeds toward it and plateaus there; a maxed colony consumes nothing. Earlier stage advances raise base capacity, but Thriving and Abundant share a base of **175,000**. Habitat Mk II doubles the base, while overcrowding can lower the live ceiling. Adaptations never change capacity. Reads **0** when empty.
 
-- **Returns** Number: the colony's ceiling at its current life stage. Stage advancement raises the base; Habitat Mk II doubles it. Adaptations never change capacity. **0** when empty.
+- **Returns** `int`. The colony's current ceiling. Earlier stage advances raise base capacity, but Thriving and Abundant share a base of **175,000**. Habitat Mk II doubles the base, while overcrowding can lower the live ceiling. Adaptations never change capacity. **0** when empty.
 
 ##### `.headroom() → int`
 
-Individuals still breedable before the current ceiling (`carrying_capacity() - population()`, floored at **0**). **0** means this colony is capped and idling. Before Abundant, reach the next stage; at Abundant Mk I, apply the sole Habitat Mk II pack or grow another species.
+Individuals still breedable before the current ceiling (`carrying_capacity() - population()`, floored at **0**). **0** means this colony is capped and idling. Upgrade a capped Thriving Mk I Habitat to Mk II to make the **175,001** Abundant threshold reachable. Reduce overcrowding if it lowers the ceiling below a stage threshold. When an Abundant colony is fully capped, grow another species.
 
-- **Returns** Number: individuals still breedable before the colony hits its current ceiling (`carrying_capacity() - population()`, floored at **0**). **0** means this colony is capped and idling.
+- **Returns** `int`. Individuals still breedable before the colony hits its current ceiling (`carrying_capacity() - population()`, floored at **0**). **0** means this colony is capped and idling.
 
 ##### `.next_stage_population() → int`
 
 Exact population that opens the next life stage: **250**, **2,500**, **25,000**, or **175,001**. Returns **0** when the Habitat is empty or already Abundant. Mk I stops at **175,000**, so entering Abundant requires Mk II. Compare the result with `population()` so your script can prepare the next supply before the transition.
 
-- **Returns** Whole-number population threshold that opens the next life-stage (**250**, **2,500**, **25,000**, or **175,001**). **0** when empty or already Abundant. Compare with `population()` to plan the next supply change.
+- **Returns** `int`. Whole-number population threshold that opens the next life-stage (**250**, **2,500**, **25,000**, or **175,001**). **0** when empty or already Abundant. Compare with `population()` to plan the next supply change.
 
 ##### `.next_requirement() → str`
 
 What changes at the colony's next stage: `"capacity"`, `"gas"`, `"liquid"`, `"switch_gas"`, `"switch_liquid"`, `"tighter_bands"`, or `"none"` at Abundant. Pair it with `next_stage_population()` to learn when the transition happens and what to prepare.
 
-- **Returns** What changes at the next stage: more `"capacity"`, a new `"gas"` or `"liquid"`, `"switch_gas"`, `"switch_liquid"`, `"tighter_bands"`, or `"none"` at Abundant. Pair with `next_stage_population()` to prepare before the transition.
+- **Returns** `str`. What changes at the next stage: more `"capacity"`, a new `"gas"` or `"liquid"`, `"switch_gas"`, `"switch_liquid"`, `"tighter_bands"`, or `"none"` at Abundant. Pair with `next_stage_population()` to prepare before the transition.
 - **Possible values** `"capacity"`, `"gas"`, `"liquid"`, `"switch_gas"`, `"switch_liquid"`, `"tighter_bands"`, `"none"`
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
@@ -12150,41 +14050,41 @@ Warms the planet surface by producing heat. The best power setting shifts with t
 
 1. Buy from the Shop for 800 cr.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `.input: InputSlot`
 
 Fuel Rod magazine for the Mk IV tier. Connect a Lead Cask to keep spare rods staged here; the generator swallows one whole rod at a time and burns it down internally. Empty and unused below Mk IV, and a Mk IV with no rod stops producing rather than degrading.
 
-- **Returns** `InputSlot` magazine for the Mk IV Fuel Rod supply: `connect()`, `take()`, `eject()`, `count()`, `capacity()`, `connected_to()`. Empty and unused below Mk IV.
+- **Returns** `InputSlot`. Magazine for the Mk IV Fuel Rod supply. Empty and unused below Mk IV.
 
 ##### `.steam_in: FluidPort`
 
 Steam supply port installed by the Mk III pack. Call `connect(...)` with a compatible steam provider, then inspect `level()`, `capacity()`, `flow_rate()`, or `connected_to()`. Mk IV uses Fuel Rods instead, but the installed port remains available.
 
-- **Returns** `FluidPort` for the steam supply installed by the Mk III pack. Call `connect(...)` with a compatible steam provider, then use `level()`, `capacity()`, `flow_rate()`, or `connected_to()`. Mk IV operation uses Fuel Rods instead, but the installed port remains available.
+- **Returns** `FluidPort`. The steam supply installed by the Mk III pack. Call `connect(...)` with a compatible steam provider. Mk IV operation uses Fuel Rods instead, but the installed port remains available.
 
 ### Methods
 
@@ -12212,38 +14112,38 @@ Set base heater power from **0-10**; values outside that range are clamped. `0` 
 
 Current daily heater thermal state, one of `"clear"`, `"dust_storm"`, `"heat_bleed"`, `"dust_veil"`. Each state has its own optimal positive `set_power()` value. The state is stable throughout the current day and changes only on a new day, so read it at the start of each iteration and branch when the string changes: `if state == "clear": self.set_power(5)` etc. Your job is figuring out the four optimal values.
 
-- **Returns** String (clear, dust_storm, heat_bleed, dust_veil)
+- **Returns** `str`
 - **Possible values** `"clear"`, `"dust_storm"`, `"heat_bleed"`, `"dust_veil"`
 
 ##### `.efficiency() → float`
 
 Current heating efficiency (**0-100%**). Hits **100%** only when `set_power()` exactly matches the current `thermal_state()`'s optimal, and falls off *steeply* around it (not linearly): about **31%** one step away, then a **10%** floor for any setting two or more steps off. Reads **0%** only when power is `0`. Scan positive power values and take the setting that reads **100%** as each state's optimal.
 
-- **Returns** Number (0-100%)
+- **Returns** `float`. 0-100%.
 
 ##### `.output() → float`
 
-Current heat-unit production rate per hour at the current settings. Heat accumulates to raise surface temperature over many days; the sensor rate display projects per-day totals. Reflects `efficiency() × tier multiplier`. Reads `0` if unpowered or no script running. Recomputed live on every read, a fresh `set_power(...)` is reflected immediately.
+Current heat-unit production rate per hour at the current settings. Heat accumulates to raise surface temperature over many days; the sensor rate display projects per-day totals. Reflects `efficiency()` × the tier multiplier. Reads `0` if unpowered or no script running. Recomputed live on every read, a fresh `set_power(...)` is reflected immediately.
 
-- **Returns** Number: current heat output rate (heat units/h). Derived live; a fresh `set_power(...)` is reflected immediately.
+- **Returns** `float`. Current heat output rate, in heat units/h. Derived live; a fresh `set_power(...)` is reflected immediately.
 
 ##### `.tier() → int`
 
 Permanently installed Mk tier as an integer (**1-4**). Upgrade packs raise this value; temporary Mk III steam starvation does not. Compare with `effective_tier()` when diagnosing a supplied or degraded heater.
 
-- **Returns** Integer: permanently installed Mk tier.
+- **Returns** `int`. Permanently installed Mk tier.
 
 ##### `.is_degraded() → bool`
 
 `True` when a Mk III pack is starved of its required fluid input and the machine has fallen back to the previous tier multiplier for this tick. Check after applying a Mk III pack, if `True`, your tier-3 heater is temporarily running as Mk II; look at `self.steam_in.level()` and the upstream thermal cap.
 
-- **Returns** Boolean: `True` when a Mk III pack is starved of its required fluid input and the machine has fallen back to the previous tier multiplier for this tick.
+- **Returns** `bool`. `True` when a Mk III pack is starved of its required fluid input and the machine has fallen back to the previous tier multiplier for this tick.
 
 ##### `.effective_tier() → int`
 
 The tier actually in effect this tick: `tier()` normally, previous tier while `is_degraded()` is `True`. Scripts that rebalance steam flow between heaters should compare `effective_tier()` with `tier()`.
 
-- **Returns** Integer: the tier actually in effect this tick: `tier()` normally, previous tier while `is_degraded()` is `True`.
+- **Returns** `int`. The tier actually in effect this tick: `tier()` normally, the previous tier while `is_degraded()` is `True`.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -12267,41 +14167,41 @@ Draws CO2 from the atmosphere and turns it into breathable oxygen, one of the co
 
 1. Buy from the Shop for 1,000 cr.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `.input: InputSlot`
 
 Fuel Rod magazine for the Mk IV tier. Connect a Lead Cask to keep spare rods staged here; the generator swallows one whole rod at a time and burns it down internally. Empty and unused below Mk IV, and a Mk IV with no rod stops producing rather than degrading.
 
-- **Returns** `InputSlot` magazine for the Mk IV Fuel Rod supply: `connect()`, `take()`, `eject()`, `count()`, `capacity()`, `connected_to()`. Empty and unused below Mk IV.
+- **Returns** `InputSlot`. Magazine for the Mk IV Fuel Rod supply. Empty and unused below Mk IV.
 
 ##### `.water_in: FluidPort`
 
 Water supply port installed by the Mk III pack. Call `connect(...)` with a compatible water provider, then inspect `level()`, `capacity()`, `flow_rate()`, or `connected_to()`. Mk IV uses Fuel Rods instead, but the installed port remains available.
 
-- **Returns** `FluidPort` for the water supply installed by the Mk III pack. Call `connect(...)` with a compatible water provider, then use `level()`, `capacity()`, `flow_rate()`, or `connected_to()`. Mk IV operation uses Fuel Rods instead, but the installed port remains available.
+- **Returns** `FluidPort`. The water supply installed by the Mk III pack. Call `connect(...)` with a compatible water provider. Mk IV operation uses Fuel Rods instead, but the installed port remains available.
 
 ### Methods
 
@@ -12329,13 +14229,13 @@ Set CO2 intake rate for this tick. Call `self.set_intake(atmosphere.get_co2() / 
 
 Current carbon waste level (**0-100**). Production runs clean below **60**, drops linearly **60-100**, and stalls (zero output) at **100**. Check this each iteration before calling `dump_waste()`, dumping between **50-60** is penalty-free; dumping elsewhere costs efficiency.
 
-- **Returns** Number (0-100)
+- **Returns** `float`. 0-100.
 
 ##### `.dump_penalty() → float`
 
 Current efficiency penalty from the last `dump_waste()` call (**0-1**). `0` means no active waste-clearing penalty; `0.25` means output is reduced by 25%. A bad dump remains visible here until the next `dump_waste()` call.
 
-- **Returns** Number (0-1, active waste-clearing efficiency penalty)
+- **Returns** `float`. Active waste-clearing efficiency penalty, 0-1.
 
 ##### `.dump_waste() → WasteDumpResult` *(self only)*
 
@@ -12355,31 +14255,31 @@ Clear accumulated carbon waste. Call `result = self.dump_waste()` when `waste()`
 
 Current conversion efficiency (**0-100%**). Hits **100%** when intake matches **CO2/10**, CO2 is available, waste is at or below **60**, and no dump penalty is active. Waste above **60** reduces efficiency; waste at **100** stalls production. The **50-60** range is the clean window for `dump_waste()`, dumping outside it applies an efficiency penalty you can read with `dump_penalty()`.
 
-- **Returns** Number (0-100%)
+- **Returns** `float`. 0-100%.
 
 ##### `.output() → float`
 
-Current O2 production rate in **ppt/h** at the current settings. Reflects `efficiency() × tier multiplier`, capped by available CO2. Reads `0` if the machine is unpowered, no script is running, CO2 is exhausted, or waste has stalled production. Recomputed live on every read, a fresh `set_intake(...)` is reflected immediately. Use this for live dashboards or to detect degradation mid-loop.
+Current O2 production rate in **ppt/h** at the current settings. Reflects `efficiency()` × the tier multiplier, capped by available CO2. Reads `0` if the machine is unpowered, no script is running, CO2 is exhausted, or waste has stalled production. Recomputed live on every read, a fresh `set_intake(...)` is reflected immediately. Use this for live dashboards or to detect degradation mid-loop.
 
-- **Returns** Number: current O2 output rate (ppt/h). Derived live; a fresh `set_intake(...)` is reflected immediately.
+- **Returns** `float`. Current O2 output rate, in ppt/h. Derived live; a fresh `set_intake(...)` is reflected immediately.
 
 ##### `.tier() → int`
 
 Permanently installed Mk tier as an integer (**1-4**). Upgrade packs raise this value; temporary Mk III fluid starvation does not. Compare with `effective_tier()` when diagnosing a supplied or degraded generator.
 
-- **Returns** Integer: permanently installed Mk tier.
+- **Returns** `int`. Permanently installed Mk tier.
 
 ##### `.is_degraded() → bool`
 
 `True` when a Mk III pack is starved of its required fluid input and the machine has fallen back to the previous tier multiplier for this tick. Check after applying a Mk III pack and before trusting `output()` to meet your Mk III projections, if `True`, check `self.water_in.level()` and the upstream pipe.
 
-- **Returns** Boolean: `True` when a Mk III pack is starved of its required fluid input and the machine has fallen back to the previous tier multiplier for this tick.
+- **Returns** `bool`. `True` when a Mk III pack is starved of its required fluid input and the machine has fallen back to the previous tier multiplier for this tick.
 
 ##### `.effective_tier() → int`
 
 The tier actually in effect this tick: `tier()` normally, previous tier while `is_degraded()` is `True`. Scripts that decide whether to route more water toward this generator should compare `effective_tier()` with `tier()`.
 
-- **Returns** Integer: the tier actually in effect this tick: `tier()` normally, previous tier while `is_degraded()` is `True`.
+- **Returns** `int`. The tier actually in effect this tick: `tier()` normally, the previous tier while `is_degraded()` is `True`.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -12403,41 +14303,41 @@ Compresses the thin atmosphere to raise surface pressure. It runs best when a sc
 
 1. Buy from the Shop for 900 cr.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `.input: InputSlot`
 
 Fuel Rod magazine for the Mk IV tier. Connect a Lead Cask to keep spare rods staged here; the generator swallows one whole rod at a time and burns it down internally. Empty and unused below Mk IV, and a Mk IV with no rod stops producing rather than degrading.
 
-- **Returns** `InputSlot` magazine for the Mk IV Fuel Rod supply: `connect()`, `take()`, `eject()`, `count()`, `capacity()`, `connected_to()`. Empty and unused below Mk IV.
+- **Returns** `InputSlot`. Magazine for the Mk IV Fuel Rod supply. Empty and unused below Mk IV.
 
 ##### `.water_in: FluidPort`
 
 Water supply port installed by the Mk III pack. Call `connect(...)` with a compatible water provider, then inspect `level()`, `capacity()`, `flow_rate()`, or `connected_to()`. Mk IV uses Fuel Rods instead, but the installed port remains available.
 
-- **Returns** `FluidPort` for the water supply installed by the Mk III pack. Call `connect(...)` with a compatible water provider, then use `level()`, `capacity()`, `flow_rate()`, or `connected_to()`. Mk IV operation uses Fuel Rods instead, but the installed port remains available.
+- **Returns** `FluidPort`. The water supply installed by the Mk III pack. Call `connect(...)` with a compatible water provider. Mk IV operation uses Fuel Rods instead, but the installed port remains available.
 
 ### Methods
 
@@ -12445,19 +14345,19 @@ Water supply port installed by the Mk III pack. Call `connect(...)` with a compa
 
 Current value on the resonance sweep (**0-100**). Rises each tick and wraps at **100**. Compare it to `next_window_low()` and `next_window_high()`; when the gauge is inside that range, both edges included, call `sync()`.
 
-- **Returns** Number (0-100)
+- **Returns** `float`. 0-100.
 
 ##### `.next_window_low() → float`
 
 Lower edge of the current sweep's sync window, included in the window. Use with `next_window_high()` and `gauge()`; call `sync()` when the gauge is inside the range. The value changes when the sweep wraps to the next cycle.
 
-- **Returns** Number (lower bound of this cycle's sync window)
+- **Returns** `float`. Lower bound of this cycle's sync window.
 
 ##### `.next_window_high() → float`
 
 Upper edge of the current sweep's sync window, included in the window. Use with `next_window_low()` and `gauge()`; call `sync()` when the gauge is inside the range. The value changes when the sweep wraps to the next cycle.
 
-- **Returns** Number (upper bound of this cycle's sync window)
+- **Returns** `float`. Upper bound of this cycle's sync window.
 
 ##### `.sync() → ActionResult` *(self only)*
 
@@ -12477,31 +14377,31 @@ Try to sync this sweep. First call per sweep counts; later calls before the gaug
 
 Current compression efficiency (**0-100%**). Climbs with hits, drops with misses, floored at **0**. A well-tuned script holds this at or near **100%** by hitting every cycle's window. Use it to detect a script that's out of sync with the shifting window.
 
-- **Returns** Number (0-100%)
+- **Returns** `float`. 0-100%.
 
 ##### `.output() → float`
 
-Current **kPa/h** production rate at the current `efficiency()`. Proportional to `efficiency() × tier multiplier`. The resonance gauge advances slowly, so pressure progress is best judged from `efficiency()` and the per-day projection on the sensor display rather than from a single `output()` read.
+Current **kPa/h** production rate at the current `efficiency()`. Proportional to `efficiency()` × the tier multiplier. The resonance gauge advances slowly, so pressure progress is best judged from `efficiency()` and the per-day projection on the sensor display rather than from a single `output()` read.
 
-- **Returns** Number: current pressure output rate (kPa/h). Derived live from `efficiency()` and tier multiplier.
+- **Returns** `float`. Current pressure output rate, in kPa/h. Derived live from `efficiency()` and the tier multiplier.
 
 ##### `.tier() → int`
 
 Permanently installed Mk tier as an integer (**1-4**). Upgrade packs raise this value; temporary Mk III fluid starvation does not. Compare with `effective_tier()` when diagnosing a supplied or degraded generator.
 
-- **Returns** Integer: permanently installed Mk tier.
+- **Returns** `int`. Permanently installed Mk tier.
 
 ##### `.is_degraded() → bool`
 
 `True` when a Mk III pack is starved of its required fluid input and the machine has fallen back to the previous tier multiplier for this tick. Check after applying a Mk III pack, if `True`, the pack is in fallback; investigate `self.water_in.level()` and the upstream supply.
 
-- **Returns** Boolean: `True` when a Mk III pack is starved of its required fluid input and the machine has fallen back to the previous tier multiplier for this tick.
+- **Returns** `bool`. `True` when a Mk III pack is starved of its required fluid input and the machine has fallen back to the previous tier multiplier for this tick.
 
 ##### `.effective_tier() → int`
 
 The tier actually in effect this tick: `tier()` normally, previous tier while `is_degraded()` is `True`. Scripts rebalancing water flow between generators should compare `effective_tier()` with `tier()`.
 
-- **Returns** Integer: the tier actually in effect this tick: `tier()` normally, previous tier while `is_degraded()` is `True`.
+- **Returns** `int`. The tier actually in effect this tick: `tier()` normally, the previous tier while `is_degraded()` is `True`.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -12526,59 +14426,59 @@ Refines raw exotic feedstock into creature-grade gas or liquid, using tar as a r
 1. Requires the **Exotic Husbandry** research (Wildlife 1,000).
 2. Buy from the Shop for 80,000 cr.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `.gas_in: FluidPort`
 
 Receives raw exotic gas. Connect a tank holding the raw gas with `self.gas_in.connect("Raw Chlorine Tank")`. See `FluidPort` for level, capacity, and flow queries.
 
-- **Returns** `FluidPort`: raw exotic GAS feedstock in. Wire from a Gas Tank: `self.gas_in.connect("Raw Chlorine Tank")`. `level()`, `capacity()`, `flow_rate()`, `connected_to()`.
+- **Returns** `FluidPort`. Raw exotic GAS feedstock in. Wire from a Gas Tank: `self.gas_in.connect("Raw Chlorine Tank")`.
 
 ##### `.liquid_in: FluidPort`
 
 Receives raw exotic liquid. Connect a tank holding the raw liquid with `self.liquid_in.connect("Raw Cryofluid Tank")`. See `FluidPort` for level, capacity, and flow queries.
 
-- **Returns** `FluidPort`: raw exotic LIQUID feedstock in. Wire from a Liquid Tank: `self.liquid_in.connect("Raw Cryofluid Tank")`. `level()`, `capacity()`, `flow_rate()`, `connected_to()`.
+- **Returns** `FluidPort`. Raw exotic LIQUID feedstock in. Wire from a Liquid Tank: `self.liquid_in.connect("Raw Cryofluid Tank")`.
 
 ##### `.gas_out: FluidPort`
 
 Sends refined gas such as Sulfur Gas or Chlorine onward. Connect a destination tank with `self.gas_out.connect("Chlorine Tank")`. See `FluidPort` for level, capacity, and flow queries.
 
-- **Returns** `FluidPort`: refined exotic GAS out (Sulfur Gas / Chlorine). Wire to a Gas Tank: `self.gas_out.connect("Chlorine Tank")`. `level()`, `capacity()`, `flow_rate()`, `connected_to()`.
+- **Returns** `FluidPort`. Refined exotic GAS out (Sulfur Gas / Chlorine). Wire to a Gas Tank: `self.gas_out.connect("Chlorine Tank")`.
 
 ##### `.liquid_out: FluidPort`
 
 Sends refined liquid such as Cryofluid or Quicksilver onward. Connect a destination tank with `self.liquid_out.connect("Cryofluid Tank")`. See `FluidPort` for level, capacity, and flow queries.
 
-- **Returns** `FluidPort`: refined exotic LIQUID out (Cryofluid / Quicksilver). Wire to a Liquid Tank: `self.liquid_out.connect("Cryofluid Tank")`. `level()`, `capacity()`, `flow_rate()`, `connected_to()`.
+- **Returns** `FluidPort`. Refined exotic LIQUID out (Cryofluid / Quicksilver). Wire to a Liquid Tank: `self.liquid_out.connect("Cryofluid Tank")`.
 
 ##### `.input: InputSlot`
 
 Loads the tar consumed during refining. Connect a source with `self.input.connect("Tar Bin")`, then pull tar with `self.input.take("tar", 20)`. This slot holds only tar. See `InputSlot`.
 
-- **Returns** `InputSlot`: load the tar reagent: `self.input.connect("Tar Bin")` then `self.input.take("tar", 20)`. This is a single-material bin; use `eject(...)` to recover staged tar while the machine is idle.
+- **Returns** `InputSlot`. Load the tar reagent: `self.input.connect("Tar Bin")` then `self.input.take("tar", 20)`. This is a single-material bin; use `eject(...)` to recover staged tar while the machine is idle.
 
 ### Methods
 
@@ -12586,7 +14486,7 @@ Loads the tar consumed during refining. Connect a source with `self.input.connec
 
 Lists the refining recipes unlocked through Bio Lab orders, one `Recipe` per exotic fluid. Locked recipes do not appear. Each recipe includes `.tier`, names its exact raw feedstock in `.input_fluid`, gives port tons consumed per run in `.fluid_inputs`, lists tar in `.inputs`, and identifies the refined product and output port through `.output_fluid` / `.fluid_outputs`. Use `for recipe in self.list_recipes(): print(recipe.tier, recipe.id, recipe.input_fluid, recipe.output_fluid)` to discover what is available.
 
-- **Returns** List of unlocked `Recipe` objects (one per refinable exotic whose recipe a Biolab order has unlocked). Each includes `.tier`, identifies raw feedstock through `.input_fluid` / `.fluid_inputs`, then the refined product and port through `.output_fluid` / `.fluid_outputs`.
+- **Returns** `list[Recipe]`. One per refinable exotic whose recipe was unlocked by completing a Bio Order at the Bio Exchange. Raw feedstock is in `.input_fluid` / `.fluid_inputs`, the refined product and its port in `.output_fluid` / `.fluid_outputs`.
 
 ##### `.find_recipe(recipe_id: str) → Recipe | None`
 
@@ -12598,7 +14498,7 @@ Find one unlocked refining recipe by id without looping through `list_recipes()`
 | --- | --- | --- |
 | `recipe_id` | `str` | Refiner recipe id |
 
-- **Returns** The matching unlocked `Recipe`, or `None` if this Refiner cannot currently run that id.
+- **Returns** `Recipe | None`. `None` if this Refiner cannot currently run that id.
 
 ##### `.set_recipe(recipe_or_id: str | Recipe | IdRecord) → ActionResult` *(self only)*
 
@@ -12661,38 +14561,38 @@ Vents whatever raw feedstock is sitting in `gas_in` and `liquid_in`, releasing t
 
 Returns the current recipe id, or `""` when none is set (or the set recipe is no longer unlocked). Use to check state before re-setting: `if self.get_recipe() == "": self.set_recipe("refine_sulfur_gas")`.
 
-- **Returns** String: the current recipe id, or `""` when none is set (or the set one is no longer unlocked).
+- **Returns** `str`. Empty when no recipe is set, or when the set one is no longer unlocked.
 - **Possible values** `""`, `"refine_sulfur_gas"`, `"refine_cryofluid"`, `"refine_chlorine"`, `"refine_quicksilver"`
 
 ##### `.get_recipe_inputs() → dict[str, int]`
 
 A dict mapping each input `item_id` → units consumed per craft, for the Refiner this is the **tar** cost, e.g. `{"tar": 5}` for a rare exotic. Empty dict if no recipe is set. Read it to keep the tar bin stocked: `for item, qty in self.get_recipe_inputs().items(): self.input.take(item, qty * 5)`. (The raw-feedstock fluid amount is metered on the input ports, not listed here.)
 
-- **Returns** A dict (`item_id` → count consumed per craft): for the Refiner this is the tar cost, e.g. `{"tar": 5}`. Empty dict if no recipe is set. (The raw-feedstock fluid cost is on the input ports, not here.)
+- **Returns** `dict[str, int]`. `{item_id: count}` consumed per craft: for the Refiner this is the tar cost, e.g. `{"tar": 5}`. Empty if no recipe is set. The raw-feedstock fluid cost is on the input ports, not here.
 
 ##### `.is_running() → bool`
 
 `True` while a refine craft is actively advancing this tick (recipe set + unlocked, raw feedstock + tar present, out port has room). `False` when stalled, idle, or powered off.
 
-- **Returns** Boolean: `True` while a refine craft is actively advancing this tick (recipe set + unlocked, raw feedstock + tar present, out port has room).
+- **Returns** `bool`. `True` while a refine craft is actively advancing this tick (recipe set and unlocked, raw feedstock and tar present, out port has room).
 
 ##### `.is_stalled() → bool`
 
 `True` when the refiner is powered and a recipe is set but the craft can't advance, for example because raw feedstock is missing (check `self.gas_in.level()` / `self.liquid_in.level()`), tar has run out (refill the input bin), or the refined-fluid out port is full (downstream backpressure, drain the out tank). `False` when unpowered, running, or no recipe is set. Poll to diagnose a stuck line.
 
-- **Returns** Boolean: `True` when the refiner is powered and a recipe is set but the craft can't advance, for example because raw feedstock or tar is missing, or the refined-fluid out port is full (downstream backpressure). `False` when unpowered, running, or no recipe is set.
+- **Returns** `bool`. `True` when the refiner is powered and a recipe is set but the craft can't advance, for example because raw feedstock or tar is missing, or the refined-fluid out port is full (downstream backpressure). `False` when unpowered, running, or no recipe is set.
 
 ##### `.get_rate() → float`
 
 Refined exotic produced this tick in t/h. **0** when stalled or idle. Use to confirm throughput while balancing feedstock against demand.
 
-- **Returns** Number: refined exotic produced this tick in t/h. **0** when stalled or idle.
+- **Returns** `float`. Refined exotic produced this tick, in t/h. **0** when stalled or idle.
 
 ##### `.get_progress() → float`
 
 Fraction **0-1** through the current refine craft. Resets to 0 each time a craft completes (a batch of refined fluid lands in the out port) and starts again if the feedstock + tar remain.
 
-- **Returns** Number (**0-1**): progress through the current refine craft.
+- **Returns** `float`. Progress through the current refine craft (**0-1**).
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -12721,65 +14621,65 @@ Assembles finished parts from several refined materials at once. A script picks 
 1. Requires the **Fabrication** research (Terraform Index 130,000).
 2. Buy from the Shop for 1,400 cr.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `.input: InputSlot`
 
 Input I/O port feeding the multi-material stockpile. Inventory works at home only; remote Fabricators connect local stores and may switch between them for each ingredient. Transfers require **Auto Feeders** research. See `InputSlot`.
 
-- **Returns** InputSlot: `connect()`, `take()`, `eject()`, `flush()`, `count()`, `capacity()`, `connected_to()`
+- **Returns** `InputSlot`
 
 ##### `.output: OutputSlot`
 
 Output I/O port for finished items. Inventory works at home only; remote Fabricators connect a local Storage Bin or Warehouse. Requires **Auto Feeders** research. See `OutputSlot`.
 
-- **Returns** OutputSlot: `connect()`, `send()`, `count()`, `capacity()`, `connected_to()`
+- **Returns** `OutputSlot`
 
 ##### `.byproduct: OutputSlot`
 
 Secondary output port for **byproducts**. Most recipes only emit through `self.output`; oil-refining recipes (lubricant, plastic, rubber) emit `tar` here on every craft. Same API as `self.output`: `self.byproduct.connect("Tar Bin")` then drain with `self.byproduct.send("tar", count)`. Requires **Auto Feeders** research. The byproduct bin must have space for the next craft, otherwise the recipe stalls, you have to keep this drained, not just `self.output`. See `OutputSlot`.
 
-- **Returns** OutputSlot for byproducts: `connect()`, `send()`, `count()`, `capacity()`, `connected_to()`. Recipes that emit a byproduct (e.g. oil refining produces tar) deposit it here.
+- **Returns** `OutputSlot`. Recipes that emit a byproduct (e.g. oil refining produces tar) deposit it here.
 
 ##### `.steam_in: FluidPort`
 
 Internal steam process buffer for recipes that declare `fluid_inputs["steam_in"]`. Call `self.steam_in.connect(...)` with a Thermal Cap or steam Gas Tank's stable machine id or display name. A local source transfers directly; a remote source also needs a completed conflict-free gas-pipe route between both locations. Read `self.steam_in.level()` / `.flow_rate()` to detect starvation. **10** ton buffer. See `FluidPort`.
 
-- **Returns** `FluidPort` process buffer. Call `connect(...)` with the provider's stable machine id or display name; a local provider transfers directly, while a remote provider uses any completed gas network reaching both outposts. Recipes with `fluid_inputs["steam_in"]` consume from it on craft completion.
+- **Returns** `FluidPort`. Process buffer. Call `connect(...)` with the provider's stable machine id or display name; a local provider transfers directly, while a remote provider uses any completed gas network reaching both outposts. Recipes with `fluid_inputs["steam_in"]` consume from it on craft completion.
 
 ##### `.water_in: FluidPort`
 
 Internal water process buffer for recipes that declare `fluid_inputs["water_in"]`. Call `self.water_in.connect(...)` with a Water Pump, Steam Condenser, water Liquid Tank, or Large Liquid Tank's stable machine id or display name. A local source transfers directly; a remote source also needs a completed conflict-free liquid-pipe route between both locations. Read `self.water_in.level()` / `.flow_rate()` to detect starvation. **10** ton buffer. See `FluidPort`.
 
-- **Returns** `FluidPort` process buffer. Call `connect(...)` with the provider's stable machine id or display name; a local provider transfers directly, while a remote provider uses any completed liquid network reaching both outposts. Recipes with `fluid_inputs["water_in"]` consume from it on craft completion.
+- **Returns** `FluidPort`. Process buffer. Call `connect(...)` with the provider's stable machine id or display name; a local provider transfers directly, while a remote provider uses any completed liquid network reaching both outposts. Recipes with `fluid_inputs["water_in"]` consume from it on craft completion.
 
 ##### `.oil_in: FluidPort`
 
 Internal oil process buffer for recipes that declare `fluid_inputs["oil_in"]` (oil-refining recipes). Call `self.oil_in.connect(...)` with an Oil Pump, oil Liquid Tank, or Large Liquid Tank's stable machine id or display name. A local source transfers directly; a remote source also needs a completed conflict-free liquid-pipe route between both locations. Read `self.oil_in.level()` / `.flow_rate()` to detect starvation. **10** ton buffer. See `FluidPort`.
 
-- **Returns** `FluidPort` process buffer. Call `connect(...)` with the provider's stable machine id or display name. A complete oil provider-consumer connection claims oil on the reachable physical component even while idle, full, or off; mere machine presence does not. Recipes with `fluid_inputs["oil_in"]` consume from it on craft completion.
+- **Returns** `FluidPort`. Process buffer. Call `connect(...)` with the provider's stable machine id or display name. A complete oil provider-consumer connection claims oil on the reachable physical component even while idle, full, or off; mere machine presence does not. Recipes with `fluid_inputs["oil_in"]` consume from it on craft completion.
 
 ### Methods
 
@@ -12787,7 +14687,7 @@ Internal oil process buffer for recipes that declare `fluid_inputs["oil_in"]` (o
 
 Every recipe this fabricator has been given a blueprint for. Returns Recipe objects with `.tier`, `.id`, `.name`, `.inputs`, `.output_item`, `.output_count`, `.duration_game_hours`, `.power_draw`, `.fluid_inputs` (tons consumed per run), and optional byproduct fields. Locked recipes (no blueprint yet) do not appear, the list reflects what the player can actually craft today. `sorted(self.list_recipes(), key=lambda recipe: recipe.tier)` orders the available queue from foundations upward.
 
-- **Returns** List of unlocked Recipe objects. Each has `.tier`, `.id`, `.name`, `.inputs`, `.output_item`, `.output_count`, `.duration_game_hours`, `.power_draw`, `.fluid_inputs`, and optional byproduct fields.
+- **Returns** `list[Recipe]`. The recipes this Fabricator has unlocked.
 
 ##### `.find_recipe(recipe_id: str) → Recipe | None`
 
@@ -12799,7 +14699,7 @@ Find one unlocked recipe by id without looping through `list_recipes()`. Returns
 | --- | --- | --- |
 | `recipe_id` | `str` | Fabricator recipe id |
 
-- **Returns** The matching unlocked `Recipe`, or `None` if this Fabricator cannot currently run that id.
+- **Returns** `Recipe | None`. `None` if this Fabricator cannot currently run that id.
 
 ##### `.set_recipe(recipe_or_id: str | Recipe | IdRecord) → ActionResult` *(self only)*
 
@@ -12846,50 +14746,50 @@ Unset the selected recipe and leave the Fabricator idle. The input stockpile is 
 
 Current recipe id as a string, or the empty string if no recipe is set. Use to gate other logic or confirm after `set_recipe()`.
 
-- **Returns** String (recipe id, or empty string)
+- **Returns** `str`. Empty when no recipe is set.
 - **Possible values** `""`, `"craft_gas_pipe_segment"`, `"craft_liquid_pipe_segment"`, `"craft_power_line_segment"`, `"craft_gas_pipe_bridge"`, `"craft_liquid_pipe_bridge"`, `"craft_power_line_bridge"`, `"craft_pressure_valve"`, `"craft_machine_frame"`, `"craft_circuit_panel"`, `"craft_control_unit"`, `"craft_battery_cell"`, `"craft_thermal_cap_kit"`, `"craft_turbine_rotor"`, `"craft_tank_lining"`, `"craft_water_pump"`, `"craft_oil_pump"`, `"craft_lubricant"`, `"craft_plastic"`, `"craft_rubber"`, `"craft_tar"`, `"craft_reinforced_biopolymer"`, `"craft_enrichment_compound"`, `"craft_drone_station_kit"`, `"craft_drone_station_kit_medium"`, `"craft_drone_station_kit_large"`, `"craft_drone_service_station_kit"`, `"craft_mining_drill_kit"`, `"craft_mining_drill_industrial_kit"`, `"craft_mining_drill_heavy_kit"`, `"craft_drone_small"`, `"craft_drone_medium"`, `"craft_drone_large"`, `"craft_electric_thruster"`, `"craft_heli_thruster"`, `"craft_cargo_pod_small"`, `"craft_cargo_pod_medium"`, `"craft_cargo_pod_large"`, `"craft_battery_pack"`, `"craft_oil_tank_small"`, `"craft_oil_tank_medium"`, `"craft_oil_tank_large"`, `"craft_coolant_loop"`, `"craft_neutron_capacitor"`, `"craft_seed_maker_kit"`, `"craft_plant_terraformer_kit"`, `"craft_grow_lamp_kit"`, `"craft_sprinkler_kit"`, `"craft_dispenser_kit"`, `"craft_garbage_disposal_kit"`, `"craft_exotic_gas_cap_kit"`, `"craft_exotic_spring_tap_kit"`, `"craft_fertilizer"`, `"craft_fertilizer_mk2"`, `"craft_fertilizer_mk3"`, `"craft_growth_accelerant"`, `"craft_yield_amplifier"`, `"craft_plant_terraformer_pack_mk2"`, `"craft_grow_lamp_pack_mk2"`, `"craft_grow_lamp_pack_mk3"`, `"craft_sprinkler_pack_mk2"`, `"craft_sprinkler_pack_mk3"`, `"craft_feed_maker_pack_mk2"`, `"craft_habitat_pack_mk2"`, `"craft_lead_plate"`, `"craft_oxygen_upgrade_pack_mk4"`, `"craft_heat_upgrade_pack_mk4"`, `"craft_pressure_upgrade_pack_mk4"`, `"craft_lead_cask"`, `"craft_shield_plating"`, `"craft_lightning_rod_kit"`
 
 ##### `.get_recipe_inputs() → dict[str, int]`
 
 Input requirements for the current recipe as a dict `{item_id: count_per_craft}`. Empty dict if no recipe is set. Use with `.keys()` / `.values()` / `.items()` to drive a loop: `for mat, need in self.get_recipe_inputs().items(): self.input.connect(bin_for(mat)); self.input.take(mat, need)`.
 
-- **Returns** A dict (item_id → count per craft), or empty dict if no recipe set
+- **Returns** `dict[str, int]`. `{item_id: count}` consumed per craft, or empty if no recipe is set.
 
 ##### `.get_stockpile() → dict[str, int]`
 
 Current stockpile contents as a dict `{item_id: count_currently_stored}`. Iterate with `.items()` to see every material; index directly with `self.get_stockpile()["iron_ingot"]` to read one. Essential for deciding what else needs pulling in.
 
-- **Returns** A dict (item_id → count currently stored)
+- **Returns** `dict[str, int]`. `{item_id: count}` currently stored.
 
 ##### `.get_stockpile_used() → int`
 
 Total units across every material in the stockpile. Compare to `get_stockpile_capacity()` to detect when the pile is full. When it is full, further input is blocked until the running craft consumes some material.
 
-- **Returns** Number (total units across every material)
+- **Returns** `int`. Total units across every material.
 
 ##### `.get_stockpile_capacity() → int`
 
 Combined unit cap across all materials (fixed for this fabricator). Queryable rather than hardcoded, the cap tunes separately from your script. Use `used / capacity` for a fill-percent gauge.
 
-- **Returns** Number (combined unit cap across all materials)
+- **Returns** `int`. Combined unit cap across all materials.
 
 ##### `.is_running() → bool`
 
 `True` while a craft is in progress. Use before `set_recipe()` to avoid `"busy"`, or to show status. Stays `True` across ticks until the craft completes.
 
-- **Returns** Boolean
+- **Returns** `bool`
 
 ##### `.get_progress() → float`
 
 Progress toward the current craft's completion (**0-1**). Resets to **0** when a craft finishes. Use for progress bars and to detect completions by watching the value drop.
 
-- **Returns** Number (**0-1**)
+- **Returns** `float`. Progress through the current craft (**0-1**).
 
 ##### `.get_output_count() → int`
 
 Completed units waiting in the output buffer. Drain them via `self.output.send(...)` before the buffer fills, processing stalls when the output is full.
 
-- **Returns** Number (completed units waiting for pickup)
+- **Returns** `int`. Completed units waiting for pickup.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -12915,41 +14815,41 @@ Presses Raw Uranium and lead plates into Fuel Rods or Nuclear Batteries, working
 1. Requires the **Fuel Assembler** research (Temperature 10,000).
 2. Buy from the Shop for 225,000 cr.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `.input: InputSlot`
 
 Receives Raw Uranium only from a Lead Cask and lead plates from an ordinary compatible local source. The port has one source relationship at a time, so reconnect it between materials.
 
-- **Returns** `InputSlot`: stage Raw Uranium and lead plates. Raw Uranium may enter only from a Lead Cask; reconnect the one-source input to an ordinary local source for lead plates. While idle, recover ordinary items to local freight and hot cargo to a compatible Lead Cask with `eject(...)`.
+- **Returns** `InputSlot`. Stages Raw Uranium and lead plates. Raw Uranium may enter only from a Lead Cask; reconnect the one-source input to an ordinary local source for lead plates. While idle, recover ordinary items to local freight and hot cargo to a compatible Lead Cask with `eject(...)`.
 
 ##### `.output: OutputSlot`
 
 Output port. Fuel Rods are hot and only a Lead Cask (or their exact Supply Dock order) accepts them. Nuclear Batteries are ordinary fabricated products and may go to compatible local storage or home Inventory.
 
-- **Returns** `OutputSlot`: route Fuel Rods to a separate Lead Cask (or their exact Supply Dock order). Nuclear Batteries are ordinary fabricated products and may route to ordinary compatible local storage or home Inventory.
+- **Returns** `OutputSlot`. Route Fuel Rods to a separate Lead Cask (or their exact Supply Dock order). Nuclear Batteries are ordinary fabricated products and may route to ordinary compatible local storage or home Inventory.
 
 ### Methods
 
@@ -12957,7 +14857,7 @@ Output port. Fuel Rods are hot and only a Lead Cask (or their exact Supply Dock 
 
 Unlocked recipes this machine can run, including each recipe's derived `.tier`. The Fuel Rod recipe arrives through Vestibule's queue; the Nuclear Battery recipe arrives through Helios's queue.
 
-- **Returns** List of unlocked `Recipe` entries this machine can run, including each recipe's derived `.tier`.
+- **Returns** `list[Recipe]`. The unlocked recipes this machine can run.
 
 ##### `.find_recipe(recipe_id: str) → Recipe | None`
 
@@ -12969,7 +14869,7 @@ Find one unlocked fuel recipe by id without looping through `list_recipes()`. Re
 | --- | --- | --- |
 | `recipe_id` | `str` | Fuel Assembler recipe id |
 
-- **Returns** The matching unlocked `Recipe`, or `None` if this Fuel Assembler cannot currently run that id.
+- **Returns** `Recipe | None`. `None` if this Fuel Assembler cannot currently run that id.
 
 ##### `.set_recipe(recipe_or_id: str | Recipe | IdRecord) → ActionResult` *(self only)*
 
@@ -13016,38 +14916,38 @@ Release the recipe once the current craft is idle and the output buffer is drain
 
 The committed recipe id, empty when none.
 
-- **Returns** Current recipe id, or empty string when none is set.
+- **Returns** `str`. Empty when no recipe is set.
 - **Possible values** `""`, `"craft_fuel_rod"`, `"craft_nuclear_battery"`
 
 ##### `.get_recipe_inputs() → dict[str, int]`
 
 Input requirements for the committed recipe as a dict `{item_id: count_per_craft}`. Returns an empty dict when no recipe is committed.
 
-- **Returns** A dict (`item_id` → count consumed per craft), or an empty dict if no recipe is set.
+- **Returns** `dict[str, int]`. `{item_id: count}` consumed per craft, or empty if no recipe is set.
 
 ##### `.is_running() → bool`
 
 `True` while a craft is actually advancing, power, inputs, and output space all present.
 
-- **Returns** Boolean: a craft is advancing this tick.
+- **Returns** `bool`. `True` while a craft is advancing this tick.
 
 ##### `.get_progress() → float`
 
 Current craft progress **0-1**. Progress survives power cuts and resumes.
 
-- **Returns** Number **0-1**: current craft progress.
+- **Returns** `float`. Progress through the current craft (**0-1**).
 
 ##### `.get_stockpile() → dict[str, int]`
 
 Staged inputs by item id, `{"raw_uranium": 12, "lead_plate": 4}`-shaped dict.
 
-- **Returns** A dict of staged input materials by item id.
+- **Returns** `dict[str, int]`. Staged input materials, by item id.
 
 ##### `.get_output_count() → int`
 
 Finished products for the selected recipe waiting in the small output buffer.
 
-- **Returns** Number: finished products for the selected recipe waiting in the output buffer.
+- **Returns** `int`. Finished products for the selected recipe waiting in the output buffer.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -13063,23 +14963,23 @@ A slow general-purpose surface vehicle that collects loose items, plants and ten
 | --- | --- |
 | Type | Harvesting |
 
-**Returned by:** `self`
+**Access via:** `self`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -13167,43 +15067,43 @@ Release the currently held item into the Harvester's current sector, the cell be
 
 Item id currently held by the Harvester, or empty string if the held slot is empty. Call `self.get_held()` before `collect()` (if non-empty, the slot is busy) or before `self.store()` (if empty, nothing to store). Essential first line of any collect loop.
 
-- **Returns** String (item id, or empty string if not holding)
+- **Returns** `str`. The held item id, or empty if holding nothing.
 
 ##### `.get_position() → str`
 
 Current sector id as a string (e.g. `"E14"`). Use to plan the next `move()` target, movement is strictly to adjacent cells, so the script needs to know where it is to compute where it can go.
 
-- **Returns** String (sector)
+- **Returns** `str`. The current sector.
 
 ##### `.get_heat() → float`
 
 Exact current heat level (**0-100**), including fractional cooling between whole heat costs. Every `move()` adds heat, and an empty-sector `collect()` attempt also adds heat; passive cooling runs continuously as game time passes, including during movement and collection. Read before moving, if you're close to **100** and your planned route crosses empty cells (+7 heat each), stop and cool. Losing the route to `"overheated"` mid-sweep wastes hours.
 
-- **Returns** Number (0-100)
+- **Returns** `float`. 0-100.
 
 ##### `.get_max_heat() → int`
 
 Maximum heat capacity, always **100**. Reaching this stalls all movement and collection until heat drops below the cap. Exposed as a method so scripts can reason about thresholds without hardcoding the number.
 
-- **Returns** Number (100)
+- **Returns** `int`. Always 100.
 
 ##### `.is_overheated() → bool`
 
 `True` when heat `>= 100`. Shortcut for `self.get_heat() >= self.get_max_heat()`. Use it as an early-exit guard when you intentionally want the Harvester to cool: `if self.is_overheated(): sleep(1)`. The Harvester cools passively whenever game time advances.
 
-- **Returns** Boolean
+- **Returns** `bool`
 
 ##### `.water_level() → float`
 
 Read the water currently in the Harvester's onboard tank, in tons, including fractional amounts. Each watering uses **1 t**. Compare with `water_capacity()` to plan refills from the home outpost's water tanks.
 
-- **Returns** Number: onboard water in tons, including fractional amounts.
+- **Returns** `float`. Onboard water, in tons, including fractional amounts.
 
 ##### `.water_capacity() → float`
 
 Read the Harvester's maximum onboard water supply in tons, currently **5 t**. Compare with `water_level()` to check how full the tank is.
 
-- **Returns** Number: onboard water capacity in tons.
+- **Returns** `float`. Onboard water capacity, in tons.
 
 ##### `.load_seed(seed: str) → ActionResult` *(self only)*
 
@@ -13234,7 +15134,7 @@ Transfer one species seed from home Inventory, from anywhere on the grid, into t
 
 ##### `.plant(seed: str) → ActionResult` *(self only)*
 
-Sow the physical seed currently in the Harvester's held slot into this empty cell. The argument must identify that held seed. The base sector is depot ground and refuses sowing. Sowing takes **0.5 hours**, and the seed and new crop appear only after the action finishes.
+Sow the physical seed currently in the Harvester's held slot into this empty cell. The argument must identify that held seed. The base sector is depot ground and refuses sowing. Sowing takes **0.5 hours**; the held seed is consumed and the new crop appears only after the action finishes.
 
 *Parameters*
 
@@ -13291,7 +15191,7 @@ Place a supported field-machine kit in the current empty cell, consuming one kit
 
 List of fixed field-machine kit ids unlocked by your current research. This is a capability list, not a live deployment check: `deploy(...)` still checks Inventory stock, the current cell, movement, heat, and whether the Harvester is busy.
 
-- **Returns** List of fixed field-machine kit ids unlocked by research. It does not check Inventory stock, placement, heat, movement, or busy state. Empty until Grow Lamp research.
+- **Returns** `list[str]`. Fixed field-machine kit ids unlocked by research. It does not check Inventory stock, placement, heat, movement, or busy state. Empty until Grow Lamp research.
 
 ##### `.light() → ActionResult` *(self only)*
 
@@ -13445,7 +15345,7 @@ Apply one `yield_amplifier`, the capstone **field-wide** Forage-output boost (no
 
 Hours remaining on the field-wide Yield Amplifier effect. Each applied unit adds **24 hours**. Returns **0** when the field is not amplified.
 
-- **Returns** Hours remaining on the field-wide Yield Amplifier effect.
+- **Returns** `float`. Hours remaining on the field-wide Yield Amplifier effect.
 
 ##### `.uproot() → ActionResult` *(self only)*
 
@@ -13521,19 +15421,19 @@ Read one grid sector as a `Cell` snapshot. Unscanned natural ground has status `
 | --- | --- | --- |
 | `sector` | `str` | Grid sector id (e.g. `"E13"`). |
 
-- **Returns** A `Cell` for the requested sector, or `None` for an invalid or off-grid id. Natural ground is `"unknown"` until scanned; the depot and player-created plants or providers remain visible. Includes plant, growth, conditions, treatment time, fertilizer tier, and forage.
+- **Returns** `Cell | None`. `None` for an invalid or off-grid id. Natural ground is `"unknown"` until scanned; the depot and player-created plants or providers remain visible.
 
 ##### `.cells() → list[Cell]`
 
 Read every harvester-grid sector as a list of `Cell` snapshots. Unscanned natural ground reports status `"unknown"`; scan sectors before planning around occupancy. Use the list for field-wide planting, treatment-route scheduling, uprooting, undeploying, and harvesting policies.
 
-- **Returns** List of every grid `Cell` on the board. Unscanned natural ground has status `"unknown"`; scanned cells expose occupancy. Player-created plants/providers, growth, direct conditions, precise remaining treatment times, active fertilizer tier, and accumulated forage remain visible.
+- **Returns** `list[Cell]`. Every cell on the board. Unscanned natural ground has status `"unknown"`; scanned cells expose occupancy. Player-created plants and providers, growth, direct conditions, precise remaining treatment times, active fertilizer tier, and accumulated forage stay visible.
 
 ##### `.position() → str`
 
 Current sector id as a string. Same position source as `get_position()`, exposed as a property-style read for grid scripts.
 
-- **Returns** String: the sector the harvester currently occupies (e.g. `"E13"`). The Plants verbs all act on this cell; `self.move(...)` to act elsewhere.
+- **Returns** `str`. The sector the harvester currently occupies (e.g. `"E13"`). The Plants verbs all act on this cell; `self.move(...)` to act elsewhere.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -13551,23 +15451,23 @@ Deploy, undeploy, decommission, upgrade, and empty-rig hardware controls are exp
 | --- | --- |
 | Type | Storage |
 
-**Returned by:** `get_component("inventory")`
+**Access via:** `get_component("inventory")`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -13575,13 +15475,13 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 Lists every occupied item stack as an `ItemStack` with `.id`, `.count`, and exact `.properties`. Items with the same id but different properties appear separately. Storage Bins and Warehouses use the same format, so routing scripts can inspect all three in one way and pass exact properties to transfer methods.
 
-- **Returns** List of occupied property-distinct `ItemStack` snapshots. This is the common storage view also exposed by Storage Bins and Warehouses.
+- **Returns** `list[ItemStack]`. Occupied, property-distinct stacks. The same storage view Storage Bins and Warehouses expose.
 
 ##### `.get_slots() → list[Slot]`
 
 Lists every current Inventory slot. Inventory starts with **36** slots, and Cargo Expansion can increase it to **60**. Stackable items hold **10** units per slot, or **20** after **Bigger Stacks**. Each `Slot` has a zero-based index from `0` through `get_size() - 1`, plus its item id, name, value, count, and properties. Properties are an exact identity dict, or `None` for ordinary items. Use them to distinguish variants with the same id and to select an exact item during transfers.
 
-- **Returns** List of `Slot` snapshots including each stack's exact `.properties` identity.
+- **Returns** `list[Slot]`. Snapshots, each with the stack's exact `.properties` identity.
 
 ##### `.count(item_id: str) → int`
 
@@ -13593,7 +15493,7 @@ How many units of `item_id` are currently stored across all slots. Returns **0**
 | --- | --- | --- |
 | `item_id` | `str` | Item id to count |
 
-- **Returns** Number: units of that item across all slots.
+- **Returns** `int`. Units of that item across all slots.
 
 ##### `.has_space(item_id: str | None = None, properties: ItemProperties | None = None) → bool`
 
@@ -13606,7 +15506,7 @@ Check whether Inventory has room. With no argument, `has_space()` is `True` when
 | `item_id` | `str \| None` | Optional item id, makes the check stack-aware for that exact variant |
 | `properties` | `ItemProperties \| None` | Exact property dict from a `Slot` or `ItemStack`; None selects the propertyless variant |
 
-- **Returns** Boolean, using exact property identity when an item id is supplied.
+- **Returns** `bool`. Uses exact property identity when an item id is supplied.
 
 ##### `.space_for(item_id: str, properties: ItemProperties | None = None) → int`
 
@@ -13619,7 +15519,7 @@ How many units of one exact item identity fit **right now**: remaining room in p
 | `item_id` | `str` | Item id to size remaining room for |
 | `properties` | `ItemProperties \| None` | Exact property dict from a `Slot` or `ItemStack`; None selects the propertyless variant |
 
-- **Returns** Number of units of this exact property variant that fit right now.
+- **Returns** `int`. Units of this exact property variant that fit right now.
 
 ##### `.transfer_to(target: str, item_id: str, count: int, properties: ItemProperties | None = None, property_match: str | None = None) → TransferResult`
 
@@ -13660,7 +15560,7 @@ Requires **Auto Feeders** research. Move up to whole-number `count` units of `it
 | `"source_changed"` | transient | The source changed between transfer planning and commit. |
 | `"target_under_construction"` | transient | The configured target is still under construction. |
 | `"target_wrong_material"` | rejection | The destination is latched to or accepts a different material. |
-| `"hot_cargo_requires_cask"` | rejection | This hot cargo must move through a compatible Lead Cask. |
+| `"hot_cargo_requires_cask"` | rejection | A transfer endpoint does not support this hot cargo. |
 | `"cask_accepts_hot_only"` | rejection | Lead Casks accept only supported hot cargo. |
 | `"slots_full"` | rejection | The destination has capacity but no slot for this material identity. |
 | `"target_full"` | rejection | The destination has no capacity for matching units. |
@@ -13713,13 +15613,13 @@ Remove every unit of `item_id` from inventory. For credits, use `shop.sell_all(i
 
 Current number of Inventory slots. Inventory starts with **36**, and Cargo Expansion can increase it one slot at a time to **60**. Use this value instead of hardcoding a slot count.
 
-- **Returns** Current number of slots (starts at 36, maximum 60)
+- **Returns** `int`. Slots available now: 36 at the start, up to 60.
 
 ##### `.get_used() → int`
 
 Number of occupied slots. `get_used() == get_size()` means inventory is full.
 
-- **Returns** Number
+- **Returns** `int`
 
 *Components / Production & Storage*
 
@@ -13737,29 +15637,29 @@ High-bay multi-material depot, 15 material-locked slots, 2,000 each (30,000 tota
 1. Requires the **Large Warehouse** research (Biomass 30,000).
 2. Buy from the Shop for 60,000 cr.
 
-**Returned by:** `get_component(id)`
+**Access via:** `get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ### Methods
 
@@ -13773,43 +15673,43 @@ Units of `item_id` held across every slot. Returns **0** if no slot holds it. In
 | --- | --- | --- |
 | `item_id` | `str` | Item id to count |
 
-- **Returns** Number: units of that item across all slots.
+- **Returns** `int`. Units of that item across all slots.
 
 ##### `.total() → int`
 
 Total units across all slots (every material combined). For one material use `count(item_id)`.
 
-- **Returns** Number: total units across every slot.
+- **Returns** `int`. Total units across every slot.
 
 ##### `.capacity() → int`
 
 Total capacity across all physical slots. A Warehouse returns **10,000** (**5** × **2,000**); a Large Warehouse returns **30,000** (**15** × **2,000**). Query this value instead of hardcoding a tier.
 
-- **Returns** Number: total capacity across all slots.
+- **Returns** `int`. Total capacity across all slots.
 
 ##### `.fill_percent() → float`
 
 Fraction full across the whole warehouse, `total() / capacity()`, in the range **0-1**.
 
-- **Returns** Number (**0-1**).
+- **Returns** `float`. A fraction, **0-1**.
 
 ##### `.is_empty() → bool`
 
 `True` if every slot is empty.
 
-- **Returns** Boolean.
+- **Returns** `bool`
 
 ##### `.materials() → list[str]`
 
 List of item ids currently stored (one entry per material with units in a slot). Iterate it: `for m in wh.materials():`.
 
-- **Returns** List of item ids currently stored.
+- **Returns** `list[str]`. Ids of the items currently stored.
 
 ##### `.stacks() → list[ItemStack]`
 
 Lists the item variants stored across all physical slots as `ItemStack` values. Items with the same id but different properties occupy separate slots. Call it again when you need current contents.
 
-- **Returns** List of property-distinct `ItemStack` snapshots across all physical slots.
+- **Returns** `list[ItemStack]`. Property-distinct stacks across all physical slots.
 
 ##### `.space_for(item_id: str, properties: ItemProperties | None = None) → int`
 
@@ -13822,7 +15722,7 @@ How many more units of one exact item variant fit **right now**, using room in m
 | `item_id` | `str` | Item id to size remaining room for |
 | `properties` | `ItemProperties \| None` | Full property dict for the variant, or None for propertyless items |
 
-- **Returns** Number: units of that exact item variant that fit right now.
+- **Returns** `int`. Units of that exact item variant that fit right now.
 
 ##### `.has_space(item_id: str, amount: int, properties: ItemProperties | None = None) → bool`
 
@@ -13836,13 +15736,13 @@ How many more units of one exact item variant fit **right now**, using room in m
 | `amount` | `int` | Whole-number units required |
 | `properties` | `ItemProperties \| None` | Full property dict for the variant, or None for propertyless items |
 
-- **Returns** Boolean.
+- **Returns** `bool`
 
 ##### `.slots() → list[WarehouseSlot]`
 
 Every physical slot as a `WarehouseSlot` record with `.index`, `.item`, `.count`, `.capacity`, and `.properties`. Property-distinct variants use distinct slots.
 
-- **Returns** List of `WarehouseSlot` records with `.index`, `.item`, `.count`, `.capacity`, and exact `.properties` identity.
+- **Returns** `list[WarehouseSlot]`. One record per slot.
 
 ##### `.compact() → TransferResult`
 
@@ -13904,7 +15804,7 @@ Requires **Auto Feeders** research. Move up to whole-number `count` units of `it
 | `"source_changed"` | transient | The source changed between transfer planning and commit. |
 | `"target_under_construction"` | transient | The configured target is still under construction. |
 | `"target_wrong_material"` | rejection | The destination is latched to or accepts a different material. |
-| `"hot_cargo_requires_cask"` | rejection | This hot cargo must move through a compatible Lead Cask. |
+| `"hot_cargo_requires_cask"` | rejection | A transfer endpoint does not support this hot cargo. |
 | `"cask_accepts_hot_only"` | rejection | Lead Casks accept only supported hot cargo. |
 | `"slots_full"` | rejection | The destination has capacity but no slot for this material identity. |
 | `"target_full"` | rejection | The destination has no capacity for matching units. |
@@ -13914,7 +15814,7 @@ Requires **Auto Feeders** research. Move up to whole-number `count` units of `it
 
 ## Lead Cask
 
-The only safe stationary home for hot radioactive cargo. Drones drop Raw Uranium into it, the Fuel Assembler draws from it and returns finished Fuel Rods, and the Reactor pulls its fuel from it.
+Shielded stationary storage for hot radioactive cargo. Drones drop Raw Uranium into it, the Fuel Assembler draws from it and returns finished Fuel Rods, and the Reactor pulls its fuel from it.
 
 | Field | Value |
 | --- | --- |
@@ -13928,29 +15828,29 @@ The only safe stationary home for hot radioactive cargo. Drones drop Raw Uranium
 3. Fabricate a **Lead Cask** on a **Fabricator**: 3× Lead Plate and 1× Machine Frame.
 4. Deploy it from your Inventory.
 
-**Returned by:** `get_component(id)`
+**Access via:** `get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ### Methods
 
@@ -13964,25 +15864,25 @@ Units of `item_id` currently casked. Returns **0** when the cask is empty or lat
 | --- | --- | --- |
 | `item_id` | `str` | Hot item id to count |
 
-- **Returns** Number: units of that hot item currently casked.
+- **Returns** `int`. Units of that hot item currently casked.
 
 ##### `.fill_percent() → float`
 
 Fill fraction **0-1**, watch your strategic reserve.
 
-- **Returns** Number (**0-1**).
+- **Returns** `float`. A fraction, **0-1**.
 
 ##### `.capacity() → int`
 
 Maximum hot units (**100**).
 
-- **Returns** Number: maximum capacity (**100**).
+- **Returns** `int`. Maximum capacity (**100**).
 
 ##### `.material() → str`
 
 What the cask is latched to, `"raw_uranium"`, `"fuel_rod"`, or empty. One material per cask, like every stock bin.
 
-- **Returns** String: `"raw_uranium"`, `"fuel_rod"`, or empty when unassigned. Casks accept ONLY hot items; everything else refuses them.
+- **Returns** `str`. Empty when unassigned. Lead Casks accept only hot items. Ordinary storage and inventory refuse them; designated shielded receivers accept them.
 - **Possible values** `""`, `"raw_uranium"`, `"fuel_rod"`
 
 ##### `.transfer_to(target: str, item_id: str, count: int, properties: ItemProperties | None = None, property_match: str | None = None) → TransferResult`
@@ -14024,7 +15924,7 @@ Requires **Auto Feeders** research. Move up to whole-number `count` units of `it
 | `"source_changed"` | transient | The source changed between transfer planning and commit. |
 | `"target_under_construction"` | transient | The configured target is still under construction. |
 | `"target_wrong_material"` | rejection | The destination is latched to or accepts a different material. |
-| `"hot_cargo_requires_cask"` | rejection | This hot cargo must move through a compatible Lead Cask. |
+| `"hot_cargo_requires_cask"` | rejection | A transfer endpoint does not support this hot cargo. |
 | `"cask_accepts_hot_only"` | rejection | Lead Casks accept only supported hot cargo. |
 | `"slots_full"` | rejection | The destination has capacity but no slot for this material identity. |
 | `"target_full"` | rejection | The destination has no capacity for matching units. |
@@ -14050,29 +15950,29 @@ Mk I static drill for deposits up to hardness 1 (Iron, Silicon): 25 t/h at stand
 3. Fabricate a **Mining Drill Kit** on a **Fabricator**: 3× Machine Frame, 1× Control Unit, 1× Circuit Panel, and 2 t Water.
 4. Build it on a mineral site with a Pioneer's Constructor.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.output: PickupOutputSlot`
 
 `PickupOutputSlot` exposing the Drill's stockpile through `count()`, `capacity()`, and `stacks()`. A physically present Rover or Pioneer pulls through its own input; a drone flies with `go_to_drill()` and loads with `cargo.load()`. The Drill has no direct item-routing methods.
 
-- **Returns** `PickupOutputSlot` exposing stockpile reads. A physically present Rover or Pioneer pulls through its input; a drone uses `go_to_drill()` and `cargo.load()`.
+- **Returns** `PickupOutputSlot`. Exposes stockpile reads. A physically present Rover or Pioneer pulls through its input; a drone uses `go_to_drill()` and `cargo.load()`.
 
 ### Methods
 
@@ -14080,7 +15980,7 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 Mineral extraction rate in t/h right now: the full rate while drilling, and **0** whenever the drill is powered off, has no deposit under it, cannot cut the deposit's hardness, or its stockpile is full. Adjusted for site purity and drill tier.
 
-- **Returns** Number: t/h being extracted right now, or **0** when not drilling. Accounts for site purity and drill tier.
+- **Returns** `float`. t/h being extracted right now, or **0** when not drilling. Accounts for site purity and drill tier.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -14106,41 +16006,41 @@ Refines raw ore into metal stock, one unit at a time, following a recipe you cho
 1. Requires the **Ore Refinement** research (Oxygen 5).
 2. Buy from the Shop for 650 cr.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `.input: InputSlot`
 
 Loads ore into the Smelter. At home it can use Inventory; remote Smelters must connect a local Storage Bin or Warehouse. Pull material with `self.input.take(item_id, count)`. Failed transfers leave the source cargo unchanged. Requires **Auto Feeders** research. See `InputSlot`.
 
-- **Returns** InputSlot: `connect()`, `take()`, `eject()`, `flush()`, `count()`, `capacity()`, `connected_to()`
+- **Returns** `InputSlot`
 
 ##### `.output: OutputSlot`
 
 Sends refined material out of the Smelter. At home it can use Inventory; remote Smelters must connect a local Storage Bin or Warehouse. Send material with `self.output.send(item_id, count)`. Failed transfers leave the output unchanged. Requires **Auto Feeders** research. See `OutputSlot`.
 
-- **Returns** OutputSlot: `connect()`, `send()`, `count()`, `capacity()`, `connected_to()`
+- **Returns** `OutputSlot`
 
 ### Methods
 
@@ -14148,7 +16048,7 @@ Sends refined material out of the Smelter. At home it can use Inventory; remote 
 
 Every recipe this smelter has been given a blueprint for. Returns Recipe objects with `.tier`, `.id`, `.name`, `.inputs`, `.output_item`, `.output_count`, `.duration_game_hours`, and `.power_draw`. Locked recipes (no blueprint yet) do not appear, the list reflects what the player can actually run today. Day-1 starts with `"smelt_iron_ingot"` only; more arrive as blueprints unlock.
 
-- **Returns** List of unlocked Recipe objects. Each has `.tier`, `.id`, `.name`, `.inputs`, `.output_item`, `.output_count`, `.duration_game_hours`, and `.power_draw`.
+- **Returns** `list[Recipe]`. The recipes this Smelter has unlocked.
 
 ##### `.find_recipe(recipe_id: str) → Recipe | None`
 
@@ -14160,7 +16060,7 @@ Find one unlocked recipe by id without looping through `list_recipes()`. Returns
 | --- | --- | --- |
 | `recipe_id` | `str` | Smelter recipe id |
 
-- **Returns** The matching unlocked `Recipe`, or `None` if this Smelter cannot currently run that id.
+- **Returns** `Recipe | None`. `None` if this Smelter cannot currently run that id.
 
 ##### `.set_recipe(recipe_or_id: str | Recipe | IdRecord) → ActionResult` *(self only)*
 
@@ -14207,38 +16107,38 @@ Unset the current recipe and leave the smelter idle. Empty latched buffers clear
 
 Current recipe id as a string, or the empty string if no recipe is set. Use after `set_recipe()` to confirm, or to gate other logic (`if self.get_recipe() == "": ...`).
 
-- **Returns** String (recipe id, or empty string if none set)
+- **Returns** `str`. Empty when no recipe is set.
 - **Possible values** `""`, `"smelt_iron_ingot"`, `"smelt_glass"`, `"smelt_titanium_ingot"`, `"smelt_cobalt_ingot"`, `"smelt_rare_earth_core"`, `"smelt_neutronium_bar"`, `"smelt_lead_ingot"`
 
 ##### `.get_recipe_inputs() → dict[str, int]`
 
 Input requirements for the current recipe as a dict `{item_id: count_per_craft}`. Returns an empty dict if no recipe is set.
 
-- **Returns** A dict (item_id → count per craft), or empty dict if no recipe is set
+- **Returns** `dict[str, int]`. `{item_id: count}` consumed per craft, or empty if no recipe is set.
 
 ##### `.is_running() → bool`
 
-`True` while the smelter is actively processing a unit. Use before `set_recipe()` to avoid the `"busy"` rejection: `if not self.is_running(): self.set_recipe(new_id)`. Stays `True` across ticks until the unit completes.
+Whether the smelter is actively processing. Can be `False` while an unfinished unit is paused, for example when its output is full. Paused progress is retained; use `get_progress()` to check for unfinished work before changing recipes.
 
-- **Returns** Boolean
+- **Returns** `bool`
 
 ##### `.get_progress() → float`
 
 Progress toward the next completed unit (**0-1**). Resets to **0** when a unit completes and a new one starts. Useful for progress bars and scripts that want to detect completions by watching the value drop.
 
-- **Returns** Number (**0-1**)
+- **Returns** `float`. Progress through the current craft (**0-1**).
 
 ##### `.get_input_count() → int`
 
 Units currently in the input buffer, waiting to be smelted. Check before `self.input.take(...)` to avoid overfilling, or to decide whether to pull more.
 
-- **Returns** Number (units in input buffer)
+- **Returns** `int`. Units in the input buffer.
 
 ##### `.get_output_count() → int`
 
 Units currently in the output buffer, waiting to be drained. Check before `self.output.send(...)`, if high, unload downstream first; if low, let processing catch up.
 
-- **Returns** Number (units in output buffer)
+- **Returns** `int`. Units in the output buffer.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -14260,29 +16160,29 @@ A passive base container that holds one material at a time. The first deposit se
 1. Requires the **Storage Bins** research (Temperature 5).
 2. Buy from the Shop for 120 cr.
 
-**Returned by:** `get_component(id)`
+**Access via:** `get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ### Methods
 
@@ -14296,31 +16196,31 @@ Units of `item_id` currently stored. Returns **0** when the bin is empty or latc
 | --- | --- | --- |
 | `item_id` | `str` | Item id to count |
 
-- **Returns** Number: units of that item currently stored.
+- **Returns** `int`. Units of that item currently stored.
 
 ##### `.get_capacity() → int`
 
 Maximum units the bin holds, **500** by default. Queryable rather than hardcoded so a retune doesn't break scripts. Use `fill_percent()` when you need the current fill ratio.
 
-- **Returns** Number (units max)
+- **Returns** `int`. Maximum units.
 
 ##### `.get_material() → str`
 
 Currently latched material id, or the empty string if the bin is empty (and therefore accepts any material on the next deposit). Use to check a bin's material before routing transfers: `if bin.get_material() in ("", "iron_ore"): # safe to deposit iron`.
 
-- **Returns** String (item id, or empty string if bin is empty)
+- **Returns** `str`. The stored item id, or empty if the bin is empty.
 
 ##### `.stacks() → list[ItemStack]`
 
 Lists the item variants stored in this bin as `ItemStack` values. Items with the same id but different properties remain separate. Call it again when you need current contents.
 
-- **Returns** List of property-distinct `ItemStack` snapshots currently stored.
+- **Returns** `list[ItemStack]`. Property-distinct stacks currently stored.
 
 ##### `.is_empty() → bool`
 
 `True` if the bin holds nothing. An empty bin has no material lock, any material can take the slot on the next deposit. Different from `has_space(0)` which is always `True`.
 
-- **Returns** Boolean
+- **Returns** `bool`
 
 ##### `.has_space(amount: int) → bool`
 
@@ -14332,19 +16232,19 @@ Lists the item variants stored in this bin as `ItemStack` values. Items with the
 | --- | --- | --- |
 | `amount` | `int` | Whole-number units of free capacity required |
 
-- **Returns** Boolean
+- **Returns** `bool`
 
 ##### `.space() → int`
 
 Free units of capacity remaining. Sizes a transfer in one call: `n = bin.space()`, then move up to `n`.
 
-- **Returns** Number (free units remaining)
+- **Returns** `int`. Free units remaining.
 
 ##### `.fill_percent() → float`
 
 Fraction full in the range **0-1**. Common threshold for rebalance scripts: `if bin.fill_percent() < 0.2: # route more here`.
 
-- **Returns** Number (**0-1**)
+- **Returns** `float`. A fraction, **0-1**.
 
 ##### `.transfer_from_inventory(item_id: str, count: int, properties: ItemProperties | None = None, property_match: str | None = None) → TransferResult`
 
@@ -14378,7 +16278,7 @@ Requires **Auto Feeders** research and a Storage Bin at the home outpost. Move u
 | `"source_empty"` | rejection | The source has no matching units available. |
 | `"source_changed"` | transient | The source changed between transfer planning and commit. |
 | `"target_wrong_material"` | rejection | The destination is latched to or accepts a different material. |
-| `"hot_cargo_requires_cask"` | rejection | This hot cargo must move through a compatible Lead Cask. |
+| `"hot_cargo_requires_cask"` | rejection | A transfer endpoint does not support this hot cargo. |
 | `"target_full"` | rejection | The destination has no capacity for matching units. |
 | `"target_changed"` | transient | The destination changed between transfer planning and commit. |
 
@@ -14454,7 +16354,7 @@ Requires **Auto Feeders** research. Move up to whole-number `count` units of `it
 | `"source_changed"` | transient | The source changed between transfer planning and commit. |
 | `"target_under_construction"` | transient | The configured target is still under construction. |
 | `"target_wrong_material"` | rejection | The destination is latched to or accepts a different material. |
-| `"hot_cargo_requires_cask"` | rejection | This hot cargo must move through a compatible Lead Cask. |
+| `"hot_cargo_requires_cask"` | rejection | A transfer endpoint does not support this hot cargo. |
 | `"cask_accepts_hot_only"` | rejection | Lead Casks accept only supported hot cargo. |
 | `"slots_full"` | rejection | The destination has capacity but no slot for this material identity. |
 | `"target_full"` | rejection | The destination has no capacity for matching units. |
@@ -14476,29 +16376,29 @@ Multi-material bulk depot, 5 material-locked slots, 2,000 each (10,000 total). D
 1. Requires the **Warehouse** research (Oxygen 150).
 2. Buy from the Shop for 3,000 cr.
 
-**Returned by:** `get_component(id)`
+**Access via:** `get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ### Methods
 
@@ -14512,43 +16412,43 @@ Units of `item_id` held across every slot. Returns **0** if no slot holds it. In
 | --- | --- | --- |
 | `item_id` | `str` | Item id to count |
 
-- **Returns** Number: units of that item across all slots.
+- **Returns** `int`. Units of that item across all slots.
 
 ##### `.total() → int`
 
 Total units across all slots (every material combined). For one material use `count(item_id)`.
 
-- **Returns** Number: total units across every slot.
+- **Returns** `int`. Total units across every slot.
 
 ##### `.capacity() → int`
 
 Total capacity across all physical slots. A Warehouse returns **10,000** (**5** × **2,000**); a Large Warehouse returns **30,000** (**15** × **2,000**). Query this value instead of hardcoding a tier.
 
-- **Returns** Number: total capacity across all slots.
+- **Returns** `int`. Total capacity across all slots.
 
 ##### `.fill_percent() → float`
 
 Fraction full across the whole warehouse, `total() / capacity()`, in the range **0-1**.
 
-- **Returns** Number (**0-1**).
+- **Returns** `float`. A fraction, **0-1**.
 
 ##### `.is_empty() → bool`
 
 `True` if every slot is empty.
 
-- **Returns** Boolean.
+- **Returns** `bool`
 
 ##### `.materials() → list[str]`
 
 List of item ids currently stored (one entry per material with units in a slot). Iterate it: `for m in wh.materials():`.
 
-- **Returns** List of item ids currently stored.
+- **Returns** `list[str]`. Ids of the items currently stored.
 
 ##### `.stacks() → list[ItemStack]`
 
 Lists the item variants stored across all physical slots as `ItemStack` values. Items with the same id but different properties occupy separate slots. Call it again when you need current contents.
 
-- **Returns** List of property-distinct `ItemStack` snapshots across all physical slots.
+- **Returns** `list[ItemStack]`. Property-distinct stacks across all physical slots.
 
 ##### `.space_for(item_id: str, properties: ItemProperties | None = None) → int`
 
@@ -14561,7 +16461,7 @@ How many more units of one exact item variant fit **right now**, using room in m
 | `item_id` | `str` | Item id to size remaining room for |
 | `properties` | `ItemProperties \| None` | Full property dict for the variant, or None for propertyless items |
 
-- **Returns** Number: units of that exact item variant that fit right now.
+- **Returns** `int`. Units of that exact item variant that fit right now.
 
 ##### `.has_space(item_id: str, amount: int, properties: ItemProperties | None = None) → bool`
 
@@ -14575,13 +16475,13 @@ How many more units of one exact item variant fit **right now**, using room in m
 | `amount` | `int` | Whole-number units required |
 | `properties` | `ItemProperties \| None` | Full property dict for the variant, or None for propertyless items |
 
-- **Returns** Boolean.
+- **Returns** `bool`
 
 ##### `.slots() → list[WarehouseSlot]`
 
 Every physical slot as a `WarehouseSlot` record with `.index`, `.item`, `.count`, `.capacity`, and `.properties`. Property-distinct variants use distinct slots.
 
-- **Returns** List of `WarehouseSlot` records with `.index`, `.item`, `.count`, `.capacity`, and exact `.properties` identity.
+- **Returns** `list[WarehouseSlot]`. One record per slot.
 
 ##### `.compact() → TransferResult`
 
@@ -14643,7 +16543,7 @@ Requires **Auto Feeders** research. Move up to whole-number `count` units of `it
 | `"source_changed"` | transient | The source changed between transfer planning and commit. |
 | `"target_under_construction"` | transient | The configured target is still under construction. |
 | `"target_wrong_material"` | rejection | The destination is latched to or accepts a different material. |
-| `"hot_cargo_requires_cask"` | rejection | This hot cargo must move through a compatible Lead Cask. |
+| `"hot_cargo_requires_cask"` | rejection | A transfer endpoint does not support this hot cargo. |
 | `"cask_accepts_hot_only"` | rejection | Lead Casks accept only supported hot cargo. |
 | `"slots_full"` | rejection | The destination has capacity but no slot for this material identity. |
 | `"target_full"` | rejection | The destination has no capacity for matching units. |
@@ -14667,47 +16567,47 @@ Permanently destroys one script-selected waste stream: items, liquids, or gases.
 2. Fabricate a **Waste Processor Kit** on a **Fabricator**: 2× Machine Frame, 4× Iron Ingot, and 1× Circuit Panel.
 3. Deploy it from your Inventory.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `.input: InputSlot`
 
 Stage unwanted items for permanent destruction. Connect a storage bin or machine buffer with `self.input.connect(name)`, then pull items with `self.input.take(item_id, count)`. Item transfers are explicit, so they may be staged while another mode is selected; only enabled `"items"` mode destroys them. See `InputSlot`.
 
-- **Returns** `InputSlot`: `connect()`, `take()`, `eject()`, `flush()`, `count()`, `capacity()`, `connected_to()`. Route any item here from a storage bin or machine byproduct bin. The input accepts **any** item in every mode; only enabled `"items"` mode destroys it. Disable destruction before recovering a mistaken load with `eject(...)`.
+- **Returns** `InputSlot`. Route any item here from a storage bin or machine byproduct bin. The input accepts **any** item in every mode; only enabled `"items"` mode destroys it. Disable destruction before recovering a mistaken load with `eject(...)`.
 
 ##### `.liquid_in: FluidPort`
 
 Generic **120 t** liquid input buffer. Connect a liquid source, select `"liquid"`, and enable the processor. A non-empty buffer accepts only its currently latched liquid until it drains. See `FluidPort`.
 
-- **Returns** Generic **120 t** `FluidPort` input for any liquid. It accepts flow only while the processor is enabled in `"liquid"` mode. A non-empty buffer remains latched to one exact liquid until drained.
+- **Returns** `FluidPort`. A **120 t** input for any liquid. It accepts flow only while the processor is enabled in `"liquid"` mode. A non-empty buffer remains latched to one exact liquid until drained.
 
 ##### `.gas_in: FluidPort`
 
 Generic **120 t** gas input buffer. Connect a gas source, select `"gas"`, and enable the processor. A non-empty buffer accepts only its currently latched gas until it drains. See `FluidPort`.
 
-- **Returns** Generic **120 t** `FluidPort` input for any gas. It accepts flow only while the processor is enabled in `"gas"` mode. A non-empty buffer remains latched to one exact gas until drained.
+- **Returns** `FluidPort`. A **120 t** input for any gas. It accepts flow only while the processor is enabled in `"gas"` mode. A non-empty buffer remains latched to one exact gas until drained.
 
 ### Methods
 
@@ -14767,45 +16667,45 @@ Select exactly one destruction stream: `"items"`, `"liquid"`, or `"gas"`. Changi
 
 Read the selected waste stream.
 
-- **Returns** Current selected stream: `"items"`, `"liquid"`, or `"gas"`.
+- **Returns** `str`
 - **Possible values** `"items"`, `"liquid"`, `"gas"`
 
 ##### `.status() → str`
 
 Read the exact live state: `"disabled"`, `"no_power"`, `"idle"`, or `"processing"`. `"disabled"` means no running script has armed the processor, so staged waste waits untouched.
 
-- **Returns** Current operating state: `"disabled"`, `"no_power"`, `"idle"`, or `"processing"`.
+- **Returns** `str`
 - **Possible values** `"disabled"`, `"no_power"`, `"idle"`, `"processing"`
 
 ##### `.throughput() → float`
 
 Read the selected mode's current destruction rate. Item mode reports units/h; liquid and gas modes report t/h.
 
-- **Returns** Number: current destruction rate for the selected mode. Item mode reports units/h; liquid and gas modes report t/h. **0** when the selected stream is not processing.
+- **Returns** `float`. Current destruction rate for the selected mode. Item mode reports units/h; liquid and gas modes report t/h. **0** when the selected stream is not processing.
 
 ##### `.item_throughput() → float`
 
 Read the current item destruction rate in units/h. At 100% outpost efficiency, the maximum is **60 units/h**.
 
-- **Returns** Number: current whole-item destruction rate in units/h. At 100% outpost efficiency, the maximum is **60 units/h**. **0** unless item mode is powered, enabled, and has staged items.
+- **Returns** `float`. Current whole-item destruction rate, in units/h. At 100% outpost efficiency, the maximum is **60 units/h**. **0** unless item mode is powered, enabled, and has staged items.
 
 ##### `.liquid_throughput() → float`
 
 Read the last liquid destruction rate in t/h. At 100% outpost efficiency, the maximum is **120 t/h**.
 
-- **Returns** Number: liquid destroyed during the last processing tick, in t/h. At 100% outpost efficiency, the maximum is **120 t/h**.
+- **Returns** `float`. Liquid destroyed during the last processing tick, in t/h. At 100% outpost efficiency, the maximum is **120 t/h**.
 
 ##### `.gas_throughput() → float`
 
 Read the last gas destruction rate in t/h. At 100% outpost efficiency, the maximum is **120 t/h**.
 
-- **Returns** Number: gas destroyed during the last processing tick, in t/h. At 100% outpost efficiency, the maximum is **120 t/h**.
+- **Returns** `float`. Gas destroyed during the last processing tick, in t/h. At 100% outpost efficiency, the maximum is **120 t/h**.
 
 ##### `.is_running() → bool`
 
 Read whether the selected mode is currently processing staged material.
 
-- **Returns** Boolean: `True` while the selected mode is processing staged material. Pure destruction has no output port and recovers no value.
+- **Returns** `bool`. `True` while the selected mode is processing staged material. Pure destruction has no output port and recovers no value.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -14817,23 +16717,23 @@ Read commands you send from the editor's **Commands** tab while this script runs
 
 Pioneer-exclusive module for construction and deconstruction blueprints created in Plan Mode or by scripts: gas/liquid pipes, utility bridges, power lines, outposts, pumps, caps, and mining drills. Fits a `universal` slot. Load the required kits, segments, or bridge items into the Pioneer's cargo for build jobs, drive within interaction range of the blueprint position, then call `execute(blueprint_id)`. Deconstruction reclaims the dismantled kit or segment into the Pioneer's cargo. Internal outpost machines, including drone facilities, deploy directly from Inventory and are not Constructor jobs.
 
-**Returned by:** `self.constructor`
+**Access via:** `self.constructor`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -14876,23 +16776,23 @@ Pick up one Construction job from the shared planning queue and build or deconst
 
 Extracts minerals through `self.drill`. Each drill cuts its hardness limit and everything below it: the basic drill reaches hardness **1** (Iron, Silicon) at **1.0×** speed using **10 W**; Industrial reaches **3**, adding Titanium, Cobalt, Lead and Rare Earth, at **0.75×** using **20 W**; Heavy reaches **4**, adding Neutronium, at **0.6×** using **30 W**. There is no hardness-2 drill: Titanium and Cobalt are cut by the Industrial. Without a mounted Drill Module, the vehicle cannot mine.
 
-**Returned by:** `self.drill`
+**Access via:** `self.drill`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -14922,7 +16822,7 @@ Extract **1** unit of the current site's mineral into vehicle cargo. Mining take
 
 Maximum mineral hardness this drill can extract.
 
-- **Returns** Number: **1** basic, **3** Industrial, **4** Heavy. A stale captured module reference raises `ReferenceError`.
+- **Returns** `int`. **1** basic, **3** Industrial, **4** Heavy. A stale captured module reference raises `ReferenceError`.
 
 *Raises*
 
@@ -14934,7 +16834,7 @@ Maximum mineral hardness this drill can extract.
 
 Per-unit time multiplier (lower = faster).
 
-- **Returns** Number: **1.0** basic, **0.75** Industrial, **0.6** Heavy. A stale captured module reference raises `ReferenceError`.
+- **Returns** `float`. **1.0** basic, **0.75** Industrial, **0.6** Heavy. A stale captured module reference raises `ReferenceError`.
 
 *Raises*
 
@@ -14959,41 +16859,41 @@ Small aerial cargo drone, 1 thruster + 2 modules.
 3. Fabricate a **Drone (Small)** on a **Fabricator**: 1× Rare Earth Core, 1× Titanium Ingot, 1× Control Unit, and 2 t Water.
 4. Deploy it from your Inventory.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.battery: DroneBattery`
 
 Reads power on electric drones. Use `self.battery.level()` for current charge in **Wh**, `capacity()` for total Battery Pack capacity, and `percent()` for the **0-1** charge fraction. These calls raise `ReferenceError` on a heli drone. In mixed fleets, check `DroneRef.engine` from `fleet.drones()` first.
 
-- **Returns** `DroneBattery` on **electric drones** with `level()`, `capacity()`, and `percent()`. Its methods raise `ReferenceError` on a drone without an electric powertrain; inspect `fleet.drones()` and branch on `DroneRef.engine` before calling across a mixed fleet.
+- **Returns** `DroneBattery`. On **electric drones** only. Its methods raise `ReferenceError` on a drone without an electric powertrain; inspect `fleet.drones()` and branch on `DroneRef.engine` before calling across a mixed fleet.
 
 ##### `.oil_tank: DroneOilTank`
 
 Reads fuel on heli drones. Use `self.oil_tank.level()` for current oil in **tons**, plus `capacity()` and `percent()`. These calls raise `ReferenceError` on an electric drone. In mixed fleets, check `DroneRef.engine` from `fleet.drones()` first.
 
-- **Returns** `DroneOilTank` on **heli drones** with `level()`, `capacity()`, and `percent()`. Its methods raise `ReferenceError` on a drone without a heli powertrain; inspect `fleet.drones()` and branch on `DroneRef.engine` before calling across a mixed fleet.
+- **Returns** `DroneOilTank`. On **heli drones** only. Its methods raise `ReferenceError` on a drone without a heli powertrain; inspect `fleet.drones()` and branch on `DroneRef.engine` before calling across a mixed fleet.
 
 ##### `.cargo: DroneCargo`
 
 Manages mounted Cargo Pods and the Bio Extractor's sealed chamber. Each pod holds one item type and unlatches when empty; the extractor chamber holds one life-form type and fills first. Use `self.cargo.count()`, `contents()`, `capacity()`, and `space_for(item_id)` to plan loads. `load()` and `unload()` work while docked at a Drone Depot; `load()` also works at a field Mining Drill or Lead Cask. Exact item properties are preserved. See `DroneCargo`.
 
-- **Returns** `DroneCargo` with mounted Cargo Pods plus the Bio Extractor's typed 25 t chamber. Use `space_for(item_id)` because biological room is item-specific.
+- **Returns** `DroneCargo`. Mounted Cargo Pods plus the Bio Extractor's typed 25 t chamber. Use `space_for(item_id)` because biological room is item-specific.
 
 ##### `.bio_scanner: PortableBioScanner`
 
@@ -15077,19 +16977,19 @@ Fly to a named field Mining Drill for ore pickup. Hauling needs no field module.
 
 Stable station id where the drone is physically docked. Returns an empty string while flying to coordinates, traveling between stations, or waiting outside a full Drone Depot. Use equality with the destination id as the authoritative station-arrival check, even when `go_to_station()` was called with a display name.
 
-- **Returns** String station id, or empty string if in transit.
+- **Returns** `str`. The station id, or empty if in transit.
 
 ##### `.current_drill() → str`
 
 Stable Mining Drill id where the drone can currently load cargo, or an empty string when no Drill is available. The drone must be within the Drill's loading area with no active route; merely passing over the Drill or holding a zero-throttle route does not count. Compare this value with the destination id as the authoritative Drill-arrival check, even when `go_to_drill()` was called with a display name.
 
-- **Returns** String Mining Drill id available for cargo loading, or empty string otherwise.
+- **Returns** `str`. The Mining Drill id available for cargo loading, or empty otherwise.
 
 ##### `.position() → Position`
 
 World coordinates `(.x, .y)`, lerped each tick by DroneSystem during transit, snapped to station coords on dock.
 
-- **Returns** Position (`.x`, `.y`): current world coordinates.
+- **Returns** `Position`. Current world coordinates.
 
 ##### `.get_distance_to(x: float, y: float) → float`
 
@@ -15102,7 +17002,7 @@ Straight-line distance in meters from the drone's current position to the given 
 | `x` | `float` | Target X coordinate in meters |
 | `y` | `float` | Target Y coordinate in meters |
 
-- **Returns** Number: straight-line distance in meters from the drone's current position to the given point.
+- **Returns** `float`. Straight-line distance in meters from the drone's current position to the given point.
 
 ##### `.go_to(x: float, y: float) → ActionResult` *(self only)*
 
@@ -15153,31 +17053,31 @@ Collect one weather aftermath batch at the drone's exact current coordinate. A s
 
 Current extraction exposure, from **0** to `exposure_capacity()`. It changes only when collecting Raw Uranium or receiving Service Station care; simply flying across a hidden aftermath is inert. A working drone docked at a powered Drone Service Station clears **10 per hour**. At capacity the drone is scrambled and requires Service Station rescue.
 
-- **Returns** Number: radiation exposure from **0** to capacity. An unplated uranium collection adds **40**; Shield Plating adds **0**. A powered Drone Service Station clears non-terminal exposure at **10/h**. At capacity the drone scrambles and requires rescue.
+- **Returns** `float`. Radiation exposure from **0** to capacity. An unplated uranium collection adds **40**; Shield Plating adds **0**. A powered Drone Service Station clears non-terminal exposure at **10/h**. At capacity the drone scrambles and requires rescue.
 
 ##### `.exposure_capacity() → float`
 
 The **100** exposure scramble threshold. An unplated drone can collect two 5-unit batches safely; the third batch is retained and then scrambles it.
 
-- **Returns** Number: the scramble threshold.
+- **Returns** `float`. The scramble threshold.
 
 ##### `.is_plated() → bool`
 
 `True` with Shield Plating mounted. Plating reduces Raw Uranium extraction exposure to zero, halves each Cargo Pod's capacity, and raises fuel burn **1.5×** because lead is heavy.
 
-- **Returns** Boolean: Shield Plating mounted (zero Raw Uranium extraction exposure and required for hot-cargo loads from Lead Casks; halves Cargo Pod capacity and raises burn).
+- **Returns** `bool`. `True` when Shield Plating is mounted: zero Raw Uranium extraction exposure and required for hot-cargo loads from Lead Casks; halves Cargo Pod capacity and raises burn.
 
 ##### `.range_remaining() → float`
 
 Estimated flight distance in meters at the current energy and throttle. Electric burn is **5 Wh/h** at full throttle; Heli burn is **5 t/h Oil**. Both scale with throttle squared, so slower routes stretch range.
 
-- **Returns** Number: estimated meters of flight at current charge and current throttle. **0** if throttle is 0 or battery/oil is empty.
+- **Returns** `float`. Estimated meters of flight at current charge and current throttle. **0** if throttle is 0 or battery or oil is empty.
 
 ##### `.throttle() → float`
 
 Current throttle (**0-1**). Full-throttle burn is **5 Wh/h** for electric propulsion or **5 t/h Oil** for Heli; both scale with throttle squared. Reads **0** after Stop, completion, or error.
 
-- **Returns** Number (**0-1**): current throttle setting.
+- **Returns** `float`. Current throttle setting (**0-1**).
 
 ##### `.set_throttle(rate: float) → ActionResult` *(self only)*
 
@@ -15198,6 +17098,12 @@ Set throttle (**0-1**). At full throttle, electric drones fly **300 m/h** using 
 | Status | Kind | Meaning |
 | --- | --- | --- |
 | `"ok"` | success | The operation completed successfully. |
+
+##### `.modules() → list[MountSlot]`
+
+Inspect what's coupled. Returns a list of `MountSlot`, one per slot on the chassis. Each has `.index` (pass to `couple` / `uncouple`), `.type` (`"thruster"` for slot 0, `"drone_module"` for the rest), `.module_id` (the coupled module, or `None` for an empty slot). Works on any drone, not only `self`. See `MountSlot`.
+
+- **Returns** `list[MountSlot]`. One per slot on the chassis.
 
 ##### `.couple(slot_index: int, module_id: str) → ActionResult` *(self only)*
 
@@ -15260,20 +17166,20 @@ Request a hardware service order that returns the module in an explicit whole-nu
 
 Current operational activity for progress and blocker handling, not an arrival test. `"idle"` can mean docked, hovering at a field coordinate, or holding a queued route at zero throttle; charging or refueling can begin immediately after docking. `"waiting_bay"` means the drone reached a full Depot but is not docked, `"holding_weather"` is a temporary heli hold, and stalled or scrambled states need intervention. Use `current_station()` or `current_drill()` to confirm arrival at an interaction endpoint.
 
-- **Returns** String: current operational activity. Use `current_station()` for the separate physical-arrival check.
+- **Returns** `str`. Current operational activity. Use `current_station()` for the separate physical-arrival check.
 - **Possible values** `"idle"`, `"traveling"`, `"charging"`, `"refueling"`, `"waiting_service"`, `"waiting_oil"`, `"waiting_bay"`, `"being_rescued"`, `"holding_weather"`, `"scrambled"`, `"stalled_no_battery"`, `"stalled_no_oil"`, `"stalled_no_route"`
 
 ##### `.is_being_rescued() → bool`
 
 `True` while a Drone Service Station's recovery vehicle is outbound to, servicing, or carrying this drone. Use this to pause route scripts while the recovery vehicle has control.
 
-- **Returns** Boolean
+- **Returns** `bool`
 
 ##### `.rescue_status() → str`
 
 Current rescue mission phase for this drone: `"none"`, `"outbound"`, `"charging"`, `"carrying"`, or `"returning"`. `"returning"` means the recovery vehicle is heading home and the drone is no longer under rescue control.
 
-- **Returns** String status: `"none"` / `"outbound"` / `"charging"` / `"carrying"` / `"returning"`.
+- **Returns** `str`
 - **Possible values** `"none"`, `"outbound"`, `"charging"`, `"carrying"`, `"returning"`
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
@@ -15286,43 +17192,43 @@ Read commands you send from the editor's **Commands** tab while this script runs
 
 Read-only index of every owned mobile unit: ground vehicles and drones. Use it for dashboards, charging scripts, rescue thresholds, and dispatch decisions without hardcoding names. Fleet refs are snapshots; control still goes through the unit's own script or the relevant station API.
 
-**Returned by:** `get_component("fleet")`
+**Access via:** `get_component("fleet")`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
 ##### `.vehicles() → list[VehicleRef]`
 
-All owned ground vehicles as `VehicleRef` snapshots. Each ref includes `.id`, `.name`, `.kind`, `.x`, `.y`, `.battery_level`, `.is_docked`, `.is_being_rescued`, and `.rescue_status`.
+All owned ground vehicles as `VehicleRef` snapshots. Each ref includes `.id`, `.name`, `.kind`, `.x`, `.y`, `.battery_level`, `.is_docked`, `.current_station`, `.is_being_rescued`, and `.rescue_status`.
 
-- **Returns** List of `VehicleRef` snapshots. Re-query for fresh positions/status, or use `get_component(ref.id)` for the live vehicle API.
+- **Returns** `list[VehicleRef]`. Snapshots. Re-query for fresh positions and status, or use `get_component(ref.id)` for the live vehicle API.
 
 ##### `.drones() → list[DroneRef]`
 
 All owned drones as `DroneRef` snapshots. Each ref includes `.id`, `.name`, `.kind`, `.engine`, `.current_station`, `.battery_level` or `.oil_level`, `.is_docked`, `.is_being_rescued`, and `.rescue_status`.
 
-- **Returns** List of `DroneRef` snapshots. Re-query for fresh positions/status, or use `get_component(ref.id)` for the live drone API.
+- **Returns** `list[DroneRef]`. Snapshots. Re-query for fresh positions and status, or use `get_component(ref.id)` for the live drone API.
 
 ##### `.mobile_units() → list[MobileUnitRef]`
 
 All owned ground vehicles and drones in one list. Use `.category` to branch between `"vehicle"` and `"drone"`.
 
-- **Returns** List of `MobileUnitRef` snapshots. Re-query for fresh positions/status.
+- **Returns** `list[MobileUnitRef]`. Snapshots. Re-query for fresh positions and status.
 
 *Components / Vehicles & Modules*
 
@@ -15330,23 +17236,23 @@ All owned ground vehicles and drones in one list. Use `.category` to branch betw
 
 Lets a vehicle drive through `self.nav`. A basic module provides **1.0×** top speed. One Sport Nav on the same rig provides **2×** top speed with **2.6×** movement power draw, about **1.3×** battery use per meter at full throttle. Further Sport Navs add **1.0×** base top speed each and raise draw faster. It fits a `nav` or `universal` slot. Keep the script running until arrival. The vehicle stops and clears its route if the script stops, ends, or errors.
 
-**Returned by:** `self.nav`
+**Access via:** `self.nav`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -15399,7 +17305,7 @@ Set throttle (**0.0-1.0**, clamped). `self.nav.set_throttle(0.5)` cruises; `1.0`
 
 Current throttle setpoint (**0.0-1.0**). Returns the value the script last wrote via `self.nav.set_throttle(...)`, or **0** after Stop, completion, error, or `brake()`. Distinct from `get_speed()`, `throttle()` is your intent, `get_speed()` is what the vehicle actually moved last tick.
 
-- **Returns** Number (**0.0-1.0**): current throttle setpoint.
+- **Returns** `float`. Current throttle setpoint (**0.0-1.0**).
 
 ##### `.brake() → ActionResult` *(self only)*
 
@@ -15420,17 +17326,17 @@ Stop the vehicle immediately, throttle and speed set to **0**, and the current t
 
 Current position as a `Position` object with `.x` and `.y` in meters from base. Read each iteration of a drive loop to detect arrival, plan next hop, or log the path. See `Position`.
 
-- **Returns** `Position` object `{x, y}` in meters from base
+- **Returns** `Position`. In meters from base.
 
 ##### `.get_speed() → float`
 
 Speed in meters per hour as recorded on the last drive tick. **0** while idle or braked; up to the Nav's top speed at throttle **1.0**. Use to confirm the vehicle is actually moving (if `0` when you expected drive, there's a power or target issue). A fresh `set_throttle(...)` won't show up here until the next drive tick.
 
-- **Returns** Number (m/h)
+- **Returns** `float`. In m/h.
 
 ##### `.get_distance_to(x: float, y: float) → float`
 
-Euclidean distance in meters from the vehicle's current position to the given point. Use it inside an intentional wait loop to detect proximity, with an arrival tolerance such as `> 2`, never exact zero. Reaching that tolerance does not stop the vehicle; call `brake()` before a stationary at-site action. For an at-building action, route to that building's `BuildingRef.position`. `set_target()` does not block while the vehicle drives, and the drive is canceled if the script stops, completes, or errors. This is pure straight-line distance and does not account for obstacles.
+Euclidean distance in meters from the vehicle's current position to the given point. Use it inside an intentional wait loop to detect proximity. The vehicle has arrived once the distance is 2 or less (never wait for exact zero), so the loop keeps going while it is `> 2`. Arriving does not stop the vehicle; call `brake()` before a stationary at-site action. For an at-building action, route to that building's `BuildingRef.position`. `set_target()` does not block while the vehicle drives, and the drive is canceled if the script stops, completes, or errors. This is pure straight-line distance and does not account for obstacles.
 
 *Parameters*
 
@@ -15439,13 +17345,13 @@ Euclidean distance in meters from the vehicle's current position to the given po
 | `x` | `float` | Target X coordinate in meters |
 | `y` | `float` | Target Y coordinate in meters |
 
-- **Returns** Number (meters)
+- **Returns** `float`. In meters.
 
 ##### `.speed_multiplier() → float`
 
 Current top-speed multiplier: **1.0** with Basic Nav/no Sport Nav, or **1 + mounted Sport Nav count** on Pioneer. Use it to plan trip times and scout builds. This is speed only; range still depends on battery, throttle, cargo load, and movement draw.
 
-- **Returns** Number: **1.0** basic, or **1 + Sport Nav count** on Pioneer. Speed only; range depends on battery, throttle, cargo load, and movement draw.
+- **Returns** `float`. **1.0** basic, or **1 + Sport Nav count** on Pioneer. Speed only; range depends on battery, throttle, cargo load, and movement draw.
 
 *Components / Vehicles & Modules*
 
@@ -15463,71 +17369,71 @@ A modular long-range vehicle for driving, scanning, mining, and building in the 
 1. Requires the **Pioneer Chassis** research (Terraform Index 100,000).
 2. Buy from the Shop for 5,000 cr.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.battery: Battery`
 
 Aggregated battery pool across every Portable Battery in every mounted Battery Holder. `self.battery.level()` returns a **0-1** fraction; `self.battery.wh()` raw watt-hours; `self.battery.capacity()` the summed max. For per-holder detail, `self.battery.holders()` returns each Holder with its `.batteries` list. The aggregate view covers most scripts, introspection is for advanced rebalance logic. If zero Portable Batteries are installed, the Pioneer can't move. See `Battery`.
 
-- **Returns** `Battery`: aggregated across every battery in every mounted Battery Holder
+- **Returns** `Battery`. Aggregated across every battery in every mounted Battery Holder.
 
 ##### `.cargo: Cargo`
 
 Combines the Portable Bins in the Pioneer's Cargo Racks. Use `count()`, `capacity()`, and `full()` for totals, or `racks()` to inspect the physical layout. Each bin holds one item type. `take()` and `send()` handle bins independently. `compact()` consolidates matching cargo into fewer bins without changing `send()` order. `discard(rack_index)` permanently empties one rack and takes **1 hour** when cargo is present; an empty rack finishes immediately. See `Cargo`.
 
-- **Returns** `Cargo`: aggregated across every bin in every mounted Cargo Rack
+- **Returns** `Cargo`. Aggregated across every bin in every mounted Cargo Rack.
 
 ##### `.nav: NavModule`
 
 Drives the Pioneer. Set a destination in meters from base with `self.nav.set_target(x, y)`. The call returns immediately and the Pioneer keeps driving while the script runs. A distance tolerance means the Pioneer is close enough, not stopped, so call `self.nav.brake()` before mining, constructing, or transferring cargo. The Pioneer stops and clears its route if the script stops, ends, or errors. Requires a Nav Module in a Universal slot. See `NavModule` for throttle, braking, and position.
 
-- **Returns** `NavModule` when a Nav Module is mounted
+- **Returns** `NavModule`. When a Nav Module is mounted.
 
 ##### `.sonar: SonarModule`
 
 Finds useful sites near the Pioneer. Use `self.sonar.scan()` to find nearby sites, then `self.sonar.survey(site)` to reveal details such as mineral hardness, purity, or vent output. Scanning and new surveys take time and use battery, so the script pauses while the sonar works. Requires a mounted Sonar Module. See `SonarModule` for its range, capabilities, and battery use.
 
-- **Returns** `SonarModule` when a Sonar Module is mounted
+- **Returns** `SonarModule`. When a Sonar Module is mounted.
 
 ##### `.drill: DrillModule`
 
 Extracts one mineral unit from the surveyed site under the Pioneer with `self.drill.mine()`. The vehicle must be stationary and have enough cargo space and power. Requires a mounted Drill Module. See `DrillModule` for speed and hardness limits.
 
-- **Returns** `DrillModule` when a Drill Module is mounted
+- **Returns** `DrillModule`. When a Drill Module is mounted.
 
 ##### `.constructor: ConstructorModule`
 
 Builds or removes Planet Map blueprints from Plan Mode or scripts. Read pending work from `get_component("construction_blueprint")`, drive near `construction.position`, then call `self.constructor.execute(construction.id)`. Building consumes the required kits or segments from cargo; removal returns reclaimed parts to cargo, so leave room. Requires a mounted Constructor Module. See `ConstructorModule`.
 
-- **Returns** `ConstructorModule` when a Constructor Module is mounted: exposes `execute()`.
+- **Returns** `ConstructorModule`. When a Constructor Module is mounted.
 
 ##### `.input: VehicleInputSlot`
 
 Loads cargo from Inventory at home, local storage at outposts, field-extractor stockpiles, or a nearby stopped cargo vehicle. Field and vehicle transfers require service range; both vehicles must be stopped. It never destroys cargo; use `self.cargo.discard(rack_index)` to jettison one rack. Requires **Auto Feeders**. See `VehicleInputSlot`.
 
-- **Returns** `VehicleInputSlot`: `connect()`, `disconnect()`, `take()`, `count()`, `capacity()`, `stacks()`, `connected_to()`, `connected_id()`
+- **Returns** `VehicleInputSlot`
 
 ##### `.output: OutputSlot`
 
 Unloads cargo to Inventory, a Storage Bin, a Warehouse, or a nearby stopped cargo vehicle. Inventory freight is physically available only while the Pioneer is parked at home. Remote outposts use their local stores. Vehicle-to-vehicle handoffs require both vehicles stopped within **~2 m**. Requires **Auto Feeders** research. See `OutputSlot`.
 
-- **Returns** `OutputSlot`: `connect()`, `send()`, `count()`, `capacity()`, `connected_to()`
+- **Returns** `OutputSlot`
 
 ### Methods
 
@@ -15535,31 +17441,60 @@ Unloads cargo to Inventory, a Storage Bin, a Warehouse, or a nearby stopped carg
 
 Read the Pioneer's current physical activity. Each call reads fresh state, including through `get_component(...)`. An idle Pioneer may still have a script running or a job assigned.
 
-- **Returns** String: current vehicle activity, evaluated when called.
+- **Returns** `str`. Current vehicle activity, evaluated when called.
 - **Possible values** `"idle"`, `"moving"`, `"stranded"`, `"scanning"`, `"surveying"`, `"drilling"`, `"discarding"`, `"constructing"`, `"transferring"`, `"charging"`, `"queued"`, `"being_rescued"`
 
 ##### `.is_being_rescued() → bool`
 
 `True` while a Vehicle Charging Station rescue drone is actively recovering this Pioneer. Use this to pause movement, mining, or construction scripts even if the battery has started rising above zero.
 
-- **Returns** Boolean
+- **Returns** `bool`
 
 ##### `.rescue_status() → str`
 
 Current rescue mission phase for this Pioneer: `"none"`, `"outbound"`, `"charging"`, or `"returning"`. `"returning"` means the rescue drone is going home and the Pioneer is free again.
 
-- **Returns** String status: `"none"` / `"outbound"` / `"charging"` / `"returning"`.
+- **Returns** `str`
 - **Possible values** `"none"`, `"outbound"`, `"charging"`, `"returning"`
+
+##### `.dock(station: str) → ActionResult` *(self only)*
+
+Pick which Vehicle Charging Station this parked Pioneer docks at: `self.dock("charging_station_2")`. Every station inside an outpost covers the whole outpost, so this chooses between them. Without a choice, the Pioneer docks at the eligible station with the shortest distance to its station position or its outpost's center; equal-distance ties are broken alphabetically by station id. The choice lasts until the Pioneer drives away or the station is removed. Moving to another station ends any charging job at the old one, and the new station charges the Pioneer once its own script calls `charge()`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `station` | `str` | Id or display name of a Vehicle Charging Station whose service area contains the parked Pioneer. |
+
+- **Returns** `ActionResult`
+- **Result fields** `.status`, `.message`
+- **Success payload** None
+
+*Outcomes*
+
+| Status | Kind | Meaning |
+| --- | --- | --- |
+| `"ok"` | success | The operation completed successfully. |
+| `"station_not_found"` | rejection | The requested station does not exist. |
+| `"under_construction"` | transient | The target is still under construction. |
+| `"not_at_station"` | rejection | The vehicle is not parked inside the requested station's service area. |
+
+##### `.current_station() → str`
+
+Stable id of the Vehicle Charging Station this Pioneer is docked at, whether it picked it with `dock()` or docked there by default. Empty string while the Pioneer is moving or parked away from every station.
+
+- **Returns** `str`. The station id, or empty if the Pioneer is not docked at a station.
 
 ##### `.modules() → list[MountSlot]`
 
 Inspect every slot on the chassis. Returns a list of `MountSlot`, eight entries for the Pioneer. Each has `.index` (pass to `mount` / `unmount`), `.type` (always `"universal"` on Pioneer), `.module_id` (what's mounted, or `None` for empty), `.internal_count` (non-zero for Battery Holders / Cargo Racks), `.internal_items` (list of installed portable item ids). Call before `self.mount(...)` or `self.install(...)` to find an empty target. See `MountSlot`.
 
-- **Returns** List of `MountSlot` objects: one per mount point on the chassis, each with `.index`, `.type`, `.module_id`, `.internal_count`, `.internal_items`.
+- **Returns** `list[MountSlot]`. One per mount point on the chassis.
 
 ##### `.mount(slot_index: int, item_id: str) → ActionResult` *(self only)*
 
-Request a hardware service order from Inventory into whole-number `slot_index`: `self.mount(0, "nav_module")`. Biological field modules are drone-only. The Pioneer must be inside a founded outpost service area. This dedicated-hardware exception does not make Inventory a freight endpoint there.
+Request a hardware service order from Inventory into whole-number `slot_index`: `self.mount(0, "nav_module")`. Biological field modules are drone-only. The Pioneer must be parked inside the service area of the home base or an operational founded outpost. This dedicated-hardware service does not make Inventory a freight endpoint at remote outposts.
 
 *Parameters*
 
@@ -15588,7 +17523,7 @@ Request a hardware service order from Inventory into whole-number `slot_index`: 
 
 ##### `.unmount(slot_index: int) → ActionResult` *(self only)*
 
-Request a hardware service order that returns the module at whole-number `slot_index` to Inventory: `self.unmount(0)`. The Pioneer must be inside a founded outpost service area. Empty every internal bay before removing a holder or rack.
+Request a hardware service order that returns the module at whole-number `slot_index` to Inventory: `self.unmount(0)`. The Pioneer must be parked inside the service area of the home base or an operational founded outpost. Empty every internal bay before removing a holder or rack.
 
 *Parameters*
 
@@ -15613,7 +17548,7 @@ Request a hardware service order that returns the module at whole-number `slot_i
 
 ##### `.install(slot_index: int, internal_index: int, item_id: str) → ActionResult` *(self only)*
 
-Request a service order that installs a Portable Battery or empty Portable Storage Bin from Inventory into a container's whole-number internal slot. `self.install(0, 1, "portable_battery")` uses bay **1** of the Battery Holder at chassis slot **0**. `self.install(4, 0, "portable_bin")` uses bay **0** of the Cargo Rack at chassis slot **4**. The Pioneer must be inside a founded outpost service area.
+Request a service order that installs a Portable Battery or empty Portable Storage Bin from Inventory into a container's whole-number internal slot. `self.install(0, 1, "portable_battery")` uses bay **1** of the Battery Holder at chassis slot **0**. `self.install(4, 0, "portable_bin")` uses bay **0** of the Cargo Rack at chassis slot **4**. The Pioneer must be parked inside the service area of the home base or an operational founded outpost.
 
 *Parameters*
 
@@ -15644,7 +17579,7 @@ Request a service order that installs a Portable Battery or empty Portable Stora
 
 ##### `.uninstall(slot_index: int, internal_index: int) → ActionResult` *(self only)*
 
-Request a service order that returns the portable item in a container's whole-number internal slot to Inventory: `self.uninstall(0, 1)`. The Pioneer must be inside a founded outpost service area, and Portable Storage Bins must be empty.
+Request a service order that returns the portable item in a container's whole-number internal slot to Inventory: `self.uninstall(0, 1)`. The Pioneer must be parked inside the service area of the home base or an operational founded outpost, and Portable Storage Bins must be empty.
 
 *Parameters*
 
@@ -15692,65 +17627,65 @@ Your starter expedition vehicle for driving, scanning, and mining. The bare chas
 1. Requires the **Rover Chassis** research (Pressure 0.11).
 2. Buy from the Shop for 2,000 cr.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.battery: Battery`
 
 How much charge the Rover has left. `self.battery.level()` returns a **0-1** fraction, `self.battery.wh()` raw watt-hours, `self.battery.capacity()` the **100 Wh** max. Below **0.1** you're close to getting stranded, `charging_station.dispatch_rescue()` can fetch you, but it's slow. `.holders()` returns an empty list (sealed rig). See `Battery`.
 
-- **Returns** `Battery`: `level()`, `wh()`, `capacity()`, `holders()`
+- **Returns** `Battery`
 
 ##### `.cargo: Cargo`
 
 Everything carried in the Rover's integrated hold. `self.cargo.count()` returns total units across every item and property variant; `self.cargo.capacity()` is **10**; `self.cargo.full()` is `True` at capacity, check it before loading or drilling. `.racks()` is empty because the hold is integrated. `self.cargo.discard(0)` permanently jettisons the whole hold and takes **1 hour** when cargo is present; an empty hold finishes immediately. See `Cargo`.
 
-- **Returns** `Cargo`: `count()`, `capacity()`, `full()`, `racks()`, `discard()`
+- **Returns** `Cargo`
 
 ##### `.nav: NavModule`
 
 Drives the Rover. Set a destination in meters from base with `self.nav.set_target(x, y)`. The call returns immediately and the Rover keeps driving while the script runs. A distance tolerance means the Rover is close enough, not stopped, so call `self.nav.brake()` before mining, scanning, surveying, or transferring cargo. The Rover stops and clears its route if the script stops, ends, or errors. Requires a mounted Nav Module. See `NavModule` for throttle, braking, and speed.
 
-- **Returns** `NavModule` when a Nav Module is mounted, else unavailable
+- **Returns** `NavModule`. When a Nav Module is mounted, else unavailable.
 
 ##### `.sonar: SonarModule`
 
 Finds useful sites near the Rover. Use `self.sonar.scan()` to find nearby sites, then `self.sonar.survey(site)` to reveal details such as mineral hardness, purity, or vent output. Scanning and new surveys take time, so the script pauses while the sonar works. Requires a mounted Sonar Module. See `SonarModule` for its range, capabilities, and battery use.
 
-- **Returns** `SonarModule` when a Sonar Module is mounted, else unavailable
+- **Returns** `SonarModule`. When a Sonar Module is mounted, else unavailable.
 
 ##### `.drill: DrillModule`
 
 Extracts one mineral unit from the surveyed site under the Rover with `self.drill.mine()`. The vehicle must be stationary and have enough cargo space and power. Requires a mounted Drill Module. See `DrillModule` for speed and hardness limits.
 
-- **Returns** `DrillModule` when a Drill Module is mounted, else unavailable
+- **Returns** `DrillModule`. When a Drill Module is mounted, else unavailable.
 
 ##### `.input: VehicleInputSlot`
 
 Loads cargo from Inventory at home, local storage at outposts, field-extractor stockpiles, or a nearby stopped cargo vehicle. Field and vehicle transfers require service range; both vehicles must be stopped. It never destroys cargo; use `self.cargo.discard(0)` to jettison the hold. Requires **Auto Feeders**. See `VehicleInputSlot`.
 
-- **Returns** `VehicleInputSlot`: `connect()`, `disconnect()`, `take()`, `count()`, `capacity()`, `stacks()`, `connected_to()`, `connected_id()`
+- **Returns** `VehicleInputSlot`
 
 ##### `.output: OutputSlot`
 
 Unloads cargo to Inventory, a Storage Bin, a Warehouse, or a nearby stopped cargo vehicle. Inventory freight is physically available only while the Rover is parked at home. Remote outposts use their local stores. Vehicle-to-vehicle handoffs require both vehicles stopped within **~2 m**. Requires **Auto Feeders** research. See `OutputSlot`.
 
-- **Returns** `OutputSlot`: `connect()`, `send()`, `count()`, `capacity()`, `connected_to()`
+- **Returns** `OutputSlot`
 
 ### Methods
 
@@ -15758,31 +17693,60 @@ Unloads cargo to Inventory, a Storage Bin, a Warehouse, or a nearby stopped carg
 
 Read the Rover's current physical activity. Each call reads fresh state, including through `get_component(...)`. An idle Rover may still have a script running or a job assigned.
 
-- **Returns** String: current vehicle activity, evaluated when called.
+- **Returns** `str`. Current vehicle activity, evaluated when called.
 - **Possible values** `"idle"`, `"moving"`, `"stranded"`, `"scanning"`, `"surveying"`, `"drilling"`, `"discarding"`, `"constructing"`, `"transferring"`, `"charging"`, `"queued"`, `"being_rescued"`
 
 ##### `.is_being_rescued() → bool`
 
 `True` while a Vehicle Charging Station rescue drone is actively recovering this Rover. Use this to pause movement or mining scripts even if the battery has started rising above zero.
 
-- **Returns** Boolean
+- **Returns** `bool`
 
 ##### `.rescue_status() → str`
 
 Current rescue mission phase for this Rover: `"none"`, `"outbound"`, `"charging"`, or `"returning"`. `"returning"` means the rescue drone is going home and the Rover is free again.
 
-- **Returns** String status: `"none"` / `"outbound"` / `"charging"` / `"returning"`.
+- **Returns** `str`
 - **Possible values** `"none"`, `"outbound"`, `"charging"`, `"returning"`
+
+##### `.dock(station: str) → ActionResult` *(self only)*
+
+Pick which Vehicle Charging Station this parked Rover docks at: `self.dock("charging_station_2")`. Every station inside an outpost covers the whole outpost, so this chooses between them. Without a choice, the Rover docks at the eligible station with the shortest distance to its station position or its outpost's center; equal-distance ties are broken alphabetically by station id. The choice lasts until the Rover drives away or the station is removed. Moving to another station ends any charging job at the old one, and the new station charges the Rover once its own script calls `charge()`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `station` | `str` | Id or display name of a Vehicle Charging Station whose service area contains the parked Rover. |
+
+- **Returns** `ActionResult`
+- **Result fields** `.status`, `.message`
+- **Success payload** None
+
+*Outcomes*
+
+| Status | Kind | Meaning |
+| --- | --- | --- |
+| `"ok"` | success | The operation completed successfully. |
+| `"station_not_found"` | rejection | The requested station does not exist. |
+| `"under_construction"` | transient | The target is still under construction. |
+| `"not_at_station"` | rejection | The vehicle is not parked inside the requested station's service area. |
+
+##### `.current_station() → str`
+
+Stable id of the Vehicle Charging Station this Rover is docked at, whether it picked it with `dock()` or docked there by default. Empty string while the Rover is moving or parked away from every station.
+
+- **Returns** `str`. The station id, or empty if the Rover is not docked at a station.
 
 ##### `.modules() → list[MountSlot]`
 
 Inspect what's mounted. Returns a list of `MountSlot`, one per chassis slot. Each has `.index` (pass to `mount` / `unmount`), `.type` (which modules fit), `.module_id` (mounted id or `None`), `.internal_items` (empty on the Rover's function slots). Call this before `self.mount(...)` to find an empty slot and verify the slot type accepts the module you want. See `MountSlot`.
 
-- **Returns** List of `MountSlot` objects: one per mount point on the chassis, each with `.index`, `.type`, `.module_id`, `.internal_count`, `.internal_items`.
+- **Returns** `list[MountSlot]`. One per mount point on the chassis.
 
 ##### `.mount(slot_index: int, item_id: str) → ActionResult` *(self only)*
 
-Request a hardware service order from Inventory into whole-number `slot_index`: `self.mount(0, "nav_module")`. Biological field modules are drone-only. The Rover must be inside a founded outpost service area. This dedicated-hardware exception does not make Inventory a freight endpoint there.
+Request a hardware service order from Inventory into whole-number `slot_index`: `self.mount(0, "nav_module")`. Biological field modules are drone-only. The Rover must be parked inside the service area of the home base or an operational founded outpost. This dedicated-hardware service does not make Inventory a freight endpoint at remote outposts.
 
 *Parameters*
 
@@ -15811,7 +17775,7 @@ Request a hardware service order from Inventory into whole-number `slot_index`: 
 
 ##### `.unmount(slot_index: int) → ActionResult` *(self only)*
 
-Request a hardware service order that returns the module at whole-number `slot_index` to Inventory: `self.unmount(0)`. The Rover must be inside a founded outpost service area, and container modules must be empty.
+Request a hardware service order that returns the module at whole-number `slot_index` to Inventory: `self.unmount(0)`. The Rover must be parked inside the service area of the home base or an operational founded outpost, and container modules must be empty.
 
 *Parameters*
 
@@ -15904,23 +17868,23 @@ Read commands you send from the editor's **Commands** tab while this script runs
 
 Finds and surveys world sites through `self.sonar`. A scan checks the area around the vehicle; driving alone does not scan. Use `get_component("nocturna").points_of_interest()` to find unscanned "?" markers, travel near one, then call `scan()` and `survey(site)`. Each sonar reveals its hardness limit and everything below it: Basic **50 m**, hardness **1**; Wide **180 m**, hardness **3** (adds Titanium and Cobalt); Deep **280 m**, hardness **4**. Research unlocks thermal vents, wells, and exotic deposits. Results are saved in the Journal. Local Harvester sectors, biological sites, and radiation fields use different scanners.
 
-**Returned by:** `self.sonar`
+**Access via:** `self.sonar`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -15988,7 +17952,7 @@ Reveal the details available for a productive `Site`. Pass either its string id 
 
 Current sonar range in meters.
 
-- **Returns** Number (meters): **50** basic, **180** Wide, **280** Deep. A stale captured module reference raises `ReferenceError`.
+- **Returns** `float`. In meters: **50** basic, **180** Wide, **280** Deep. A stale captured module reference raises `ReferenceError`.
 
 *Raises*
 
@@ -16000,7 +17964,7 @@ Current sonar range in meters.
 
 Maximum mineral hardness this sonar can identify.
 
-- **Returns** Number: **1** basic, **3** Wide, **4** Deep. A stale captured module reference raises `ReferenceError`.
+- **Returns** `int`. **1** basic, **3** Wide, **4** Deep. A stale captured module reference raises `ReferenceError`.
 
 *Raises*
 
@@ -16012,7 +17976,7 @@ Maximum mineral hardness this sonar can identify.
 
 Survey-depth tier granted by this sonar: `"basic"` / `"wide"` / `"deep"`. Controls how much of a thermal vent or exotic deposit is revealed by `survey()`; `"deep"` is also required for oil-well discovery.
 
-- **Returns** Survey-depth tier granted by this sonar: `"basic"` / `"wide"` / `"deep"`. Controls thermal/exotic detail; `"deep"` is required for oil-well discovery. A stale captured module reference raises `ReferenceError`.
+- **Returns** `str`. The survey depth this sonar grants. It controls thermal and exotic detail; `"deep"` is required for oil-well discovery. A stale captured module reference raises `ReferenceError`.
 - **Possible values** `"basic"`, `"wide"`, `"deep"`
 
 *Raises*
@@ -16027,29 +17991,29 @@ Survey-depth tier granted by this sonar: `"basic"` / `"wide"` / `"deep"`. Contro
 
 Stores JSON-safe data that survives script restarts and save/load. Access the Data Archive with `get_component("notebook")` after its research unlocks. Use Libraries to share code and the Signal Bus to share temporary live state.
 
-**Returned by:** `get_component("notebook")`
+**Access via:** `get_component("notebook")`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
 ##### `.set(key: str, value: JsonValue) → ActionResult`
 
-Store a JSON-safe value under a named key. Dictionaries inside the value must use string keys. The archive holds up to 512 entries; each value supports 8 nested levels, 16,384 total nodes counting values and containers, and 4,096 characters per string or dictionary key.
+Store a JSON-safe value under a named key. Dictionaries inside the value must use string keys. The archive holds up to 2,048 entries; each value supports 8 nested levels, 16,384 total nodes counting values and containers, and 4,096 characters per string or dictionary key.
 
 *Parameters*
 
@@ -16108,7 +18072,7 @@ Read a stored value by key. If the key is missing, returns the optional default 
 | `key` | `str` | Archive key, 1-96 characters using letters, numbers, `_`, `.`, `:`, or `-` |
 | `default` | `JsonValue` | Returned when the key is missing |
 
-- **Returns** Stored value, the optional default, or `None`.
+- **Returns** `JsonValue`. Stored value, the optional default, or `None`.
 
 *Raises*
 
@@ -16126,7 +18090,7 @@ Return `True` when the archive contains the key, otherwise `False`.
 | --- | --- | --- |
 | `key` | `str` | Archive key, 1-96 characters using letters, numbers, `_`, `.`, `:`, or `-` |
 
-- **Returns** Boolean: `True` when the archive contains the key.
+- **Returns** `bool`. `True` when the archive contains the key.
 
 *Raises*
 
@@ -16166,7 +18130,7 @@ Return archive keys as a sorted list. Pass a prefix such as `"rover."` to list o
 | --- | --- | --- |
 | `prefix` | `str` | Optional key prefix using the archive key character set |
 
-- **Returns** Sorted list of archive keys, optionally filtered by prefix.
+- **Returns** `list[str]`. Archive keys, sorted, optionally filtered by prefix.
 
 *Raises*
 
@@ -16215,41 +18179,41 @@ Remove archived entries. With no prefix it clears the whole archive; with a pref
 3. Fabricate a **Drone Depot Kit** on a **Fabricator**: 2× Machine Frame, 1× Control Unit, 2× Gas Pipe Segment, 2× Liquid Pipe Segment, and 3 t Water.
 4. Deploy it from your Inventory.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `.input: InputSlot`
 
 `InputSlot` for this station's local stockpile. Connect `"inventory"` or a machine or storage source at the same outpost, then call `self.input.take(item_id, count)`. `self.input.flush()` discards the station stockpile. Stock at another Drone Depot is not visible here.
 
-- **Returns** InputSlot: `connect()`, `take()`, `eject()`, `flush()`, `count()`, `capacity()`, `connected_to()`.
+- **Returns** `InputSlot`
 
 ##### `.output: OutputSlot`
 
 `OutputSlot` for this station's local stockpile. Connect `"inventory"` or a machine or storage target at the same outpost, then call `self.output.send(item_id, count)`. Move cargo between outposts with a drone; stations do not share stock.
 
-- **Returns** OutputSlot.
+- **Returns** `OutputSlot`
 
 ### Methods
 
@@ -16257,31 +18221,31 @@ The outpost where this building is deployed. The returned `OutpostRef` includes 
 
 List of drone ids currently docked at this Depot, in stable id order. Read each drone's state with `get_component(id)`.
 
-- **Returns** List of drone instance ids currently docked at this Depot, in stable id order.
+- **Returns** `list[str]`. Instance ids of the drones currently docked at this Depot, in stable id order.
 
 ##### `.bay_count() → int`
 
-Total bays at this station: **1** (basic) / **2** (medium) / **4** (large).
+Total bays at this station: **1** (basic) / **2** (medium) / **4** (large). Upgrading the Depot in place with a larger kit raises it at once.
 
-- **Returns** Number: total bays at this station (**1** / **2** / **4** depending on tier).
+- **Returns** `int`. Total bays at this station (**1** / **2** / **4** depending on tier).
 
 ##### `.bays_occupied() → int`
 
 Bays currently occupied by docked drones. When equal to `bay_count`, arriving drones queue in airspace.
 
-- **Returns** Number: bays currently occupied by docked drones.
+- **Returns** `int`. Bays currently occupied by docked drones.
 
 ##### `.slots_used() → int`
 
 How many distinct materials the stockpile currently holds. One material is one slot no matter how many units of it are stored, so **50** units of one material fills a single slot.
 
-- **Returns** Number: distinct materials currently held. Each material occupies one slot regardless of how many units of it are stored.
+- **Returns** `int`. Distinct materials currently held. Each material occupies one slot regardless of how many units of it are stored.
 
 ##### `.slot_capacity() → int`
 
 How many distinct materials this depot can hold at once. A depot is a transfer proxy, not a warehouse: when every slot is taken, a `cargo.unload()` of a new material moves **0** units and reports that no slot is free, even while units remain free. Drain a material out to release its slot.
 
-- **Returns** Number: how many distinct materials this depot can hold at once (**3** / **4** / **6** depending on tier).
+- **Returns** `int`. How many distinct materials this depot can hold at once (**3** / **4** / **6** depending on tier).
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -16306,35 +18270,35 @@ Charges electric drones in the field and recovers heli drones for queued refueli
 3. Fabricate a **Drone Service Station Kit** on a **Fabricator**: 2× Machine Frame, 1× Control Unit, 2× Circuit Panel, 1× Battery Cell, and 1× Liquid Pipe Segment.
 4. Deploy it from your Inventory.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `.oil_in: FluidPort`
 
 Oil `FluidPort` for heli refueling. Call `self.oil_in.connect(...)` with an Oil Pump or oil tank's stable machine id or display name. A remote source also needs a completed conflict-free Liquid Pipe route between both locations.
 
-- **Returns** `FluidPort` for heli refueling supply. Call `connect(...)` with the provider's stable machine id or display name; local providers transfer directly and remote providers use completed liquid-pipe networks.
+- **Returns** `FluidPort`. Heli refueling supply. Call `connect(...)` with the provider's stable machine id or display name; local providers transfer directly and remote providers use completed liquid-pipe networks.
 
 ### Methods
 
@@ -16342,7 +18306,7 @@ Oil `FluidPort` for heli refueling. Call `self.oil_in.connect(...)` with an Oil 
 
 List of all drone ids (electric and heli) currently parked at this station. Read each drone's state via `get_component(id)`.
 
-- **Returns** List of all drone ids currently docked at this station (electric and heli). Read each drone's state via `get_component(id)`.
+- **Returns** `list[str]`. Ids of every drone docked at this station, electric and heli. Read each drone's state via `get_component(id)`.
 
 ##### `.charge(drone_id: str, target_level: float = 1.0) → ActionResult` *(self only)*
 
@@ -16442,13 +18406,13 @@ Abort the in-flight rescue. The drone is released at its current position (it ke
 
 `True` while the recovery vehicle is on a rescue mission.
 
-- **Returns** Boolean, `True` while the service vehicle is mid-mission.
+- **Returns** `bool`. `True` while the service vehicle is mid-mission.
 
 ##### `.get_rescue_target() → str`
 
 Mission target's display name while the recovery vehicle is outbound, servicing, carrying, or returning; empty string when idle.
 
-- **Returns** String, the mission target's display name while the service vehicle is outbound, servicing, carrying, or returning; empty string when idle.
+- **Returns** `str`. The mission target's display name while the service vehicle is outbound, servicing, carrying, or returning; empty string when idle.
 
 ##### `.stop(drone_id: str) → ActionResult` *(self only)*
 
@@ -16491,13 +18455,13 @@ Clear every active or queued charge and refuel job on this station. Docked drone
 
 List of drone ids currently occupying active service bays (charging or refueling). An oil-blocked heli is waiting, not active.
 
-- **Returns** List of drone ids currently occupying active service bays (charging or refueling). Oil-blocked heli jobs are waiting, not active.
+- **Returns** `list[str]`. Ids of the drones occupying active service bays (charging or refueling). Oil-blocked heli jobs are waiting, not active.
 
 ##### `.get_queue() → list[str]`
 
 One FIFO list of drone ids across electric charging and heli refueling. Oil-blocked helis stay in order while ready later jobs may use otherwise-idle bays.
 
-- **Returns** One FIFO list of queued drone ids across electric charging and heli refueling. Oil-blocked helis stay in this order while ready later jobs may use otherwise-idle bays.
+- **Returns** `list[str]`. Queued drone ids, first in first out, across electric charging and heli refueling. Oil-blocked helis stay in this order while ready later jobs may use otherwise-idle bays.
 
 ##### `.status(drone_id: str) → dict[str, JsonValue]`
 
@@ -16509,13 +18473,13 @@ Detailed status for one drone's service job. Electric drones return a dict with 
 | --- | --- | --- |
 | `drone_id` | `str` | Display name or id of a drone |
 
-- **Returns** A dict for the drone's active/queued service job. Electric: `state`, `target_level`, `battery_wh`, `capacity_wh`, `rate_w`, `bay_index`, `queue_index`. Heli: `state`, `target_level`, `oil_tons`, `capacity_tons`, `rate_tons_per_hour`, `bay_index`, `queue_index`.
+- **Returns** `dict[str, JsonValue]`. The drone's active or queued service job. Electric: `state`, `target_level`, `battery_wh`, `capacity_wh`, `rate_w`, `bay_index`, `queue_index`. Heli: `state`, `target_level`, `oil_tons`, `capacity_tons`, `rate_tons_per_hour`, `bay_index`, `queue_index`.
 
 ##### `.get_bay_count() → int`
 
 Number of simultaneous service bays.
 
-- **Returns** Number of simultaneous service bays
+- **Returns** `int`. How many drones can be serviced at once.
 
 ##### `.get_charge_rate(drone_id: str) → float`
 
@@ -16527,7 +18491,7 @@ Returns the Wh/h currently being pushed into the named electric drone (**0** if 
 | --- | --- | --- |
 | `drone_id` | `str` | Display name or id of a docked electric drone |
 
-- **Returns** Number, **Wh/h** currently being pushed into that electric drone (**0** if not being charged).
+- **Returns** `float`. **Wh/h** currently being pushed into that electric drone, **0** if it is not being charged.
 
 ##### `.get_refuel_rate(drone_id: str) → float`
 
@@ -16539,7 +18503,7 @@ Returns the oil t/h currently being pushed into the named heli drone (**0** if i
 | --- | --- | --- |
 | `drone_id` | `str` | Display name or id of a docked heli drone |
 
-- **Returns** Number, **t/h** currently being pushed into that heli drone (**0** if not being refueled).
+- **Returns** `float`. **t/h** currently being pushed into that heli drone, **0** if it is not being refueled.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -16551,23 +18515,23 @@ Read commands you send from the editor's **Commands** tab while this script runs
 
 Read Earth's current orders, future campaign requirements and rewards, and completed campaign history through `get_component("orders")`. Supply Dock scripts can use campaign and Weekly Orders to decide what to ship, while dashboards can show progress. Scripts cannot create or cancel Earth Orders. Bio Orders come from a Bio Exchange instead.
 
-**Returned by:** `get_component("orders")`
+**Access via:** `get_component("orders")`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -16575,19 +18539,19 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 Current contractor campaign Orders as a stable list of `Order` objects. These orders never expire and disappear from this list when fully shipped. Empty means no contractor shipment is currently available. See `Order`.
 
-- **Returns** List of current contractor campaign `Order` objects.
+- **Returns** `list[Order]`. Current contractor campaign orders.
 
 ##### `.list_upcoming_orders() → list[Order]`
 
 Plan future production and reward paths with upcoming contractor campaign Orders, in campaign declaration order, preserving each contractor's queue sequence. Excludes current orders, completed orders, and Weekly Earth Orders. Upcoming orders cannot be assigned to Supply Docks until they become current. See `Order`.
 
-- **Returns** List of future campaign `Order` objects with status `"upcoming"`, in campaign declaration order. Empty when no upcoming campaign orders remain.
+- **Returns** `list[Order]`. Future campaign orders (status `"upcoming"`), in campaign declaration order. Empty when no upcoming campaign orders remain.
 
 ##### `.list_weekly_orders() → list[Order]`
 
 The current five Weekly Earth Orders, including offers already fulfilled during this cycle. Returns an empty list until an eligible production chain is available. Weekly objects have `.kind == "weekly"`, `.expires_day`, no contractor, credits-only rewards, and `.status` of `"active"` or `"completed"`. The whole list is replaced every seven days.
 
-- **Returns** The current five Weekly Earth `Order` objects, including offers already fulfilled this cycle; an empty list until an eligible production chain is available.
+- **Returns** `list[Order]`. The current five Weekly Earth Orders, including offers already fulfilled this cycle. Empty until an eligible production chain is available.
 
 ##### `.get_order(order_id: str) → Order | None`
 
@@ -16599,13 +18563,13 @@ Look up a specific Earth Order by id, including upcoming campaign orders for pla
 | --- | --- | --- |
 | `order_id` | `str` | Earth Order id from `list_orders()`, `list_upcoming_orders()`, `list_weekly_orders()`, or `completed_orders()` |
 
-- **Returns** Campaign `Order` with status `"upcoming"`, `"active"`, or `"completed"`, or a Weekly Earth Order from the current board. Unknown or expired weekly ids return `None`. Bio Order ids are read from a Bio Exchange.
+- **Returns** `Order | None`. A campaign order with status `"upcoming"`, `"active"`, or `"completed"`, or a Weekly Earth Order from the current board. `None` for unknown or expired weekly ids. Bio Order ids are read from a Bio Exchange.
 
 ##### `.completed_orders() → list[Order]`
 
 Permanent contractor campaign history, ordered by completion time (oldest first). Weekly completions stay on the current Weekly board and are intentionally excluded from this ledger.
 
-- **Returns** List of Earth `Order` objects already delivered, in order of completion.
+- **Returns** `list[Order]`. Earth Orders already delivered, in order of completion.
 
 *Components / Logistics & Orders*
 
@@ -16613,23 +18577,23 @@ Permanent contractor campaign history, ordered by completion time (oldest first)
 
 Coordinates scripts through shared JSON-safe values. Access the Signal Bus with `get_component("comms")` after its research unlocks. Use `send()` and `receive()` for work that should be handled once; use `broadcast()` and `latest()` for the newest shared value.
 
-**Returned by:** `get_component("comms")`
+**Access via:** `get_component("comms")`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -16771,7 +18735,7 @@ Inspect all waiting messages on a channel in receive order without consuming the
 | --- | --- | --- |
 | `channel` | `str` | Channel id, 1-64 characters using letters, numbers, `_`, `.`, `:`, or `-` |
 
-- **Returns** List of copied CommsMessage entries in receive order, oldest first. Empty when no messages are waiting, including a missing channel or one with only a broadcast.
+- **Returns** `list[CommsMessage]`. Copied in receive order, oldest first. Empty when no messages are waiting, including a missing channel or one with only a broadcast.
 
 *Raises*
 
@@ -16877,7 +18841,7 @@ Return the most recent value broadcast on a channel, or `None` if the channel ha
 | --- | --- | --- |
 | `channel` | `str` | Channel id, 1-64 characters using letters, numbers, `_`, `.`, `:`, or `-` |
 
-- **Returns** Latest broadcast value on the channel, or `None` if nothing has been broadcast.
+- **Returns** `JsonValue`. Latest broadcast value on the channel, or `None` if nothing has been broadcast.
 
 *Raises*
 
@@ -16895,7 +18859,7 @@ Inspect the latest broadcast, who published it, and how long ago it was updated.
 | --- | --- | --- |
 | `channel` | `str` | Channel id, 1-64 characters using letters, numbers, `_`, `.`, `:`, or `-` |
 
-- **Returns** A BroadcastInfo snapshot with value, sender, and age_seconds, or `None` when the channel has no broadcast. Missing saved sender or timestamp information is `None` in the corresponding field.
+- **Returns** `BroadcastInfo | None`. `None` when the channel has no broadcast. Missing saved sender or timestamp information is `None` in the corresponding field.
 
 *Raises*
 
@@ -16913,7 +18877,7 @@ Number of queued messages waiting on the channel.
 | --- | --- | --- |
 | `channel` | `str` | Channel id, 1-64 characters using letters, numbers, `_`, `.`, `:`, or `-` |
 
-- **Returns** Number of queued messages on the channel.
+- **Returns** `int`. Messages queued on the channel.
 
 *Raises*
 
@@ -16925,7 +18889,7 @@ Number of queued messages waiting on the channel.
 
 All channel ids that currently have queued messages or a latest broadcast value.
 
-- **Returns** List of channel ids with queued or broadcast state.
+- **Returns** `list[str]`. Ids of the channels with queued or broadcast state.
 
 ##### `.clear(channel: str) → CountResult`
 
@@ -16965,35 +18929,35 @@ Ships finished goods to Earth at **25 units/h** before throughput research. A sc
 1. Requires the **Supply Logistics** research (Terraform Index 110,000).
 2. Buy from the Shop. Price starts at 5,000 cr and rises as you own more.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `.input: InputSlot`
 
 Load only what the active Order still needs with `connect(...)` and `take(...)`, or push from a parked cargo vehicle. Excess stays at the source, and active-order cargo stays reserved. After `clear_order()` or completion, use `eject(destination, item_id, count)` to recover leftovers to Inventory at Nocturna Base or local freight elsewhere. `flush()` destroys loaded cargo. Requires **Auto Feeders** research. See `InputSlot`.
 
-- **Returns** Order-aware `InputSlot` that accepts only the active Order's remaining need. After the Order clears or completes, `eject(...)` recovers leftover cargo to explicit local freight; `flush()` destroys it.
+- **Returns** `InputSlot`. Order-aware: accepts only the active Order's remaining need. After the Order clears or completes, `eject(...)` recovers leftover cargo to explicit local freight; `flush()` destroys it.
 
 ### Methods
 
@@ -17001,13 +18965,13 @@ Load only what the active Order still needs with `connect(...)` and `take(...)`,
 
 Total units still owed across every item of the active Order (the dock's remaining demand). Returns **0** when no Order is assigned. Use as the upper bound for how much you still need to load + ship.
 
-- **Returns** Number: total units still owed across the active Order; **0** when idle.
+- **Returns** `int`. Total units still owed across the active Order; **0** when idle.
 
 ##### `.total() → int`
 
 Sum of units currently loaded across every slot. Compare to `capacity()` to see how much more the dock still needs to ingest; `total() == 0` means every slot is empty.
 
-- **Returns** Number: current units summed across every slot.
+- **Returns** `int`. Current units summed across every slot.
 
 ##### `.count(item_id: str) → int`
 
@@ -17019,19 +18983,19 @@ Units of `item_id` currently held across the dock's slots. Returns **0** if the 
 | --- | --- | --- |
 | `item_id` | `str` | Item id to count |
 
-- **Returns** Number: units of `item_id` currently in any slot.
+- **Returns** `int`. Units of `item_id` currently in any slot.
 
 ##### `.slots() → list[DockSlot]`
 
 The dock's physical slots as a list of `DockSlot` objects (`.index`, `.item_id`, `.count`). Always **5** entries, indexed **0-4**; slots not opened by the current Order have `.item_id == None` and `.count == 0`. See `DockSlot`.
 
-- **Returns** List of `DockSlot` objects: one per physical slot (indexes **0-4**).
+- **Returns** `list[DockSlot]`. One per physical slot (indexes **0-4**).
 
 ##### `.current_order() → Order | None`
 
 Returns this dock's active Earth `Order`, or `None` if no Earth Order is assigned. Flips to `None` automatically when the Earth Order completes. Use it to read `.requires` and `.shipped` before deciding what to load.
 
-- **Returns** `Order` currently assigned to this dock, or `None`.
+- **Returns** `Order | None`. The order currently assigned to this dock, or `None`.
 
 ##### `.set_order(order_id: str) → ActionResult` *(self only)*
 
@@ -17094,25 +19058,25 @@ Toggle the continuous dispatcher. `True` resumes shipping; `False` pauses it. Lo
 
 `True` while the dispatcher is active. It becomes `False` after `set_enabled(False)` or when the assigned Order completes. A new dock starts enabled, so assigning an Order while cargo is loaded begins shipping immediately.
 
-- **Returns** Boolean: `True` when the dispatcher is active, `False` after `set_enabled(False)`. Newly deployed docks default to enabled.
+- **Returns** `bool`. `True` when the dispatcher is active, `False` after `set_enabled(False)`. Newly deployed docks default to enabled.
 
 ##### `.dispatch_rate() → float`
 
 The dispatcher's current effective throughput in **units/h**, already including throughput research and any outpost overcrowding penalty. The base rate is **25** (one unit every **2.4** minutes); **Bulk Logistics II** multiplies it by **4**, and **Bulk Logistics III** by **16**. Multiply this returned value by hours elapsed to predict how much the dock will ship.
 
-- **Returns** Number: current dispatcher throughput in **units/h**.
+- **Returns** `float`. Current dispatcher throughput, in **units/h**.
 
 ##### `.current_dispatch() → str | None`
 
 The `item_id` the dispatcher is currently emitting, or `None` when idle (no power, no Order, dispatcher paused via `set_enabled(False)`, or no shippable unit loaded). Useful for scripts that want to know which material is flowing right now.
 
-- **Returns** String item id currently being dispatched, or `None` when the dock is idle (no order, dispatcher paused, or no shippable unit loaded).
+- **Returns** `str | None`. The item id currently being dispatched, or `None` when the dock is idle (no order, dispatcher paused, or no shippable unit loaded).
 
 ##### `.dispatch_progress() → float`
 
 Fraction **0-1** of the current unit's accumulator toward emission. Holds at **0** while the dock has nothing shippable loaded, the charge starts when a shippable unit lands. Drives the perimeter-clock animation on the dock card; scripts can use it to estimate "next launch in X hours."
 
-- **Returns** Number in **0-1**: fraction of the current unit's accumulation toward emission. At **1.0** a unit is emitted and the counter resets.
+- **Returns** `float`. Fraction of the current unit's accumulation toward emission (**0-1**). At **1.0** a unit is emitted and the counter resets.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -17124,23 +19088,23 @@ Read commands you send from the editor's **Commands** tab while this script runs
 
 Manages planned construction and removal work. Plan Mode and scripts share the same queue. Scripts can place structures, pipes, power lines, and bridges, or mark existing structures for removal. Planning creates the map marker immediately without needing a vehicle at the site. A Pioneer with a Constructor Module must still travel to each job and call `self.constructor.execute(construction.id)` to perform the work.
 
-**Returned by:** `get_component("construction_blueprint")`
+**Access via:** `get_component("construction_blueprint")`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -17323,19 +19287,19 @@ Cancel a queued, active, or paused construction blueprint by id. Unpaid jobs can
 
 Returns blueprints awaiting a worker as `list[Construction]`. Drawn pipe/power paths and marked deconstruction targets are split into independent jobs, usually in placement order. Pass each `c.id` to `self.constructor.execute(c.id)` to build or deconstruct it. Read `c.required_item` and `c.required_count` to load the exact cargo before executing; never infer material from `c.kind`. Filter by `c.kind` to specialize a Pioneer's role, then use `c.medium` to distinguish `"gas"`, `"liquid"`, and `"power"` utility jobs. Point structures have `c.medium == None`; see `Construction.kind` for the full kind list.
 
-- **Returns** List of `Construction` snapshots awaiting a worker. Each has `.id`, `.kind`, `.medium`, `.position`, `.progress`, `.required_item`, `.required_count`. Iterate and pass `c.id` to `self.constructor.execute(c.id)` to build or deconstruct it.
+- **Returns** `list[Construction]`. Snapshots of constructions awaiting a worker. Pass each `c.id` to `self.constructor.execute(c.id)` to build or deconstruct it.
 
 ##### `.active_constructions() → list[Construction]`
 
 Returns blueprints currently being built (a Pioneer is working). Useful for monitor scripts, read `c.progress` to see how far along.
 
-- **Returns** List of `Construction` snapshots currently being built or removed (a Pioneer is working). Re-query for fresh `.progress`.
+- **Returns** `list[Construction]`. Snapshots of constructions being built or removed right now (a Pioneer is working). Re-query for fresh `.progress`.
 
 ##### `.paused_constructions() → list[Construction]`
 
 Returns blueprints started then abandoned (worker died, ran out of fuel, or script stopped). Any Pioneer can resume by navigating to `c.position` and calling `self.constructor.execute(c.id)`.
 
-- **Returns** List of `Construction` snapshots started then abandoned (worker died / left). Resumable by any Pioneer via `self.constructor.execute(c.id)`. Re-query for fresh `.progress`.
+- **Returns** `list[Construction]`. Snapshots of constructions started then abandoned (the worker died or left). Resumable by any Pioneer via `self.constructor.execute(c.id)`. Re-query for fresh `.progress`.
 
 *Components / Infrastructure & Fluids*
 
@@ -17355,29 +19319,29 @@ Captures gas from a cyclic exotic deposit during its active phase. Connect `self
 2. Fabricate a **Exotic Gas Cap Kit** on a **Fabricator**: 2× Titanium Ingot and 2× Gas Pipe Segment.
 3. Build it on a surveyed exotic deposit with a Pioneer's Constructor.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.gas_out: FluidPort`
 
 Fluid output for the buffered gas. This port may declare one destination with `self.gas_out.connect("Chlorine Tank")`; additional consumers may connect their own compatible input ports to this Cap. Because the Cap is a field structure, every destination needs a compatible completed Gas Pipe component reaching the Cap and the destination. `connected_to()` reports only this port's own declaration; `flow_rate()` reports total live release. See `FluidPort`.
 
-- **Returns** `FluidPort` for the deposit's gas. This port may declare one destination with `self.gas_out.connect("Chlorine Tank")`; additional consumers may connect their own compatible inputs to the Cap. Completed gas-pipe networks carry gas between outposts.
+- **Returns** `FluidPort`. The deposit's gas. This port may declare one destination with `self.gas_out.connect("Chlorine Tank")`; additional consumers may connect their own compatible inputs to the Cap. Completed gas-pipe networks carry gas between outposts.
 
 ### Methods
 
@@ -17385,35 +19349,35 @@ Fluid output for the buffered gas. This port may declare one destination with `s
 
 The `ExoticDeposit` this cap is bolted to, `.id`, `position()`, `fluid()`, `current_phase()`, cycle timing. Field availability is gated by the sonar tier that last surveyed the deposit: basic reveals phase only, wide adds rates, deep adds cycle timing. `None` if the cap isn't on a deposit. Use `deposit.current_phase()` to check whether the source is active. See `ExoticDeposit`.
 
-- **Returns** `ExoticDeposit` attached to this cap, or `None`. Its cycle, survey and collector methods read live state on each call: keep the object and call its methods for fresh readings. The `.surveyed` property remains a creation-time snapshot.
+- **Returns** `ExoticDeposit | None`. The deposit attached to this cap, or `None`. Its cycle, survey and collector methods read live state on each call: keep the object and call its methods for fresh readings. The `.surveyed` property remains a creation-time snapshot.
 
 ##### `.capture_rate() → float`
 
 Exotic gas captured from the deposit on the last flow tick in t/h. **0** during the deposit's dormant phase, or when the buffer is full and holding (see `is_venting()`). Already factors in current phase and buffer headroom, read it instead of computing from the deposit's rate. Updates once per flow tick.
 
-- **Returns** Number: exotic gas captured from the deposit this tick in t/h. **0** during the deposit's dormant phase, or when the buffer is full and holding (see `is_venting()`).
+- **Returns** `float`. Exotic gas captured from the deposit this tick, in t/h. **0** during the deposit's dormant phase, or when the buffer is full and holding (see `is_venting()`).
 
 ##### `.is_venting() → bool`
 
 `True` if active gas production exceeded the capture buffer's available space on the last flow tick. The excess is held upstream without losing gas. Dormancy returns `False` even with a full buffer, as does loss of power. This is a capture-space limit, unlike `is_stalled()`, which reports a blocked release. Open `self.set_throttle(...)` toward a tank with room.
 
-- **Returns** Boolean: `True` if active gas production exceeded the capture buffer's available space on the last flow tick. The excess is held upstream, not lost. `False` during dormancy even if the buffer is full, or when unpowered. Open `set_throttle(...)` to a tank with room.
+- **Returns** `bool`. `True` if active gas production exceeded the capture buffer's available space on the last flow tick. The excess is held upstream, not lost. `False` during dormancy even if the buffer is full, or when unpowered. Open `set_throttle(...)` to a tank with room.
 
 ##### `.is_stalled() → bool`
 
 `True` if, on the last flow tick, the powered cap had an open throttle and buffered gas available for release but could transfer none across its connected routes. An empty buffer, closed throttle, or lack of power does not report a stall.
 
-- **Returns** Boolean: `True` if, on the last flow tick, the powered cap had `throttle > 0` and buffered gas available for release but could transfer none across its connected routes. `False` when unpowered, the throttle is closed, or the buffer has no gas to release.
+- **Returns** `bool`. `True` if, on the last flow tick, the powered cap had `throttle > 0` and buffered gas available for release but could transfer none across its connected routes. `False` when unpowered, the throttle is closed, or the buffer has no gas to release.
 
 ##### `.throttle() → float`
 
 Current release-valve setting, `0.0` (holding) to `1.0` (wide open). Read it back after `set_throttle(...)`.
 
-- **Returns** Number (**0-1**): current release-valve setting.
+- **Returns** `float`. Current release-valve setting (**0-1**).
 
 ##### `.set_throttle(t: float) → ActionResult` *(self only)*
 
-Open the cap's release valve in the `0.0 to 1.0` range (clamped). `0` holds the buffer; `1.0` releases gas across reachable connected destinations as fast as buffer supply, headroom, and throughput allow. This script-owned setpoint resets to `0` when the script stops, ends, or errors. `[self only]`
+Open the cap's release valve from `0.0` to `1.0` (clamped). `0` holds the buffer; `1.0` releases gas across reachable connected destinations as fast as buffer supply, headroom, and throughput allow. This script-owned setpoint resets to `0` when the script stops, ends, or errors. `[self only]`
 
 *Parameters*
 
@@ -17453,29 +19417,29 @@ Captures liquid from a cyclic exotic spring during its active phase. Connect `se
 2. Fabricate a **Exotic Spring Tap Kit** on a **Fabricator**: 2× Titanium Ingot, 2× Liquid Pipe Segment, and 1× Pressure Valve.
 3. Build it on a surveyed exotic deposit with a Pioneer's Constructor.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.liquid_out: FluidPort`
 
 Fluid output for the buffered liquid. This port may declare one destination with `self.liquid_out.connect("Cryofluid Tank")`; additional consumers may connect their own compatible input ports to this Tap. Because the Tap is a field structure, every destination needs a compatible completed Liquid Pipe component reaching the Tap and the destination. `connected_to()` reports only this port's own declaration; `flow_rate()` reports total live release. See `FluidPort`.
 
-- **Returns** `FluidPort` for the deposit's liquid. This port may declare one destination with `self.liquid_out.connect("Cryofluid Tank")`; additional consumers may connect their own compatible inputs to the Tap. Completed liquid-pipe networks carry liquid between outposts.
+- **Returns** `FluidPort`. The deposit's liquid. This port may declare one destination with `self.liquid_out.connect("Cryofluid Tank")`; additional consumers may connect their own compatible inputs to the Tap. Completed liquid-pipe networks carry liquid between outposts.
 
 ### Methods
 
@@ -17483,35 +19447,35 @@ Fluid output for the buffered liquid. This port may declare one destination with
 
 The `ExoticDeposit` this tap is bolted to, `.id`, `position()`, `fluid()`, `current_phase()`, cycle timing. Field availability is gated by the sonar tier that last surveyed the deposit (basic / wide / deep). `None` if the tap isn't on a deposit. Use `deposit.current_phase()` to check whether the source is active. See `ExoticDeposit`.
 
-- **Returns** `ExoticDeposit` attached to this tap, or `None`. Its cycle, survey and collector methods read live state on each call: keep the object and call its methods for fresh readings. The `.surveyed` property remains a creation-time snapshot.
+- **Returns** `ExoticDeposit | None`. The deposit attached to this tap, or `None`. Its cycle, survey and collector methods read live state on each call: keep the object and call its methods for fresh readings. The `.surveyed` property remains a creation-time snapshot.
 
 ##### `.capture_rate() → float`
 
 Exotic liquid captured from the spring on the last flow tick in t/h. **0** during the deposit's dormant phase, or when the buffer is full and holding (see `is_venting()`). Already factors in current phase and buffer headroom. Updates once per flow tick.
 
-- **Returns** Number: exotic liquid captured from the spring this tick in t/h. **0** during the deposit's dormant phase, or when the buffer is full and holding (see `is_venting()`).
+- **Returns** `float`. Exotic liquid captured from the spring this tick, in t/h. **0** during the deposit's dormant phase, or when the buffer is full and holding (see `is_venting()`).
 
 ##### `.is_venting() → bool`
 
 `True` if active liquid production exceeded the capture buffer's available space on the last flow tick. The excess is held upstream without losing liquid. Dormancy returns `False` even with a full buffer, as does loss of power. This is a capture-space limit, unlike `is_stalled()`, which reports a blocked release. Open `self.set_throttle(...)` toward a tank with room.
 
-- **Returns** Boolean: `True` if active liquid production exceeded the capture buffer's available space on the last flow tick. The excess is held upstream, not lost. `False` during dormancy even if the buffer is full, or when unpowered. Open `set_throttle(...)` to a tank with room.
+- **Returns** `bool`. `True` if active liquid production exceeded the capture buffer's available space on the last flow tick. The excess is held upstream, not lost. `False` during dormancy even if the buffer is full, or when unpowered. Open `set_throttle(...)` to a tank with room.
 
 ##### `.is_stalled() → bool`
 
 `True` if, on the last flow tick, the powered tap had an open throttle and buffered liquid available for release but could transfer none across its connected routes. An empty buffer, closed throttle, or lack of power does not report a stall.
 
-- **Returns** Boolean: `True` if, on the last flow tick, the powered tap had `throttle > 0` and buffered liquid available for release but could transfer none across its connected routes. `False` when unpowered, the throttle is closed, or the buffer has no liquid to release.
+- **Returns** `bool`. `True` if, on the last flow tick, the powered tap had `throttle > 0` and buffered liquid available for release but could transfer none across its connected routes. `False` when unpowered, the throttle is closed, or the buffer has no liquid to release.
 
 ##### `.throttle() → float`
 
 Current release-valve setting, `0.0` (holding) to `1.0` (wide open). Read it back after `set_throttle(...)`.
 
-- **Returns** Number (**0-1**): current release-valve setting.
+- **Returns** `float`. Current release-valve setting (**0-1**).
 
 ##### `.set_throttle(t: float) → ActionResult` *(self only)*
 
-Open the tap's release valve in the `0.0 to 1.0` range (clamped). `0` holds the buffer; `1.0` releases liquid across reachable connected destinations as fast as buffer supply, headroom, and throughput allow. This script-owned setpoint resets to `0` when the script stops, ends, or errors. `[self only]`
+Open the tap's release valve from `0.0` to `1.0` (clamped). `0` holds the buffer; `1.0` releases liquid across reachable connected destinations as fast as buffer supply, headroom, and throughput allow. This script-owned setpoint resets to `0` when the script stops, ends, or errors. `[self only]`
 
 *Parameters*
 
@@ -17549,53 +19513,53 @@ A passive buffer that latches onto the first gas piped in (steam, ammonia, swamp
 1. Requires the **Gas Tank** research (Pressure 2.75).
 2. Buy from the Shop for 1,200 cr.
 
-**Returned by:** `get_component(id)`
+**Access via:** `get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `.gas_in: FluidPort`
 
 The latched gas id (e.g. `"steam"`, `"ammonia"`), or `""` while empty. The tank commits to the first gas it receives and holds only that until it drains to **0**, then re-latches.
 
-- **Returns** Neutral generic `FluidPort` input while empty. Call `connect(...)` with the provider's stable machine id or display name; the first exact gas delivered latches the tank.
+- **Returns** `FluidPort`. Accepts any gas while empty. Call `connect(...)` with the provider's stable machine id or display name; the first exact gas delivered latches the tank.
 
 ##### `.gas_out: FluidPort`
 
 The latched gas id (e.g. `"steam"`, `"ammonia"`), or `""` while empty. The tank commits to the first gas it receives and holds only that until it drains to **0**, then re-latches.
 
-- **Returns** Generic `FluidPort` output. It remains neutral while empty and provides the tank's latched exact gas to connected consumers.
+- **Returns** `FluidPort`. Neutral while empty; provides the tank's latched gas to connected consumers.
 
 ##### `.steam_in: FluidPort`
 
 The latched gas id (e.g. `"steam"`, `"ammonia"`), or `""` while empty. The tank commits to the first gas it receives and holds only that until it drains to **0**, then re-latches.
 
-- **Returns** `FluidPort` input for the tank's exact latched gas. This property exists only while `fluid()` is `"steam"`.
+- **Returns** `FluidPort`. `FluidPort` input for the tank's exact latched gas. This property exists only while `fluid()` is `"steam"`.
 
 ##### `.steam_out: FluidPort`
 
 The latched gas id (e.g. `"steam"`, `"ammonia"`), or `""` while empty. The tank commits to the first gas it receives and holds only that until it drains to **0**, then re-latches.
 
-- **Returns** `FluidPort` output for the tank's exact latched gas. This property exists only while `fluid()` is `"steam"`.
+- **Returns** `FluidPort`. `FluidPort` output for the tank's exact latched gas. This property exists only while `fluid()` is `"steam"`.
 
 ### Methods
 
@@ -17603,50 +19567,50 @@ The latched gas id (e.g. `"steam"`, `"ammonia"`), or `""` while empty. The tank 
 
 The latched gas id (e.g. `"steam"`, `"ammonia"`), or `""` while empty. The tank commits to the first gas it receives and holds only that until it drains to **0**, then re-latches.
 
-- **Returns** String: the latched gas id (e.g. `"steam"`, `"ammonia"`), or `""` while empty/unlatched.
+- **Returns** `str`. The latched gas id, or `""` while empty or unlatched.
 - **Possible values** `""`, `"steam"`, `"ammonia"`, `"swamp_gas"`, `"raw_sulfur_gas"`, `"sulfur_gas"`, `"raw_chlorine"`, `"chlorine"`
 
 ##### `.level() → float`
 
 Current gas stored in tons, from **0** to `capacity()`. Read each iteration to gauge the buffer, near **0** means downstream is about to starve; near `capacity()` means upstream is backpressured. At **0** the tank unlatches and can accept a different gas next.
 
-- **Returns** Number: current gas stored in tons.
+- **Returns** `float`. Gas stored now, in tons.
 
 ##### `.capacity() → float`
 
 Maximum tons of gas this tank holds, queryable rather than hardcoded so tank tuning doesn't break scripts. Use with `level()` for a fill-percent indicator, or directly via `fill_pct()`.
 
-- **Returns** Number: maximum gas capacity in tons.
+- **Returns** `float`. Maximum gas capacity, in tons.
 
 ##### `.fill_pct() → float`
 
 Fill fraction (**0.0-1.0**), shortcut for `level() / capacity()`. Use for threshold checks: `if self.fill_pct() < 0.2: # boost throttle upstream`.
 
-- **Returns** Number (**0-1**).
+- **Returns** `float`. A fraction, **0-1**.
 
 ##### `.inflow_rate() → float`
 
 Gas arriving in t/h. **0** means no upstream flow, for example a dormant source, unavailable relationship, incomplete remote route, or full tank. Compare to `outflow_rate()` to see if the tank is filling or draining.
 
-- **Returns** Number: gas arriving in t/h.
+- **Returns** `float`. Gas arriving, in t/h.
 
 ##### `.outflow_rate() → float`
 
 Gas leaving in t/h. **0** means downstream consumer is saturated or the pipe is disconnected.
 
-- **Returns** Number: gas leaving in t/h.
+- **Returns** `float`. Gas leaving, in t/h.
 
 ##### `.is_full() → bool`
 
 `True` when `level() == capacity()`, upstream backpressure is kicking in, and a Cap may start venting to atmosphere. Check it to detect when connected destinations cannot absorb current production.
 
-- **Returns** Boolean.
+- **Returns** `bool`
 
 ##### `.is_empty() → bool`
 
 `True` when `level() == 0`; the tank is unlatched and nothing can be sent downstream. If the source is still active while the tank remains empty, inspect the source and its pipe connection.
 
-- **Returns** Boolean.
+- **Returns** `bool`
 
 *Components / Infrastructure & Fluids*
 
@@ -17664,53 +19628,53 @@ A big passive tank holding 1,000 t of one liquid. Like a Liquid Tank it sticks t
 1. Requires the **Large Liquid Tank** research (Plants 900,000).
 2. Buy from the Shop for 15,000 cr.
 
-**Returned by:** `get_component(id)`
+**Access via:** `get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `.liquid_in: FluidPort`
 
 The latched liquid id (e.g. `"water"`, `"oil"`, `"frozen_essence"`), or `""` while empty. The tank commits to the first liquid it receives and holds only that until it drains to **0**, then re-latches.
 
-- **Returns** Neutral generic `FluidPort` input while empty. Call `connect(...)` with the provider's stable machine id or display name; the first exact liquid delivered latches the reservoir.
+- **Returns** `FluidPort`. Accepts any liquid while empty. Call `connect(...)` with the provider's stable machine id or display name; the first exact liquid delivered latches the reservoir.
 
 ##### `.liquid_out: FluidPort`
 
 The latched liquid id (e.g. `"water"`, `"oil"`, `"frozen_essence"`), or `""` while empty. The tank commits to the first liquid it receives and holds only that until it drains to **0**, then re-latches.
 
-- **Returns** Generic `FluidPort` output for the reservoir's latched liquid.
+- **Returns** `FluidPort`. Carries the reservoir's latched liquid.
 
 ##### `.water_in: FluidPort`
 
 The latched liquid id (e.g. `"water"`, `"oil"`, `"frozen_essence"`), or `""` while empty. The tank commits to the first liquid it receives and holds only that until it drains to **0**, then re-latches.
 
-- **Returns** `FluidPort` input for the tank's exact latched liquid. This property exists only while `fluid()` is `"water"`.
+- **Returns** `FluidPort`. `FluidPort` input for the tank's exact latched liquid. This property exists only while `fluid()` is `"water"`.
 
 ##### `.water_out: FluidPort`
 
 The latched liquid id (e.g. `"water"`, `"oil"`, `"frozen_essence"`), or `""` while empty. The tank commits to the first liquid it receives and holds only that until it drains to **0**, then re-latches.
 
-- **Returns** `FluidPort` output for the tank's exact latched liquid. This property exists only while `fluid()` is `"water"`.
+- **Returns** `FluidPort`. `FluidPort` output for the tank's exact latched liquid. This property exists only while `fluid()` is `"water"`.
 
 ### Methods
 
@@ -17718,50 +19682,50 @@ The latched liquid id (e.g. `"water"`, `"oil"`, `"frozen_essence"`), or `""` whi
 
 The latched liquid id (e.g. `"water"`, `"oil"`, `"frozen_essence"`), or `""` while empty. The tank commits to the first liquid it receives and holds only that until it drains to **0**, then re-latches.
 
-- **Returns** String: the latched liquid id, or `""` while empty/unlatched.
+- **Returns** `str`. The latched liquid id, or `""` while empty or unlatched.
 - **Possible values** `""`, `"water"`, `"oil"`, `"frozen_essence"`, `"coastal_essence"`, `"geothermal_essence"`, `"volcanic_essence"`, `"deep_essence"`, `"brine"`, `"raw_cryofluid"`, `"cryofluid"`, `"raw_quicksilver"`, `"quicksilver"`
 
 ##### `.level() → float`
 
 Current liquid stored in tons, from **0** to `capacity()`. At **0** the tank unlatches and can accept a different liquid next.
 
-- **Returns** Number: current liquid stored in tons.
+- **Returns** `float`. Liquid stored now, in tons.
 
 ##### `.capacity() → float`
 
 Maximum tons this tank holds. Queryable rather than hardcoded. Use with `level()` or `fill_pct()` for threshold checks.
 
-- **Returns** Number: maximum capacity in tons.
+- **Returns** `float`. Maximum capacity, in tons.
 
 ##### `.fill_pct() → float`
 
 Fill fraction (**0.0-1.0**), shortcut for `level() / capacity()`. Common threshold in supply-control scripts.
 
-- **Returns** Number (**0-1**).
+- **Returns** `float`. A fraction, **0-1**.
 
 ##### `.inflow_rate() → float`
 
 Liquid arriving in t/h. **0** = no upstream flow.
 
-- **Returns** Number: liquid arriving in t/h.
+- **Returns** `float`. Liquid arriving, in t/h.
 
 ##### `.outflow_rate() → float`
 
 Liquid leaving in t/h. **0** = no downstream consumer drawing.
 
-- **Returns** Number: liquid leaving in t/h.
+- **Returns** `float`. Liquid leaving, in t/h.
 
 ##### `.is_full() → bool`
 
 `True` when `level() == capacity()`; upstream source is backpressured.
 
-- **Returns** Boolean.
+- **Returns** `bool`
 
 ##### `.is_empty() → bool`
 
 `True` when `level() == 0`; the tank is unlatched and downstream consumers are starved.
 
-- **Returns** Boolean.
+- **Returns** `bool`
 
 *Components / Infrastructure & Fluids*
 
@@ -17779,53 +19743,53 @@ Passive buffer that holds any one liquid, water, oil, or a biome essence. It com
 1. Requires the **Liquid Tank** research (Oxygen 400).
 2. Buy from the Shop for 900 cr.
 
-**Returned by:** `get_component(id)`
+**Access via:** `get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `.liquid_in: FluidPort`
 
 The latched liquid id (e.g. `"water"`, `"oil"`, `"frozen_essence"`), or `""` while empty. The tank commits to the first liquid it receives and holds only that until it drains to **0**, then re-latches.
 
-- **Returns** Neutral generic `FluidPort` input while empty. Call `connect(...)` with the provider's stable machine id or display name; the first exact liquid delivered latches the tank.
+- **Returns** `FluidPort`. Accepts any liquid while empty. Call `connect(...)` with the provider's stable machine id or display name; the first exact liquid delivered latches the tank.
 
 ##### `.liquid_out: FluidPort`
 
 The latched liquid id (e.g. `"water"`, `"oil"`, `"frozen_essence"`), or `""` while empty. The tank commits to the first liquid it receives and holds only that until it drains to **0**, then re-latches.
 
-- **Returns** Generic `FluidPort` output. It remains neutral while empty and provides the tank's latched exact liquid to connected consumers.
+- **Returns** `FluidPort`. Neutral while empty; provides the tank's latched liquid to connected consumers.
 
 ##### `.water_in: FluidPort`
 
 The latched liquid id (e.g. `"water"`, `"oil"`, `"frozen_essence"`), or `""` while empty. The tank commits to the first liquid it receives and holds only that until it drains to **0**, then re-latches.
 
-- **Returns** `FluidPort` input for the tank's exact latched liquid. This property exists only while `fluid()` is `"water"`.
+- **Returns** `FluidPort`. `FluidPort` input for the tank's exact latched liquid. This property exists only while `fluid()` is `"water"`.
 
 ##### `.water_out: FluidPort`
 
 The latched liquid id (e.g. `"water"`, `"oil"`, `"frozen_essence"`), or `""` while empty. The tank commits to the first liquid it receives and holds only that until it drains to **0**, then re-latches.
 
-- **Returns** `FluidPort` output for the tank's exact latched liquid. This property exists only while `fluid()` is `"water"`.
+- **Returns** `FluidPort`. `FluidPort` output for the tank's exact latched liquid. This property exists only while `fluid()` is `"water"`.
 
 ### Methods
 
@@ -17833,50 +19797,50 @@ The latched liquid id (e.g. `"water"`, `"oil"`, `"frozen_essence"`), or `""` whi
 
 The latched liquid id (e.g. `"water"`, `"oil"`, `"frozen_essence"`), or `""` while empty. The tank commits to the first liquid it receives and holds only that until it drains to **0**, then re-latches.
 
-- **Returns** String: the latched liquid id (e.g. `"water"`, `"oil"`, `"frozen_essence"`), or `""` while empty/unlatched.
+- **Returns** `str`. The latched liquid id (e.g. `"water"`, `"oil"`, `"frozen_essence"`), or `""` while empty or unlatched.
 - **Possible values** `""`, `"water"`, `"oil"`, `"frozen_essence"`, `"coastal_essence"`, `"geothermal_essence"`, `"volcanic_essence"`, `"deep_essence"`, `"brine"`, `"raw_cryofluid"`, `"cryofluid"`, `"raw_quicksilver"`, `"quicksilver"`
 
 ##### `.level() → float`
 
 Current liquid stored in tons, from **0** to `capacity()`. At **0** the tank unlatches and can accept a different liquid next.
 
-- **Returns** Number: current liquid stored in tons.
+- **Returns** `float`. Liquid stored now, in tons.
 
 ##### `.capacity() → float`
 
 Maximum tons this tank holds. Queryable rather than hardcoded. Use with `level()` or `fill_pct()` for threshold checks.
 
-- **Returns** Number: maximum capacity in tons.
+- **Returns** `float`. Maximum capacity, in tons.
 
 ##### `.fill_pct() → float`
 
 Fill fraction (**0.0-1.0**), shortcut for `level() / capacity()`. Common threshold in supply-control scripts.
 
-- **Returns** Number (**0-1**).
+- **Returns** `float`. A fraction, **0-1**.
 
 ##### `.inflow_rate() → float`
 
 Liquid arriving in t/h. **0** = no upstream flow.
 
-- **Returns** Number: liquid arriving in t/h.
+- **Returns** `float`. Liquid arriving, in t/h.
 
 ##### `.outflow_rate() → float`
 
 Liquid leaving in t/h. **0** = no downstream consumer drawing.
 
-- **Returns** Number: liquid leaving in t/h.
+- **Returns** `float`. Liquid leaving, in t/h.
 
 ##### `.is_full() → bool`
 
 `True` when `level() == capacity()`; upstream source is backpressured.
 
-- **Returns** Boolean.
+- **Returns** `bool`
 
 ##### `.is_empty() → bool`
 
 `True` when `level() == 0`; the tank is unlatched and downstream consumers are starved.
 
-- **Returns** Boolean.
+- **Returns** `bool`
 
 *Components / Infrastructure & Fluids*
 
@@ -17897,29 +19861,29 @@ Extracts oil from a surveyed well at a throttle your script sets. Oil wells run 
 2. Fabricate a **Oil Pump** on a **Fabricator**: 2× Iron Ingot, 1× Titanium Ingot, 1× Pressure Valve, and 1× Circuit Panel.
 3. Build it on a surveyed oil well with a Pioneer's Constructor.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.oil_out: FluidPort`
 
 Fluid output for oil. This port may declare one destination with `self.oil_out.connect("Oil Reserve")`; additional consumers may connect their own `oil_in` ports to this Pump. Because the Pump is a field structure, every destination needs a compatible completed Liquid Pipe component reaching the Pump and the destination. `connected_to()` reports only this output port's declaration; `flow_rate()` reports total live delivery. The Pump stores nothing, so `level()` reads **0**. See `FluidPort`.
 
-- **Returns** `FluidPort` routing oil to a connected target. Call `connect(...)` with the target's stable machine id or display name, then open `set_throttle(...)`. Completed liquid-pipe networks carry oil between outposts.
+- **Returns** `FluidPort`. Routes oil to a connected target. Call `connect(...)` with the target's stable machine id or display name, then open `set_throttle(...)`. Completed liquid-pipe networks carry oil between outposts.
 
 ### Methods
 
@@ -17927,31 +19891,31 @@ Fluid output for oil. This port may declare one destination with `self.oil_out.c
 
 The `OilWell` this pump is bolted to. Same shape as `WaterWell`, yield tier (1×/2×/3×) and base flow rate.
 
-- **Returns** `OilWell` snapshot for the well this pump is on: `.id`, `position()`, `yield_tier()`, `flow_rate()`.
+- **Returns** `OilWell`. A snapshot of the well this pump is on.
 
 ##### `.pump_rate() → float`
 
 Total oil delivered across every reachable connected destination this tick, in t/h. **0** when throttle is **0**, the well is dormant, or no destination can accept flow. See `is_stalled()` to tell a routing block from a dormant well.
 
-- **Returns** Number: total oil delivered across every reachable connected destination this tick, in t/h. **0** when throttle is **0**, the well is dormant, or no destination can accept flow.
+- **Returns** `float`. Total oil delivered across every reachable connected destination this tick, in t/h. **0** when throttle is **0**, the well is dormant, or no destination can accept flow.
 
 ##### `.well_active() → bool`
 
 Reads the well's pulse. `True`, the well below is in its active phase and delivers at full rate. `False`, dormant: no oil at any throttle, typically for several hours. Bank oil in a downstream Liquid Tank and throttle down during the gap to save watts.
 
-- **Returns** Boolean: `True` while the well below is in its active phase. Dormant wells deliver nothing at any throttle: bank oil in a downstream Liquid Tank to ride the gap.
+- **Returns** `bool`. `True` while the well below is in its active phase. Dormant wells deliver nothing at any throttle: bank oil in a downstream Liquid Tank to ride the gap.
 
 ##### `.is_stalled() → bool`
 
 `True` if, on the last flow tick, the powered pump had an open throttle and oil available from its active well but could transfer none across its connected routes. Dormancy, a closed throttle, or lack of power does not report a stall. Declare a destination with `self.oil_out.connect(...)`, or let consumers connect their own `oil_in` ports to this Pump.
 
-- **Returns** `True` if, on the last flow tick, the powered pump had `throttle > 0` and oil available from its active well but could transfer none across its connected routes. `False` when unpowered, the throttle is closed, or the well supplies no oil, including during dormancy.
+- **Returns** `bool`. `True` if, on the last flow tick, the powered pump had `throttle > 0` and oil available from its active well but could transfer none across its connected routes. `False` when unpowered, the throttle is closed, or the well supplies no oil, including during dormancy.
 
 ##### `.throttle() → float`
 
 Current throttle setting (**0-1**). **0** by default.
 
-- **Returns** Number (**0-1**).
+- **Returns** `float`. The throttle setting (**0-1**).
 
 ##### `.set_throttle(rate: float) → ActionResult` *(self only)*
 
@@ -17983,7 +19947,7 @@ Read commands you send from the editor's **Commands** tab while this script runs
 
 Represents a home or player-founded outpost. Look one up by stable id with `get_component("outpost_1")` or by display name with `get_component_by_name("Mining Camp")`. Players can rename outposts from the Computer System tab, so use the id for scripts that must survive renames.
 
-**Returned by:** `get_component("outpost")`
+**Access via:** `get_component("outpost")`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
@@ -17993,7 +19957,7 @@ Represents a home or player-founded outpost. Look one up by stable id with `get_
 
 Immutable instance id (e.g. `"outpost_home"`, `"outpost_1"`). Use this in scripts that need to outlive renames.
 
-- **Returns** String (immutable instance id, e.g. "outpost_home", "outpost_1")
+- **Returns** `str`. Immutable instance id, e.g. `"outpost_home"` or `"outpost_1"`.
 
 ### Methods
 
@@ -18001,37 +19965,37 @@ Immutable instance id (e.g. `"outpost_home"`, `"outpost_1"`). Use this in script
 
 Display name. The home outpost starts as `"Nocturna Base"`; player-founded outposts start as `"Outpost N"`. Freely renameable from the Computer System tab. Mutable, prefer `id` for stable references.
 
-- **Returns** String (outpost display name, freely renameable)
+- **Returns** `str`. The outpost's display name, freely renameable.
 
 ##### `.coords() → list[int]`
 
 World coordinates as `[x, y]`. Home outpost sits at `[0, 0]`.
 
-- **Returns** List [x, y] (world coordinates of the outpost anchor)
+- **Returns** `list[int]`. `[x, y]`: world coordinates of the outpost anchor.
 
 ##### `.buildings_used() → int`
 
 Number of buildings deployed at this outpost. Sensors, mobile units, structural hubs, and POI extraction don't count.
 
-- **Returns** Number (buildings deployed at this outpost)
+- **Returns** `int`. Buildings deployed at this outpost.
 
 ##### `.buildings_capacity() → int`
 
 Soft building threshold at this outpost. Each counted building above it reduces productive and service throughput. Nocturna Base has a few extra starter slots; player-founded outposts use the standard threshold.
 
-- **Returns** Number (soft building threshold at this outpost)
+- **Returns** `int`. Soft building threshold at this outpost.
 
 ##### `.is_full() → bool`
 
 Returns `True` when this outpost has reached or exceeded its soft building threshold. The threshold itself does not block ordinary deployment.
 
-- **Returns** Boolean (true if the soft building threshold is reached or exceeded)
+- **Returns** `bool`. `True` if the soft building threshold is reached or exceeded.
 
 ##### `.is_home() → bool`
 
 Returns `True` when this is the home outpost.
 
-- **Returns** Boolean (true if this is the home outpost)
+- **Returns** `bool`. `True` if this is the home outpost.
 
 ##### `.buildings(type_id?: str) → list[BuildingRef]`
 
@@ -18043,7 +20007,7 @@ Lists buildings deployed at this outpost as `BuildingRef` snapshots. Call `self.
 | --- | --- | --- |
 | `type_id` | `str` | Optional building type id used to filter the returned list. |
 
-- **Returns** List of BuildingRef: one per building deployed here. Pass type_id (e.g. "storage_bin") to filter, or omit for every building. Empty list if no buildings match.
+- **Returns** `list[BuildingRef]`. One per building deployed here. Pass `type_id` (e.g. `"storage_bin"`) to filter, or omit it for every building. Empty if no buildings match.
 
 ##### `.harvesting_machines(type_id?: str) → list[HarvestingMachineRef]`
 
@@ -18055,7 +20019,7 @@ Lists fixed machines deployed on this outpost's Harvesting field as `HarvestingM
 | --- | --- | --- |
 | `type_id` | `str` | Optional fixed Harvesting-field machine type id used to filter the returned list. |
 
-- **Returns** List of HarvestingMachineRef snapshots for fixed machines on this outpost's Harvesting field. Pass type_id to filter, or omit for Grow Lamps, Sprinklers, Dispensers, and Crop Automators. Only Nocturna Base has this field; founded outposts return an empty list.
+- **Returns** `list[HarvestingMachineRef]`. Snapshots of the fixed machines on this outpost's Harvesting field. Pass `type_id` to filter, or omit it for Grow Lamps, Sprinklers, Dispensers, and Crop Automators. Only Nocturna Base has this field; founded outposts return an empty list.
 
 *Components / Infrastructure & Fluids*
 
@@ -18063,23 +20027,23 @@ Lists fixed machines deployed on this outpost's Harvesting field as `HarvestingM
 
 Read-only index of every owned outpost, including home. Use it for routing, deployment planning, capacity dashboards, and nearest-service decisions without hardcoding `outpost_1`, `outpost_2`, etc. An outpost's `.x` and `.y` identify its footprint anchor. For an at-building action, select that outpost's `BuildingRef` and route to `.position`. Construction planning belongs to Plan Mode and the shared `construction_blueprint` component; physical work belongs to Constructor scripts.
 
-**Returned by:** `get_component("outpost_network")`
+**Access via:** `get_component("outpost_network")`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -18087,13 +20051,13 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 All owned outposts as `OutpostRef` snapshots. Each ref includes `.id`, `.name`, `.x`, `.y`, `.is_home`, `.buildings_used`, `.buildings_capacity`, and `.is_full`. The coordinates are the top-left footprint anchor, not a particular building's docking point.
 
-- **Returns** List of `OutpostRef` snapshots. Re-query for fresh names/building counts.
+- **Returns** `list[OutpostRef]`. Snapshots. Re-query for fresh names and building counts.
 
 ##### `.home() → OutpostRef`
 
 The home outpost as an `OutpostRef`.
 
-- **Returns** `OutpostRef` snapshot
+- **Returns** `OutpostRef`. A snapshot.
 
 ##### `.nearest(x: float, y: float) → OutpostRef`
 
@@ -18106,7 +20070,7 @@ Nearest owned outpost to the given world coordinate. Useful before routing a veh
 | `x` | `float` | World X coordinate |
 | `y` | `float` | World Y coordinate |
 
-- **Returns** Nearest `OutpostRef` snapshot
+- **Returns** `OutpostRef`. A snapshot of the nearest outpost.
 
 *Components / Infrastructure & Fluids*
 
@@ -18114,23 +20078,23 @@ Nearest owned outpost to the given world coordinate. Useful before routing a veh
 
 Discover every independent power grid, inspect connected outposts, buildings, and field power structures, read generation, consumption, battery charge, and Lightning reserve, or operate machine breakers from one shared controller. Grid objects are snapshots of the latest completed power allocation. After changing a breaker or rewiring infrastructure, re-query on the next loop iteration for refreshed grid totals and membership.
 
-**Returned by:** `get_component("power_control")`
+**Access via:** `get_component("power_control")`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -18138,7 +20102,7 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 Returns every independent power grid on the planet as a fresh list of `PowerGrid` snapshots. Isolated completed outposts and field structures appear as their own grids, so scripts do not need to guess or hardcode grid ids.
 
-- **Returns** Fresh list of every independent `PowerGrid` snapshot on the planet.
+- **Returns** `list[PowerGrid]`. A fresh snapshot of every independent grid on the planet.
 
 ##### `.grid(target_id: str) → PowerGrid | None`
 
@@ -18163,7 +20127,7 @@ Finds the grid containing `target_id`, which may be an outpost, building, or fie
 
 Returns a planet-wide `PowerSummary` across every independent grid. Conventional battery storage and Lightning reserve remain separate so automation can decide which supply it is relying on.
 
-- **Returns** Planet-wide `PowerSummary` snapshot across every independent grid.
+- **Returns** `PowerSummary`. A planet-wide snapshot across every independent grid.
 
 ##### `.is_powered(machine_id: str) → bool`
 
@@ -18175,7 +20139,7 @@ Returns `True` when the named machine is currently switched on. Unknown machine 
 | --- | --- | --- |
 | `machine_id` | `str` | Machine instance id |
 
-- **Returns** Boolean: `True` when the named machine is powered on.
+- **Returns** `bool`. `True` when the named machine is powered on.
 
 ##### `.can_power_off(machine_id: str) → bool`
 
@@ -18187,7 +20151,7 @@ Returns `True` when the named machine exists and has a visible breaker toggle. T
 | --- | --- | --- |
 | `machine_id` | `str` | Machine instance id |
 
-- **Returns** Boolean: `True` when the named machine exposes a breaker/power toggle.
+- **Returns** `bool`. `True` when the named machine exposes a breaker/power toggle.
 
 ##### `.set_powered(machine_id: str, on: bool) → ActionResult`
 
@@ -18229,23 +20193,23 @@ for grid in power.grids():
 
 Inspect machine scripts, discover and apply saved variants, and control execution remotely. Shared start/stop controller for machine scripts, the remote equivalent of a machine card's Run / Stop buttons. Use it to build a supervisor: one script that watches the base and shuts down another machine when it detects a fault, without parking that machine in a permanent `sleep` loop. This is the **run/stop axis**, separate from `power_control` (the breaker): `stop` ends a script and latches it off, while a power toggle only pauses and auto-resumes.
 
-**Returned by:** `get_component("run_control")`
+**Access via:** `get_component("run_control")`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -18342,7 +20306,7 @@ Returns `True` when the named machine has a script actively scheduled, including
 | --- | --- | --- |
 | `machine_id` | `str` | Machine instance id |
 
-- **Returns** Boolean: `True` when the named machine has a script actively scheduled (running, including mid-`sleep`/mid-action). A paused, stopped, completed, or errored script reads `False`.
+- **Returns** `bool`. `True` when the named machine has a script actively scheduled (running, including mid-`sleep`/mid-action). A paused, stopped, completed, or errored script reads `False`.
 
 ##### `.stop(machine_id: str) → ActionResult`
 
@@ -18415,23 +20379,23 @@ for variant in run.variants("o2gen_1"):
 
 Manages the hardware roster: deploy a machine, vehicle, or drone from Inventory into an outpost, remove one back to Inventory, decommission an emptied outpost, and rename anything you own. These are the Inventory page's Deploy button and the Computer's System tab, reached from a script. Every call needs Ship Computer research; the buttons themselves keep working before it.
 
-**Returned by:** `get_component("computer")`
+**Access via:** `get_component("computer")`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -18462,8 +20426,8 @@ Deploy one unit of an inventory item into an outpost, defaulting to home. The ma
 | `"location_not_found"` | rejection | The requested outpost does not exist or is not operational. |
 | `"wrong_biome_for_machine"` | rejection | This machine only operates in another biome. |
 | `"duplicate_outpost_machine"` | rejection | This outpost already has a machine of this type, and only one is allowed. |
-| `"missing_drone_station"` | rejection | The target outpost has no drone station to assemble a drone at. |
-| `"drone_station_full"` | rejection | Every drone station bay at the target outpost is occupied. |
+| `"missing_drone_station"` | rejection | The target outpost has no Drone Depot to assemble a drone at. |
+| `"drone_station_full"` | rejection | Every Drone Depot bay at the target outpost is occupied. |
 
 ##### `.undeploy(machine: str | Component) → ActionResult`
 
@@ -18495,7 +20459,7 @@ Remove a deployed machine, vehicle, or drone and return its kit, mounted modules
 
 ##### `.decommission(outpost: str | Outpost) → ActionResult`
 
-Remove a founded outpost and return its Outpost Kit to Inventory. The outpost must hold no machines; nothing is cascade-destroyed. Pipes, power lines, and bridges that touched it stay on the map for a Pioneer to reclaim. The home outpost is permanent.
+Remove a founded outpost and return its Outpost Kit to Inventory. The outpost must hold no machines; nothing is cascade-destroyed. Drones and vehicles don't belong to an outpost, so they never block it. Pipes, power lines, and bridges that touched it stay on the map for a Pioneer to reclaim. The home outpost is permanent.
 
 *Parameters*
 
@@ -18563,41 +20527,41 @@ Converts incoming steam into clean water at a 1:1 mass ratio. Scripted throttle 
 1. Requires the **Steam Condensation** research (Plants 1,000,000).
 2. Buy from the Shop for 50,000 cr.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `.steam_in: FluidPort`
 
 Steam input port. Connect a Thermal Cap or a steam-latched Gas Tank. Its 250 t internal buffer is consumed by condensation after the grid powers the machine.
 
-- **Returns** `FluidPort` accepting steam from a Thermal Cap or Gas Tank.
+- **Returns** `FluidPort`. Accepts steam from a Thermal Cap or Gas Tank.
 
 ##### `.water_out: FluidPort`
 
 Clean-water output port. Connect a Liquid Tank, Large Liquid Tank, Plant Terraformer, Sprinkler, or other water consumer. Its 250 t internal buffer backpressures condensation when full.
 
-- **Returns** `FluidPort` supplying the condensed clean water.
+- **Returns** `FluidPort`. Supplies the condensed clean water.
 
 ### Methods
 
@@ -18605,32 +20569,32 @@ Clean-water output port. Connect a Liquid Tank, Large Liquid Tank, Plant Terrafo
 
 Clean water produced on the last simulation tick in t/h. Full throttle reaches **250 t/h** when the steam input has supply, the water output has room, and the host outpost is not overcrowded.
 
-- **Returns** Number: clean water produced on the last tick in t/h.
+- **Returns** `float`. Clean water produced on the last tick, in t/h.
 
 ##### `.efficiency() → float`
 
 Fraction of the throttle's requested condensation completed on the last tick (**0.0-1.0**). Low values mean the steam input ran short or the water output filled before the tick completed.
 
-- **Returns** Number (**0-1**): fraction of requested condensation completed.
+- **Returns** `float`. Fraction of requested condensation completed (**0-1**).
 
 ##### `.is_stalled() → bool`
 
 `True` when throttle is above zero and the current fluid state blocks condensation because `steam_in` is empty or `water_out` is full. This is derived immediately from both ports; use `status()` to distinguish the blockers.
 
-- **Returns** Boolean: `True` when steam is empty or the water buffer is full while throttle is open.
+- **Returns** `bool`. `True` when steam is empty or the water buffer is full while throttle is open.
 
 ##### `.status() → str`
 
 Current actionable state: `"idle"`, `"no_power"`, `"no_steam"`, `"output_full"`, or `"running"`. This is derived live from throttle, power, and both fluid buffers. Once throttle is **0**, it reports `"idle"`; inspect port levels to decide when to reopen it.
 
-- **Returns** One of `"idle"`, `"no_power"`, `"no_steam"`, `"output_full"`, or `"running"`.
+- **Returns** `str`
 - **Possible values** `"idle"`, `"no_power"`, `"no_steam"`, `"output_full"`, `"running"`
 
 ##### `.throttle() → float`
 
 Current condensation setpoint (**0.0-1.0**). It scales steam use, water output, and power draw linearly.
 
-- **Returns** Number (**0-1**): current condensation setpoint.
+- **Returns** `float`. Current condensation setpoint (**0-1**).
 
 ##### `.set_throttle(t: float) → ActionResult` *(self only)*
 
@@ -18675,29 +20639,29 @@ Captures Steam from a thermal vent. If its chamber reaches 100%, every stored to
 2. Fabricate a **Thermal Cap Kit** on a **Fabricator**: 2× Titanium Ingot and 2× Gas Pipe Segment.
 3. Build it on a surveyed thermal vent with a Pioneer's Constructor.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.steam_out: FluidPort`
 
 Fluid output for the chamber's steam. This port may declare one destination with `self.steam_out.connect("bio_caster_1")`; additional consumers may connect their own `steam_in` ports to this Cap. Because the Cap is a field structure, every destination needs a compatible completed Gas Pipe component reaching the Cap and the destination. `connected_to()` reports only this output port's own declaration; `flow_rate()` reports total live release. See `FluidPort`.
 
-- **Returns** `FluidPort` for chamber steam. This port may declare one destination with `connect("bio_caster_1")`; additional consumers may connect their own `steam_in` ports to the Cap. Completed gas-pipe networks carry steam between outposts.
+- **Returns** `FluidPort`. Chamber steam. This port may declare one destination with `connect("bio_caster_1")`; additional consumers may connect their own `steam_in` ports to the Cap. Completed gas-pipe networks carry steam between outposts.
 
 ### Methods
 
@@ -18705,54 +20669,54 @@ Fluid output for the chamber's steam. This port may declare one destination with
 
 The `ThermalVent` this cap sits on. Field availability follows the sonar tier that last surveyed the vent: basic reveals phase, wide adds steam rates, deep adds cycle timing. Use `self.vent().current_phase()` (or the cap's own `phase()`) to know when steam is coming. See `ThermalVent`.
 
-- **Returns** `ThermalVent` for the vent this cap sits on. Read `current_phase()` / `next_phase_in()` / rates off it, or use the cap's own `phase()` / `next_phase_in()`.
+- **Returns** `ThermalVent`. The vent this cap sits on. Read `current_phase()` / `next_phase_in()` / rates off it, or use the cap's own `phase()` / `next_phase_in()`.
 
 ##### `.phase() → str | None`
 
 `"active"` while the vent produces steam (your chamber fills) or `"dormant"` while it rests (the chamber only drains). `None` until the vent is surveyed. Drive your release loop off this: open the throttle when active, ease it when dormant so you do not run downstream dry.
 
-- **Returns** `"active"` while the vent produces steam (chamber fills), `"dormant"` while it rests. `None` until the vent is surveyed. Ease the throttle in dormancy so you do not run downstream dry.
+- **Returns** `str | None`. `"active"` while the vent produces steam (chamber fills), `"dormant"` while it rests. `None` until the vent is surveyed. Ease the throttle in dormancy so you do not run downstream dry.
 - **Possible values** `"active"`, `"dormant"`
 
 ##### `.next_phase_in() → float | None`
 
 Game-minutes until the vent flips between active and dormant, so you can open up before a surge or ease off before a dry spell. Returns `None` unless the vent was **Deep**-surveyed, so a predictive loop is the payoff for deep sonar.
 
-- **Returns** Game-minutes until the vent flips phase, to pre-empt a surge or a dry spell. `None` unless the vent was Deep-surveyed.
+- **Returns** `float | None`. Game-minutes until the vent flips phase, to pre-empt a surge or a dry spell. `None` unless the vent was Deep-surveyed.
 
 ##### `.pressure() → float`
 
-Chamber fill in the `0.0 to 1.0` range. It climbs while the cap captures steam from the vent and drops as you release through `steam_out`. Hit `1.0` and the cap **overpressurizes**: the whole chamber blows off to atmosphere and rebuilds from empty. The job is keeping this off the ceiling, so poll it every tick and open the throttle as it rises.
+Chamber fill from `0.0` to `1.0`. It climbs while the cap captures steam from the vent and drops as you release through `steam_out`. Hit `1.0` and the cap **overpressurizes**: the whole chamber blows off to atmosphere and rebuilds from empty. The job is keeping this off the ceiling, so poll it every tick and open the throttle as it rises.
 
-- **Returns** Chamber fill in the `0.0 to 1.0` range. Climbs as the vent captures, drops as you release. At `1.0` it overpressurizes: the whole chamber blows off to atmosphere and refills from empty. Keep it off the ceiling.
+- **Returns** `float`. Chamber fill from `0.0` to `1.0`. Climbs as the vent captures, drops as you release. At `1.0` it overpressurizes: the whole chamber blows off to atmosphere and refills from empty. Keep it off the ceiling.
 
 ##### `.capture_rate() → float`
 
 Steam captured from the vent on the last tick, in t/h. **0** during the dormant phase, up to the vent's current output while active. Already factors in the vent's phase, so read it instead of computing from the vent rate. Updates once per flow tick.
 
-- **Returns** Steam captured from the vent this tick, t/h. `0` while the vent is dormant.
+- **Returns** `float`. Steam captured from the vent this tick, t/h. `0` while the vent is dormant.
 
 ##### `.is_overpressured() → bool`
 
 `True` the tick the chamber tops out and blows its whole contents to atmosphere. After that the chamber is empty and must refill from the vent before you get steam again, so everything you had banked is gone. If you see this, you released too slowly, open the throttle sooner.
 
-- **Returns** `True` the tick the chamber tops out and blows off to atmosphere. You then rebuild from empty, losing everything banked. Release sooner next time.
+- **Returns** `bool`. `True` the tick the chamber tops out and blows off to atmosphere. You then rebuild from empty, losing everything banked. Release sooner next time.
 
 ##### `.is_stalled() → bool`
 
 `True` if, on the last flow tick, the powered cap had an open throttle and chamber steam available for release but could transfer none across its connected routes. An empty chamber, closed throttle, or lack of power does not report a stall. Declare a destination with `self.steam_out.connect(...)`, or let consumers connect their own `steam_in` ports to this Cap.
 
-- **Returns** `True` if, on the last flow tick, the powered cap had `throttle > 0` and chamber steam available for release but could transfer none across its connected routes. `False` when unpowered, the throttle is closed, or the chamber has no steam to release.
+- **Returns** `bool`. `True` if, on the last flow tick, the powered cap had `throttle > 0` and chamber steam available for release but could transfer none across its connected routes. `False` when unpowered, the throttle is closed, or the chamber has no steam to release.
 
 ##### `.throttle() → float`
 
 The current release-valve setting, `0.0` (sealed) to `1.0` (wide open). Read it back after `set_throttle(...)`.
 
-- **Returns** Current release-valve setting in the `0.0 to 1.0` range.
+- **Returns** `float`. Current release-valve setting from `0.0` to `1.0`.
 
 ##### `.set_throttle(t: float) → ActionResult` *(self only)*
 
-Open the cap's release valve in the `0.0 to 1.0` range (clamped). `0` seals the chamber so it fills; `1.0` releases steam across all reachable connected destinations as fast as chamber supply, destination headroom, and throughput allow. Your primary knob against overpressure, so call it every tick against `pressure()`. This script-owned setpoint resets to `0` when the script stops, ends, or errors. If no destination can accept enough and `pressure()` still climbs, use `set_relief(...)` to shed the surplus. `[self only]`
+Open the cap's release valve from `0.0` to `1.0` (clamped). `0` seals the chamber so it fills; `1.0` releases steam across all reachable connected destinations as fast as chamber supply, destination headroom, and throughput allow. Your primary knob against overpressure, so call it every tick against `pressure()`. This script-owned setpoint resets to `0` when the script stops, ends, or errors. If no destination can accept enough and `pressure()` still climbs, use `set_relief(...)` to shed the surplus. `[self only]`
 
 *Parameters*
 
@@ -18774,13 +20738,13 @@ Open the cap's release valve in the `0.0 to 1.0` range (clamped). `0` seals the 
 
 The current relief-valve setting, `0.0` (shut) to `1.0` (wide open). Read it back after `set_relief(...)`.
 
-- **Returns** Current relief-valve setting in the `0.0 to 1.0` range: how wide the atmosphere overflow is open.
+- **Returns** `float`. Current relief-valve setting from `0.0` to `1.0`: how wide the atmosphere overflow is open.
 
 ##### `.relief_rate() → float`
 
 Steam wasted to atmosphere through the relief valve this tick, in t/h. `0` when the relief valve is shut. Watch it to see how much surplus you're dumping.
 
-- **Returns** Steam wasted to atmosphere through the relief valve this tick, t/h. `0` when the valve is shut.
+- **Returns** `float`. Steam wasted to atmosphere through the relief valve this tick, t/h. `0` when the valve is shut.
 
 ##### `.set_relief(t: float) → ActionResult` *(self only)*
 
@@ -18822,39 +20786,39 @@ Extracts water from a surveyed well at a throttle your script sets. Its Planet M
 
 ### How to obtain
 
-1. The recipe unlocks with the **Hydrology Survey** research (Pressure 30).
+1. The recipe unlocks with the **Hydrology Survey** research (Pressure 18).
 2. Fabricate a **Water Pump** on a **Fabricator**: 2× Iron Ingot, 2× Glass, and 4× Liquid Pipe Segment.
 3. Build it on a surveyed water well with a Pioneer's Constructor.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.output: PickupOutputSlot`
 
 `PickupOutputSlot` holding salt created as a water-pumping byproduct. This is separate from `water_out`, which carries water through Liquid Pipes. Read `count()`, `capacity()`, or `stacks()` to inspect it. A physically present Rover or Pioneer connects its own input and pulls salt; the Pump has no direct item-routing methods.
 
-- **Returns** `PickupOutputSlot` holding the discrete salt byproduct for a physically present Rover or Pioneer.
+- **Returns** `PickupOutputSlot`. Holds the discrete salt byproduct for a physically present Rover or Pioneer.
 
 ##### `.water_out: FluidPort`
 
 Fluid output for water. This port may declare one destination with `self.water_out.connect("bio_caster_1")`; additional consumers may connect their own `water_in` ports to this Pump. Because the Pump is a field structure, every destination needs a completed Liquid Pipe route reaching the Pump and destination. `connected_to()` reports only this output port's declaration; `flow_rate()` reports total live delivery. The Pump stores nothing, so `level()` reads **0**. See `FluidPort`.
 
-- **Returns** `FluidPort` routing water to a connected target. Call `connect(...)` with the target's stable machine id or display name, then open `set_throttle(...)`. Completed liquid-pipe networks carry water between outposts.
+- **Returns** `FluidPort`. Routes water to a connected target. Call `connect(...)` with the target's stable machine id or display name, then open `set_throttle(...)`. Completed liquid-pipe networks carry water between outposts.
 
 ### Methods
 
@@ -18862,25 +20826,25 @@ Fluid output for water. This port may declare one destination with `self.water_o
 
 The `WaterWell` this pump is bolted to. Read `.yield_tier()` to see whether the well is `"standard"` / `"rich"` / `"pure"` (1×/2×/3× multiplier) and `.flow_rate()` for the well's per-hour output. Useful for prioritization scripts that compare yields across the fleet.
 
-- **Returns** `WaterWell` snapshot for the well this pump is on: `.id`, `position()`, `yield_tier()`, `flow_rate()`.
+- **Returns** `WaterWell`. A snapshot of the well this pump is on.
 
 ##### `.pump_rate() → float`
 
 Total water delivered to connected destinations this tick, in t/h. Reads **0** when throttle is **0** or no destination can accept flow. If a productive well still reports 0, check the connections, completed pipe routes, conflicts, power, and destination capacity.
 
-- **Returns** Number: total water delivered across every reachable connected destination this tick, in t/h. **0** when throttle is **0** or no destination can accept flow.
+- **Returns** `float`. Total water delivered across every reachable connected destination this tick, in t/h. **0** when throttle is **0** or no destination can accept flow.
 
 ##### `.is_stalled() → bool`
 
 `True` if, on the last flow tick, the powered pump had an open throttle and water available from its well but could transfer none across its connected routes. No available water, a closed throttle, or lack of power does not report a stall. Declare a destination with `self.water_out.connect(...)`, or let consumers connect their own `water_in` ports to this Pump.
 
-- **Returns** `True` if, on the last flow tick, the powered pump had `throttle > 0` and water available from its well but could transfer none across its connected routes. `False` when unpowered, the throttle is closed, or no water is available to pump.
+- **Returns** `bool`. `True` if, on the last flow tick, the powered pump had `throttle > 0` and water available from its well but could transfer none across its connected routes. `False` when unpowered, the throttle is closed, or no water is available to pump.
 
 ##### `.throttle() → float`
 
 Current throttle setting (**0-1**). **0** by default, the pump idles until a script calls `set_throttle()`.
 
-- **Returns** Number (**0-1**): current throttle setting.
+- **Returns** `float`. Current throttle setting (**0-1**).
 
 ##### `.set_throttle(rate: float) → ActionResult` *(self only)*
 
@@ -18928,59 +20892,59 @@ Blends biome essences into biomass. The global Biomass phase sets the minimum di
 1. Requires the **Biosphere** research (Terraform Index 210,000).
 2. Buy from the Shop for 60,000 cr.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `.frozen_essence_in: FluidPort`
 
 Input port for Frozen Essence. Wire with `self.frozen_essence_in.connect(...)`. See `FluidPort`.
 
-- **Returns** `FluidPort` for Frozen Essence input.
+- **Returns** `FluidPort`. Frozen Essence input.
 
 ##### `.coastal_essence_in: FluidPort`
 
 Input port for Coastal Essence. Wire with `self.coastal_essence_in.connect(...)`. See `FluidPort`.
 
-- **Returns** `FluidPort` for Coastal Essence input.
+- **Returns** `FluidPort`. Coastal Essence input.
 
 ##### `.geothermal_essence_in: FluidPort`
 
 Input port for Geothermal Essence. Wire with `self.geothermal_essence_in.connect(...)`. See `FluidPort`.
 
-- **Returns** `FluidPort` for Geothermal Essence input.
+- **Returns** `FluidPort`. Geothermal Essence input.
 
 ##### `.volcanic_essence_in: FluidPort`
 
 Input port for Volcanic Essence. Wire with `self.volcanic_essence_in.connect(...)`. See `FluidPort`.
 
-- **Returns** `FluidPort` for Volcanic Essence input.
+- **Returns** `FluidPort`. Volcanic Essence input.
 
 ##### `.deep_essence_in: FluidPort`
 
 Input port for Deep Essence. Wire with `self.deep_essence_in.connect(...)`. See `FluidPort`.
 
-- **Returns** `FluidPort` for Deep Essence input.
+- **Returns** `FluidPort`. Deep Essence input.
 
 ### Methods
 
@@ -18988,43 +20952,43 @@ Input port for Deep Essence. Wire with `self.deep_essence_in.connect(...)`. See 
 
 Biomass tons produced last tick, in **t/h**. Sum across every Biomass Mixer on the planet = total biomass production rate.
 
-- **Returns** Number, biomass produced last tick in t/h.
+- **Returns** `float`. Biomass produced last tick, in t/h.
 
 ##### `.active_essences() → int`
 
 Number of essence input buffers currently carrying supply (**0-5**). The current phase decides the minimum required by `required_essences()`. Extra balanced essence types can increase output.
 
-- **Returns** Number: count of essence input buffers that currently have supply (0-5).
+- **Returns** `int`. Count of essence input buffers that currently have supply (0-5).
 
 ##### `.mixing_essences() → int`
 
 Number of supplied essence types selected for the strongest balanced mix on the last tick (**0-5**). The Mixer evaluates every diversity level from the phase minimum upward, so a weak extra feed can never reduce output.
 
-- **Returns** Number (**0-5**), the count of supplied essence types selected for the strongest balanced mix last tick.
+- **Returns** `int`. The count of supplied essence types selected for the strongest balanced mix last tick (**0-5**).
 
 ##### `.tier() → int`
 
 Installed Mixer tier: **1** for Mk I or **2** for Mk II. Mk II produces **4.5×** biomass while consuming only **2.4×** as much of every selected essence, with **5×** power draw, so it yields **87.5%** more biomass per ton of essence.
 
-- **Returns** Number, installed Mixer tier: **1** (Mk I) or **2** (Mk II).
+- **Returns** `int`. Installed Mixer tier: **1** (Mk I) or **2** (Mk II).
 
 ##### `.is_stalled() → bool`
 
 `True` if the mixer is powered and fewer input buffers contain usable essence than the current Biomass phase requires. Buffered essence counts even without new inflow. `False` when unpowered or enough essence types are available. Connect each missing essence input to a compatible source and complete a remote Liquid Pipe route where needed; Biomass phases only advance and never drop.
 
-- **Returns** Boolean: `True` if the mixer is powered and fewer input buffers contain usable essence than the current Biomass phase requires. Buffered essence counts even without new inflow. `False` when unpowered or enough essence types are available.
+- **Returns** `bool`. `True` if the mixer is powered and fewer input buffers contain usable essence than the current Biomass phase requires. Buffered essence counts even without new inflow. `False` when unpowered or enough essence types are available.
 
 ##### `.phase() → int`
 
 The global Biomass phase (**1-6**), derived from cumulative biomass tons, using the same thresholds as the Sensors phase badge. The phase sets the minimum essence diversity but does not directly multiply output.
 
-- **Returns** Number (**1-6**), the global Biomass phase derived from cumulative biomass tons. It sets the minimum required essence diversity.
+- **Returns** `int`. The global Biomass phase (**1-6**), derived from cumulative biomass tons. It sets the minimum required essence diversity.
 
 ##### `.required_essences() → int`
 
 How many distinct biome essences must be supplied this phase (**1-5**, equal to the phase, capped at 5). Below this the Mixer stalls. Supplying more can raise output when the larger mix is balanced enough.
 
-- **Returns** Number (**1-5**), the minimum distinct biome essences needed this phase. Extra balanced essences can raise output.
+- **Returns** `int`. The minimum distinct biome essences needed this phase (**1-5**). Extra balanced essences can raise output.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -19049,23 +21013,23 @@ Queues harvest, plant, and treatment jobs across up to 24 other cells in a cente
 2. Buy from the Shop for 30,000 cr.
 3. Deploy the kit on an empty field cell with a Harvester's `deploy()`.
 
-**Returned by:** `self`
+**Access via:** `self`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.input: InputSlot`
 
@@ -19176,7 +21140,7 @@ Submit one Fertilizer Mk I/II/III or Growth Accelerant job. Submission is immedi
 
 Grid sector occupied by this automator. Jobs can target up to 24 other cells in its centered 5 by 5 service area.
 
-- **Returns** The automator's own field sector. Jobs can target up to 24 other cells in its centered 5 by 5 service area.
+- **Returns** `str`. The automator's own field sector. Jobs can target up to 24 other cells in its centered 5 by 5 service area.
 
 ##### `.cell(sector: str) → Cell | None`
 
@@ -19201,7 +21165,7 @@ Read one sector inside this automator's service area as a `Cell` snapshot, cover
 
 Read every sector this automator serves as a list of `Cell` snapshots, for sweeping the whole service area in one pass. Unscanned natural ground reports status `"unknown"`.
 
-- **Returns** List of the `Cell` snapshots this automator serves, one per addressable sector. Empty while the automator is not placed on the field.
+- **Returns** `list[Cell]`. One snapshot per sector this automator can address. Empty while the automator is not placed on the field.
 
 ##### `.status() → str`
 
@@ -19348,29 +21312,29 @@ Salts the four orthogonally adjacent field cells (directly above, below, left, a
 2. Fabricate a **Dispenser Kit** on a **Fabricator**: 1× Machine Frame, 1× Control Unit, and 1× Circuit Panel.
 3. Deploy the kit on an empty field cell with a Harvester's `deploy()`.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.input: InputSlot`
 
 Loads salt from a storage bin or other source. Connect a source with `self.input.connect(name)`, then pull salt with `self.input.take("salt", count)`. See `InputSlot`.
 
-- **Returns** `InputSlot`: `connect()`, `take()`, `eject()`, `flush()`, `count()`, `capacity()`, `connected_to()`. Feed salt in from a storage bin: `self.input.connect("Salt Bin")` then `self.input.take("salt", 50)`. Salt is a Water Pump byproduct.
+- **Returns** `InputSlot`. Feed salt in from a storage bin: `self.input.connect("Salt Bin")` then `self.input.take("salt", 50)`. Salt is a Water Pump byproduct.
 
 ### Methods
 
@@ -19410,32 +21374,32 @@ Command salting on or off. Power loss pauses the script but preserves this setpo
 
 `True` when the dispenser is commanded on, powered, and has salt in its input buffer. If disabled, unpowered, or empty, covered cells lose `salted`.
 
-- **Returns** Boolean: `True` when the dispenser is placed, commanded on, powered, and has salt in its input buffer. `False` when unplaced, disabled, unpowered, or empty; covered cells then lose `salted` and their plants pause.
+- **Returns** `bool`. `True` when the dispenser is placed, commanded on, powered, and has salt in its input buffer. `False` when unplaced, disabled, unpowered, or empty; covered cells then lose `salted` and their plants pause.
 
 ##### `.status() → str`
 
 Exact operating state: `"not_placed"`, `"disabled"`, `"no_power"`, `"no_salt"`, or `"active"`.
 
-- **Returns** Exact operating state: `"not_placed"`, `"disabled"`, `"no_power"`, `"no_salt"`, or `"active"`.
+- **Returns** `str`
 - **Possible values** `"not_placed"`, `"disabled"`, `"no_power"`, `"no_salt"`, `"active"`
 
 ##### `.buffer() → float`
 
 Fraction of the onboard salt buffer currently filled (**0-1**). It drops while dosing cells and refills through `self.input`.
 
-- **Returns** Number (**0-1**): fraction of the onboard salt buffer currently filled. Drops as the dispenser doses cells; refilled by feeding salt into `self.input`. **0** means empty (covered cells lose `salted`).
+- **Returns** `float`. Fraction of the onboard salt buffer currently filled (**0-1**). Drops as the dispenser doses cells; refilled by feeding salt into `self.input`. **0** means empty (covered cells lose `salted`).
 
 ##### `.tier() → int`
 
 Always **1**. The Dispenser ships at Mk I and has no upgrade pack; salt providers don't tier, so every deployed Dispenser reads **1**.
 
-- **Returns** Number: always **1**. The Dispenser ships at Mk I and has no upgrade pack; salt providers don't tier. Reads **1** for every deployed Dispenser.
+- **Returns** `int`. Always **1**. The Dispenser ships at Mk I and has no upgrade pack; salt providers don't tier.
 
 ##### `.position() → str`
 
 Grid sector occupied by this dispenser, such as `"E14"`.
 
-- **Returns** String: the grid sector this dispenser occupies (e.g. `"E14"`).
+- **Returns** `str`. The grid sector this dispenser occupies (e.g. `"E14"`).
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -19459,41 +21423,41 @@ Renders native life-form samples down into their biome's essence fluid. It only 
 1. Requires the **Biosphere** research (Terraform Index 210,000).
 2. Buy from the Shop for 35,000 cr.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `.input: InputSlot`
 
 The input slot for life-form samples native to this outpost's biome. Machine and storage sources must share the outpost. Inventory works only at home; remote Liquifiers receive samples from local storage. A wrong-biome sample is rejected without being moved.
 
-- **Returns** `InputSlot` for life-form samples native to this outpost's biome. Wrong-biome samples are rejected without being moved; `eject(...)` recovers staged samples to an explicit local destination.
+- **Returns** `InputSlot`. For life-form samples native to this outpost's biome. Wrong-biome samples are rejected without being moved; `eject(...)` recovers staged samples to an explicit local destination.
 
 ##### `.frozen_essence_out: FluidPort`
 
 This machine has exactly one essence output, named for its outpost biome: `frozen_essence_out`, `coastal_essence_out`, `geothermal_essence_out`, `volcanic_essence_out`, or `deep_essence_out`. It is a `FluidPort`. Connect it to a local Liquid Tank or matching Mixer input. A remote peer relationship also needs a completed conflict-free Liquid Pipe route between both locations. Example: `self.frozen_essence_out.connect("liquid_tank_1")`.
 
-- **Returns** `FluidPort` for Frozen essence. A Liquifier exposes only the port matching its outpost biome. Call `self.biome()` to confirm the port, then connect it like any fluid source: `self.frozen_essence_out.connect("liquid_tank_1")`.
+- **Returns** `FluidPort`. Frozen essence output. A Liquifier exposes only the port matching its outpost biome. Call `self.biome()` to confirm the port, then connect it like any fluid source: `self.frozen_essence_out.connect("liquid_tank_1")`.
 
 ### Methods
 
@@ -19501,32 +21465,32 @@ This machine has exactly one essence output, named for its outpost biome: `froze
 
 Current biome essence output, in **t/h**. At 100% outpost efficiency, the Essence Liquifier has a base **1 t/h** life-form intake. This readout applies both outpost efficiency and the loaded life form's rarity yield (common **×5**, uncommon **×10**, rare **×25**), and reads **0** when the machine cannot run or buffer its next whole output.
 
-- **Returns** Number, current biome essence output in t/h.
+- **Returns** `float`. Current biome essence output, in t/h.
 
 ##### `.yield_multiplier() → float`
 
 Unscaled essence tons produced per ton of the life form currently in the input bin: **5** for a common life form, **10** uncommon, **25** rare. Returns **0** when the input is empty. At 100% outpost efficiency, `essence_rate()` equals this multiplier while the machine is powered, fed, and able to buffer its next whole output; overcrowding can reduce the actual output rate.
 
-- **Returns** Number: essence tons produced per ton of the life form currently loaded (**5** common / **10** uncommon / **25** rare), or **0** when the input is empty.
+- **Returns** `float`. Essence tons produced per ton of the life form currently loaded (**5** common / **10** uncommon / **25** rare), or **0** when the input is empty.
 
 ##### `.is_stalled() → bool`
 
 `True` whenever `stall_reason()` is not `"ok"`: no valid host biome, no input, or insufficient output room for the next whole rarity-scaled yield. Use `stall_reason()` for the specific cause.
 
-- **Returns** Boolean. `True` whenever `stall_reason()` is not `"ok"`.
+- **Returns** `bool`. `True` whenever `stall_reason()` is not `"ok"`.
 
 ##### `.stall_reason() → str`
 
 Why the Liquifier is idle, as a string you can branch on: `"no_biome"` (the machine has no valid host outpost), `"no_input"` (input bin empty, feed it native-biome life forms), `"output_full"` (the next whole rarity-scaled yield cannot fit and a configured output cannot drain right now), `"unconnected"` (the next whole yield cannot fit and the essence output has no effective peer relationship), or `"ok"` (running, ready, or able to buffer the next whole yield). More specific than `is_stalled()`.
 
-- **Returns** String: one of `"ok"`, `"no_biome"`, `"no_input"`, `"output_full"`, `"unconnected"`. The specific reason the Liquifier is idle.
+- **Returns** `str`. Why the Liquifier is idle, or `"ok"` when it is not.
 - **Possible values** `"ok"`, `"no_biome"`, `"no_input"`, `"output_full"`, `"unconnected"`
 
 ##### `.biome() → str | None`
 
 Returns the biome the host outpost sits in: `"frozen"`, `"coastal"`, `"geothermal"`, `"volcanic"`, or `"deep"`. Returns `None` when the machine has no valid outpost. This determines which life-form items the Essence Liquifier will accept; wrong-biome items are rejected by the input port.
 
-- **Returns** String: the biome the outpost sits in: `"frozen"`, `"coastal"`, `"geothermal"`, `"volcanic"`, or `"deep"`. `None` if the machine has no valid outpost. This determines which life-form items the Essence Liquifier accepts.
+- **Returns** `str | None`. The biome the outpost sits in, or `None` if the machine has no valid outpost. It determines which life-form items the Essence Liquifier accepts.
 - **Possible values** `"frozen"`, `"coastal"`, `"geothermal"`, `"volcanic"`, `"deep"`
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
@@ -19551,23 +21515,23 @@ Lights the four orthogonally adjacent field cells (directly above, below, left, 
 2. Fabricate a **Grow Lamp Kit** on a **Fabricator**: 1× Machine Frame, 2× Circuit Panel, and 2× Glass.
 3. Deploy the kit on an empty field cell with a Harvester's `deploy()`.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -19607,26 +21571,26 @@ Command the lamp on or off. Power loss pauses the script but preserves this setp
 
 `True` when the lamp is commanded on, powered, and actively lighting its covered cells. If disabled or unpowered, covered cells lose `lit` and their plants pause.
 
-- **Returns** Boolean: `True` when the lamp is placed, commanded on, powered, and actively lighting its covered cells. `False` when unplaced, disabled, or unpowered; covered cells then lose `lit` and their plants pause.
+- **Returns** `bool`. `True` when the lamp is placed, commanded on, powered, and actively lighting its covered cells. `False` when unplaced, disabled, or unpowered; covered cells then lose `lit` and their plants pause.
 
 ##### `.status() → str`
 
 Exact operating state: `"not_placed"`, `"disabled"`, `"no_power"`, or `"active"`.
 
-- **Returns** Exact operating state: `"not_placed"` after placement recovery, `"disabled"` when the script command is off, `"no_power"` when commanded on but unpowered, or `"active"` while lighting.
+- **Returns** `str`. `"not_placed"` after placement recovery, `"disabled"` when the script command is off, `"no_power"` when commanded on but unpowered, or `"active"` while lighting.
 - **Possible values** `"not_placed"`, `"disabled"`, `"no_power"`, `"active"`
 
 ##### `.tier() → int`
 
 Deployed tier (**1-4**). Mk I/II/III/IV provide **1×/2×/4×/8×** supported plant output and draw **5/25/100/500 W** while active.
 
-- **Returns** Number (**1-4**), the deployed tier. Higher tiers boost the output of plants they cover and draw far more power; tier up by fabricating and applying a Grow Lamp upgrade pack.
+- **Returns** `int`. The deployed tier (**1-4**). Higher tiers boost the output of plants they cover and draw far more power; tier up by fabricating and applying a Grow Lamp upgrade pack.
 
 ##### `.position() → str`
 
 Grid sector occupied by this lamp, such as `"E14"`.
 
-- **Returns** String: the grid sector this lamp occupies (e.g. `"E14"`).
+- **Returns** `str`. The grid sector this lamp occupies (e.g. `"E14"`).
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -19652,41 +21616,41 @@ The sole converter from harvested physical Forage to permanent Plants km². Load
 2. Fabricate a **Plant Terraformer Kit** on a **Fabricator**: 5× Machine Frame, 3× Control Unit, 5× Circuit Panel, 4× Liquid Pipe Segment, and 10 t Water.
 3. Deploy it from your Inventory.
 
-**Returned by:** `self`
+**Access via:** `self`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `.input: InputSlot`
 
 Standard timed `InputSlot` for Forage, Salt, Fertilizer, and Growth Accelerant. Connect Inventory, a local Storage Bin or Warehouse, or a local machine output such as a Crop Automator after Auto Feeders research. The destination feeder handles **16 items per step** at Mk I and **80** at Mk II, in either transfer direction. Its holders fit one full Forage batch plus Salt and up to **10 of each** support item type.
 
-- **Returns** `InputSlot` for timed item transfers into the Terraformer's one-cycle material holders. Mk I handles 16 items per ordinary feeder quantum; Mk II handles 80.
+- **Returns** `InputSlot`. Timed item transfers into the Terraformer's one-cycle material holders. Mk I handles 16 items per ordinary feeder quantum; Mk II handles 80.
 
 ##### `.water_in: FluidPort`
 
 Water `FluidPort` sized for one full cycle: **60 t** at Mk I or **330 t** at Mk II. Connect it to a water source; a remote source also needs a completed conflict-free Liquid Pipe route between both locations. Water is required from the Seedlings phase onward.
 
-- **Returns** `FluidPort` for Water. Water becomes required from the Seedlings phase onward.
+- **Returns** `FluidPort`. Water input, required from the Seedlings phase onward.
 
 ### Methods
 
@@ -19720,74 +21684,74 @@ Enable or pause conversion. `True` starts a cycle whenever the onboard item hold
 
 Permanently installed Plant Terraformer tier as an integer (**1-2**). Mk II raises batch throughput and enables the late Plants recipes.
 
-- **Returns** Integer: permanently installed Plant Terraformer tier (**1-2**).
+- **Returns** `int`. Permanently installed Plant Terraformer tier (**1-2**).
 
 ##### `.status() → str`
 
 Exact live state: `"complete"`, `"disabled"`, `"no_power"`, `"needs_mk2"`, `"no_forage"`, `"no_water"`, `"no_salt"`, `"no_fertilizer"`, `"no_accelerant"`, or `"running"`.
 
-- **Returns** Exact live state: `"complete"`, `"disabled"`, `"no_power"`, `"needs_mk2"`, `"no_forage"`, `"no_water"`, `"no_salt"`, `"no_fertilizer"`, `"no_accelerant"`, or `"running"`.
+- **Returns** `str`
 - **Possible values** `"complete"`, `"disabled"`, `"no_power"`, `"needs_mk2"`, `"no_forage"`, `"no_water"`, `"no_salt"`, `"no_fertilizer"`, `"no_accelerant"`, `"running"`
 
 ##### `.is_running() → bool`
 
 `True` while a conversion cycle is running. An unpowered or disabled machine keeps its in-flight batch but reads `False` until it resumes.
 
-- **Returns** Boolean
+- **Returns** `bool`
 
 ##### `.get_progress() → float`
 
 Completion of the current conversion cycle, **0-1**. A full cycle requires **3 hours** of work at 100% outpost efficiency; overcrowding slows its progress proportionally. Reads **0** whenever no batch is loaded.
 
-- **Returns** Number (**0-1**)
+- **Returns** `float`. Progress through the current cycle (**0-1**).
 
 ##### `.batch_size() → int`
 
 Whole Forage items in the running cycle, or the batch that can load now. A full batch is **1,200** at Mk I and **6,600** at Mk II. Limited materials or a nearby phase boundary load less.
 
-- **Returns** Whole Forage items committed to the running cycle, or the batch the next cycle would load. Returns 0 while stalled, disabled, or complete.
+- **Returns** `int`. Whole Forage items committed to the running cycle, or the batch the next cycle would load. Returns 0 while stalled, disabled, or complete.
 
 ##### `.km2_rate() → float`
 
 This machine's current permanent Plants output in km²/h. It combines the loaded batch, its nominal **3 hour** work cycle, the pinned phase exchange rate from **20 km² per Forage** early to **1 km² per 3 Forage** late, and this outpost's overcrowding efficiency. Returns **0** while blocked, disabled, or complete.
 
-- **Returns** Current conversion rate in km²/h, the running batch spread across its cycle. Returns 0 while stalled, disabled, or complete.
+- **Returns** `float`. Current conversion rate in km²/h, the running batch spread across its cycle. Returns 0 while stalled, disabled, or complete.
 
 ##### `.phase() → int`
 
 Current global Plants phase number, **1-6**.
 
-- **Returns** Current global Plants phase index from 1 to 6.
+- **Returns** `int`. Current global Plants phase index from 1 to 6.
 
 ##### `.recipe_tier() → int | None`
 
 Derived production tier of the current cumulative Plants conversion recipe. Returns `None` after Continental completion.
 
-- **Returns** Derived production tier for the current Plants conversion, or `None` after completion.
+- **Returns** `int | None`. Derived production tier for the current Plants conversion, or `None` after completion.
 
 ##### `.next_threshold() → float`
 
 Permanent Plants km² required for the next phase. At completion, returns the **5,000,000 km²** ceiling.
 
-- **Returns** Plants km² required for the next phase, or the completed 5,000,000 km² ceiling.
+- **Returns** `float`. Plants km² required for the next phase, or the completed 5,000,000 km² ceiling.
 
 ##### `.remaining() → float`
 
 Permanent Plants km² still needed for the next phase. Returns **0** when Continental is complete.
 
-- **Returns** Plants km² remaining to the next phase. Returns 0 at completion.
+- **Returns** `float`. Plants km² remaining to the next phase. Returns 0 at completion.
 
 ##### `.required_inputs() → list[str]`
 
 Current cumulative material ids. Starts with `forage`, then adds `water`, `salt`, the `fertilizer` category, and `growth_accelerant` across the five conversions.
 
-- **Returns** List of the material ids required by the current cumulative phase recipe.
+- **Returns** `list[str]`. Material ids the current cumulative phase recipe requires.
 
 ##### `.batch_requirements() → dict[str, int]`
 
 Exact amounts for the largest next batch allowed by this tier and phase. The dict uses `forage`, `water`, `salt`, `fertilizer_potency`, and `growth_accelerant` as needed. Salt and Growth Accelerant are whole-item counts, rounded up per batch. Fertilizer potency is a whole number. It does not shrink when onboard stock is short.
 
-- **Returns** A dict of the material amounts for the largest next batch allowed by this tier and phase. Salt and Growth Accelerant are whole-item counts, rounded up per batch. Fertilizer is reported as whole `fertilizer_potency`.
+- **Returns** `dict[str, int]`. Material amounts for the largest next batch allowed by this tier and phase. Salt and Growth Accelerant are whole-item counts, rounded up per batch. Fertilizer is reported as whole `fertilizer_potency`.
 
 ##### `.fertilizer_potency(item_id: str) → int`
 
@@ -19799,7 +21763,7 @@ Return one Fertilizer item's whole potency: **10** for Mk I, **30** for Mk II, o
 | --- | --- | --- |
 | `item_id` | `str` | A Fertilizer Mk I, Mk II, or Mk III item id. |
 
-- **Returns** Potency of one Fertilizer item: 10 for Mk I, 30 for Mk II, or 50 for Mk III.
+- **Returns** `int`. Potency of one Fertilizer item: 10 for Mk I, 30 for Mk II, or 50 for Mk III.
 
 *Raises*
 
@@ -19830,41 +21794,41 @@ An outpost processing building that combines three life-form samples into a viab
 2. Fabricate a **Seed Maker Kit** on a **Fabricator**: 2× Machine Frame, 1× Control Unit, 2× Circuit Panel, and 3 t Water.
 3. Deploy it from your Inventory.
 
-**Returned by:** `self`
+**Access via:** `self`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `.input: InputSlot`
 
 `InputSlot` for loading the Seed Maker's three-sample reaction chamber. The natural source is a local Drone Depot where biological drones unload; a local Warehouse, Storage Bin, or home Inventory is also valid. The chamber accepts exactly **1 t each of three distinct life forms** and cannot stockpile surplus material.
 
-- **Returns** `InputSlot` for the **3 t** reaction chamber. It accepts one unit each of three distinct life forms and rejects duplicates or a fourth sample. `combine()` reserves the trio while running. When idle, use `eject(...)` to recover a mistaken load or `flush()` to destroy it.
+- **Returns** `InputSlot`. The **3 t** reaction chamber. It accepts one unit each of three distinct life forms and rejects duplicates or a fourth sample. `combine()` reserves the trio while running. When idle, use `eject(...)` to recover a mistaken load or `flush()` to destroy it.
 
 ##### `.output: OutputSlot`
 
 `OutputSlot` containing the one physical seed produced by a successful trial. Send it to home Inventory, then call the Harvester's `load_seed()` anywhere on the local grid, or route it to a Crop Automator. The Seed Maker cannot start another trial until this result bay is empty. Sludge produces no item.
 
-- **Returns** `OutputSlot` for the single physical result seed. Send it to home Inventory, then transfer it into the Harvester with `load_seed()`; another local store is also valid. A successful trial leaves exactly **1** species-specific seed here, and no further trial can start until `send(...)` removes it. A sludge result produces no output item.
+- **Returns** `OutputSlot`. Holds the single physical result seed. Send it to home Inventory, then transfer it into the Harvester with `load_seed()`; another local store is also valid. A successful trial leaves exactly **1** species-specific seed here, and no further trial can start until `send(...)` removes it. A sludge result produces no output item.
 
 ### Methods
 
@@ -19903,31 +21867,31 @@ Run the exact three different life-form ids loaded in this machine's reaction ch
 
 List of the **30** accepted life-form item ids. For each `blend` from `combinations(self.life_forms(), 3)`, load its three items with `self.input.take(item_id, 1)`, then call `self.combine(blend)`. Enumeration does not move materials. Send any resulting physical seed from `self.output` before continuing.
 
-- **Returns** List of the **30** accepted life-form item ids. For each `blend` from `combinations(self.life_forms(), 3)`, load its three items with `self.input.take(item_id, 1)`, then call `self.combine(blend)`. Enumeration does not move materials. Send any resulting physical seed with `self.output.send(...)` before the next trial.
+- **Returns** `list[str]`. The **30** accepted life-form item ids. For each `blend` from `combinations(self.life_forms(), 3)`, load its three items with `self.input.take(item_id, 1)`, then call `self.combine(blend)`. Enumeration does not move materials. Send any resulting physical seed with `self.output.send(...)` before the next trial.
 
 ##### `.is_running() → bool`
 
 `True` while a combine trial is in flight.
 
-- **Returns** Boolean: `True` while a combine trial is in flight.
+- **Returns** `bool`. `True` while a combine trial is in flight.
 
 ##### `.get_progress() → float`
 
 Progress of the current combine trial as **0-1**; returns **0** when idle.
 
-- **Returns** Number (**0-1**): progress of the current trial; **0** when idle.
+- **Returns** `float`. Progress of the current trial (**0-1**); **0** when idle.
 
 ##### `.get_output_count() → int`
 
 Number of physical seeds waiting in the single-result bay: **0** or **1**.
 
-- **Returns** Number (**0** or **1**): whether a physical seed is waiting in the result bay.
+- **Returns** `int`. **1** when a physical seed is waiting in the result bay, else **0**.
 
 ##### `.recipes() → list[SeedRecipe]`
 
 List of `SeedRecipe` for every blend discovered so far, the same discover-once-kept-forever journal the Flora / Seed Recipes tab shows. Each carries `.tier`, the physical `.seed_id`, bare `.species`, `.blend`, `.requirements`, `.requirement`, and `.growth_time`. `.requirements` is the programmable form: every `PlantRequirement` has `.kind` and optional `.species`, so companion and antagonist entries identify the exact related plant. `.requirement` remains a compact string summary. Empty until your first hit; re-run a known `.blend` with `self.combine(...)` to reproduce that seed without re-sweeping.
 
-- **Returns** List of every discovered `SeedRecipe`, or an empty list before the first discovery. Each recipe includes its species, three-item blend, cultivation requirements, and growth time. Use `self.combine(recipe.blend)` to reproduce its seed.
+- **Returns** `list[SeedRecipe]`. Every discovered recipe; empty before the first discovery. Use `self.combine(recipe.blend)` to reproduce its seed.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -19952,29 +21916,29 @@ Waters the four orthogonally adjacent field cells (directly above, below, left, 
 2. Fabricate a **Sprinkler Kit** on a **Fabricator**: 1× Machine Frame, 2× Liquid Pipe Segment, 1× Pressure Valve, and 2 t Water.
 3. Deploy the kit on an empty field cell with a Harvester's `deploy()`.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.water_in: FluidPort`
 
 Supplies water from a connected source. Call `self.water_in.connect(...)` with the source's stable machine id or display name. A remote source also needs a completed conflict-free Liquid Pipe route between both locations. See `FluidPort` for level, capacity, flow, and connection queries.
 
-- **Returns** `FluidPort` water buffer. Call `connect(...)` with the provider's stable machine id or display name; completed liquid-pipe networks carry water between outposts. Sharing an outpost with a pipe or tank does not connect it automatically.
+- **Returns** `FluidPort`. Water buffer. Call `connect(...)` with the provider's stable machine id or display name; completed liquid-pipe networks carry water between outposts. Sharing an outpost with a pipe or tank does not connect it automatically.
 
 ### Methods
 
@@ -20014,32 +21978,32 @@ Command watering on or off. Power loss pauses the script but preserves this setp
 
 `True` when the sprinkler is commanded on, powered, and has water in its `water_in` buffer. If disabled, unpowered, or dry, covered cells lose `watered`.
 
-- **Returns** Boolean: `True` when the sprinkler is placed, commanded on, powered, and has water in its `water_in` buffer. `False` when unplaced, disabled, unpowered, or dry; covered cells then lose `watered` and their plants pause.
+- **Returns** `bool`. `True` when the sprinkler is placed, commanded on, powered, and has water in its `water_in` buffer. `False` when unplaced, disabled, unpowered, or dry; covered cells then lose `watered` and their plants pause.
 
 ##### `.status() → str`
 
 Exact operating state: `"not_placed"`, `"disabled"`, `"no_power"`, `"no_water"`, or `"active"`.
 
-- **Returns** Exact operating state: `"not_placed"`, `"disabled"`, `"no_power"`, `"no_water"`, or `"active"`.
+- **Returns** `str`
 - **Possible values** `"not_placed"`, `"disabled"`, `"no_power"`, `"no_water"`, `"active"`
 
 ##### `.buffer() → float`
 
 Fraction of the onboard water buffer currently filled (**0-1**). It drops while watering and refills from the connected `water_in` source.
 
-- **Returns** Number (**0-1**): fraction of the onboard water buffer currently filled. Drops as the sprinkler waters; refilled by the connected `water_in` flow source. **0** means dry (covered cells lose `watered`).
+- **Returns** `float`. Fraction of the onboard water buffer currently filled (**0-1**). Drops as the sprinkler waters; refilled by the connected `water_in` flow source. **0** means dry (covered cells lose `watered`).
 
 ##### `.tier() → int`
 
 Deployed tier (**1-4**). Mk I/II/III/IV provide **1×/2×/4×/8×** supported plant output, draw **5/25/100/500 W**, and consume **2/4/8/16 t/h Water** while active.
 
-- **Returns** Number (**1-4**), the deployed tier. Higher tiers boost the output of plants they cover and drink more water and power; tier up by fabricating and applying a Sprinkler upgrade pack.
+- **Returns** `int`. The deployed tier (**1-4**). Higher tiers boost the output of plants they cover and drink more water and power; tier up by fabricating and applying a Sprinkler upgrade pack.
 
 ##### `.position() → str`
 
 Grid sector occupied by this sprinkler, such as `"E14"`.
 
-- **Returns** String: the grid sector this sprinkler occupies (e.g. `"E14"`).
+- **Returns** `str`. The grid sector this sprinkler occupies (e.g. `"E14"`).
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -20051,23 +22015,23 @@ Read commands you send from the editor's **Commands** tab while this script runs
 
 Looks up static identity metadata for any known item id. Use `get_component("item_catalog")` when a script needs to classify an item without maintaining its own data archive.
 
-**Returned by:** `get_component("item_catalog")`
+**Access via:** `get_component("item_catalog")`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ### Methods
 
@@ -20081,7 +22045,7 @@ Return an `ItemInfo` with `.id`, `.name`, `.category`, `.stackable`, `.biome`, `
 | --- | --- | --- |
 | `item_id` | `str` | Item id to identify |
 
-- **Returns** `ItemInfo` with identity metadata, or `None` for an unknown item id.
+- **Returns** `ItemInfo | None`. `None` for an unknown item id.
 
 ```python
 catalog = get_component("item_catalog")
@@ -20106,41 +22070,41 @@ A programmable local storm station and live receiver. It measures immutable loca
 1. Requires the **Weather Program** research (Terraform Index 330,000).
 2. Buy from the Shop for 60,000 cr.
 
-**Returned by:** `self / get_component(id)`
+**Access via:** `self / get_component(id)`
 
 **Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
 
 ### Properties
 
-##### `.id`
+##### `.id: str`
 
 Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
 
-- **Returns** String
+- **Returns** `str`
 
-##### `.name`
+##### `.name: str`
 
 Human-readable display name. Prefer `.id` for scripts that need to survive renames.
 
-- **Returns** String
+- **Returns** `str`
 
 ##### `.outpost: OutpostRef`
 
 The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
 
-- **Returns** `OutpostRef` for the outpost where this building is deployed.
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
 
 ##### `.signal_board: WeatherSignalBoard`
 
 This station's programmable Weather display. `reveal()` publishes a transmission into a numbered slot, `reject()` counts a refused copy, and `resolve()` publishes labelled values. The board displays what your script supplies without interpreting it.
 
-- **Returns** This station's optional player-authored board. It displays supplied transmissions and labelled values without interpreting them.
+- **Returns** `WeatherSignalBoard`. This station's optional player-authored board. It displays supplied transmissions and labelled values without interpreting them.
 
 ##### `.signal_receiver: SignalReceiver`
 
 Live receiver. `transmissions()` returns only the raw copies audible to this powered station now and stores no history. Dust reception uses local biome channels; thunder reception broadcasts.
 
-- **Returns** This station's live receiver. `transmissions()` exposes only what is audible now and stores no raw history. Dust-event channels are biome-specific; all thunder packets broadcast.
+- **Returns** `SignalReceiver`. This station's live receiver. `transmissions()` exposes only what is audible now and stores no raw history. Dust-event channels are biome-specific; all thunder packets broadcast.
 
 ### Methods
 
@@ -20148,7 +22112,7 @@ Live receiver. `transmissions()` returns only the raw copies audible to this pow
 
 Measure one immutable local report. The station refreshes at most once per world-clock hour; faster calls return the same report id. The report includes local coverage, active storm snapshots, and a local forecast reaching 8 world-clock hours ahead, or 24 once Weather Forecasting is researched. It never contains an aftermath coordinate.
 
-- **Returns** Immutable `WeatherReport` from this station's local coverage. Repeated calls inside one observation hour return the same report. Raises `RuntimeError` when the station is unfinished or unpowered.
+- **Returns** `WeatherReport`. An immutable report from this station's local coverage. Repeated calls inside one observation hour return the same report. Raises `RuntimeError` when the station is unfinished or unpowered.
 
 *Raises*
 
@@ -20160,13 +22124,13 @@ Measure one immutable local report. The station refreshes at most once per world
 
 Read the last measured report without taking a new observation. This is useful for startup recovery and stale-data handling; `None` means this station has never completed `observe()`.
 
-- **Returns** The last local `WeatherReport`, or `None` before the first successful observation. The snapshot remains readable while stale or unpowered.
+- **Returns** `WeatherReport | None`. The last local report, or `None` before the first successful observation. The snapshot remains readable while stale or unpowered.
 
 ##### `.strikes() → list[WeatherStrike]`
 
 Return this station's bounded strike history. Each `WeatherStrike` includes its event id, observation time, energy, and whether a Lightning Rod banked it. Exact strike positions and Storm Glass eligibility are not included. Only strikes this station physically observed are returned.
 
-- **Returns** Lightning strikes observed by this station, oldest first.
+- **Returns** `list[WeatherStrike]`. Lightning strikes observed by this station, oldest first.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -20217,7 +22181,7 @@ Blueprint unlocks by completing the order **Helios, Iron Bootstrap**.
 | Power | 28 W |
 | Production tier | T0 |
 
-##### Cobalt → Cobalt Ingot `smelt_cobalt_ingot` *(Unlocked)*
+##### Cobalt → Cobalt Ingot `smelt_cobalt_ingot` *(Not yet unlocked)*
 
 1× Cobalt → 1× Cobalt Ingot
 Blueprint unlocks by completing the order **Spire, Avionics Run**.
@@ -20228,7 +22192,7 @@ Blueprint unlocks by completing the order **Spire, Avionics Run**.
 | Power | 28 W |
 | Production tier | T0 |
 
-##### Rare Earth → Rare Earth Core `smelt_rare_earth_core` *(Unlocked)*
+##### Rare Earth → Rare Earth Core `smelt_rare_earth_core` *(Not yet unlocked)*
 
 1× Rare Earth → 1× Rare Earth Core
 Blueprint unlocks by completing the order **Spire, Control Run**.
@@ -20333,7 +22297,7 @@ Blueprint unlocks by completing the order **Vestibule, Utility Conduit Stock**.
 | Power | 25 W |
 | Production tier | T2 |
 
-##### Iron + Glass → Pressure Valve `craft_pressure_valve` *(Unlocked)*
+##### Iron + Glass → Pressure Valve `craft_pressure_valve` *(Not yet unlocked)*
 
 1× Iron Ingot and 1× Glass → 1× Pressure Valve
 Blueprint unlocks by completing the order **Spire, Cobalt Run**.
@@ -20344,7 +22308,7 @@ Blueprint unlocks by completing the order **Spire, Cobalt Run**.
 | Power | 25 W |
 | Production tier | T1 |
 
-##### Iron + Titanium → Machine Frame `craft_machine_frame` *(Unlocked)*
+##### Iron + Titanium → Machine Frame `craft_machine_frame` *(Not yet unlocked)*
 
 3× Iron Ingot, 1× Titanium Ingot, and 2 t Water → 1× Machine Frame
 Blueprint unlocks by completing the order **Helios, Battery Order**.
@@ -20366,7 +22330,7 @@ Blueprint unlocks by completing the order **Spire, Optical Glass**.
 | Power | 30 W |
 | Production tier | T1 |
 
-##### Panel + Titanium + Glass → Control Unit `craft_control_unit` *(Unlocked)*
+##### Panel + Titanium + Glass → Control Unit `craft_control_unit` *(Not yet unlocked)*
 
 1× Circuit Panel, 1× Titanium Ingot, 1× Glass, and 2 t Water → 1× Control Unit
 Blueprint unlocks by completing the order **Spire, Circuit Order**.
@@ -20399,7 +22363,7 @@ Blueprint unlocks with the **Thermal Cap** research.
 | Power | 38 W |
 | Production tier | T2 |
 
-##### Titanium + Cobalt + Rare Earth → Turbine Rotor `craft_turbine_rotor` *(Unlocked)*
+##### Titanium + Cobalt + Rare Earth → Turbine Rotor `craft_turbine_rotor` *(Not yet unlocked)*
 
 2× Titanium Ingot, 1× Cobalt Ingot, 1× Rare Earth Core, and 4 t Steam → 1× Turbine Rotor
 Blueprint unlocks by completing the order **Helios, Cap Kit Order**.
@@ -20410,7 +22374,7 @@ Blueprint unlocks by completing the order **Helios, Cap Kit Order**.
 | Power | 42 W |
 | Production tier | T1 |
 
-##### Iron + Titanium + Glass → Tank Lining `craft_tank_lining` *(Unlocked)*
+##### Iron + Titanium + Glass → Tank Lining `craft_tank_lining` *(Not yet unlocked)*
 
 2× Iron Ingot, 1× Titanium Ingot, 1× Glass, and 2 t Water → 1× Tank Lining
 Blueprint unlocks by completing the order **Helios, Bulk Iron Run**.
@@ -20421,7 +22385,7 @@ Blueprint unlocks by completing the order **Helios, Bulk Iron Run**.
 | Power | 38 W |
 | Production tier | T1 |
 
-##### Iron + Glass + Liquid Pipe Segment → Water Pump `craft_water_pump` *(Unlocked)*
+##### Iron + Glass + Liquid Pipe Segment → Water Pump `craft_water_pump` *(Not yet unlocked)*
 
 2× Iron Ingot, 2× Glass, and 4× Liquid Pipe Segment → 1× Water Pump
 Blueprint unlocks with the **Hydrology Survey** research.
@@ -20432,7 +22396,7 @@ Blueprint unlocks with the **Hydrology Survey** research.
 | Power | 35 W |
 | Production tier | T2 |
 
-##### Iron + Titanium + Valve + Panel → Oil Pump `craft_oil_pump` *(Unlocked)*
+##### Iron + Titanium + Valve + Panel → Oil Pump `craft_oil_pump` *(Not yet unlocked)*
 
 2× Iron Ingot, 1× Titanium Ingot, 1× Pressure Valve, and 1× Circuit Panel → 1× Oil Pump
 Blueprint unlocks with the **Petroleum Survey** research.
@@ -20443,7 +22407,7 @@ Blueprint unlocks with the **Petroleum Survey** research.
 | Power | 40 W |
 | Production tier | T2 |
 
-##### Iron + Oil → Lubricant + Tar `craft_lubricant` *(Unlocked)*
+##### Iron + Oil → Lubricant + Tar `craft_lubricant` *(Not yet unlocked)*
 
 1× Iron Ingot and 3 t Oil → 1× Lubricant and + byproduct 1× Tar
 Blueprint unlocks by completing the order **Vestibule, Liquid Pipe Order**.
@@ -20465,7 +22429,7 @@ Blueprint unlocks by completing the order **Spire, Magnetic Stator Build**.
 | Power | 32 W |
 | Production tier | T1 |
 
-##### Cobalt + Oil → Rubber + Tar `craft_rubber` *(Unlocked)*
+##### Cobalt + Oil → Rubber + Tar `craft_rubber` *(Not yet unlocked)*
 
 1× Cobalt Ingot and 2 t Oil → 1× Rubber and + byproduct 1× Tar
 Blueprint unlocks by completing the order **Vestibule, Pipe Network Run**.
@@ -20509,7 +22473,7 @@ Blueprint unlocks with the **Enrichment Chemistry** research.
 | Power | 45 W |
 | Production tier | T3 |
 
-##### Frame + Control + Gas Pipe Segments + Liquid Pipe Segments → Drone Depot Kit `craft_drone_station_kit` *(Unlocked)*
+##### Frame + Control + Gas Pipe Segments + Liquid Pipe Segments → Drone Depot Kit `craft_drone_station_kit` *(Not yet unlocked)*
 
 2× Machine Frame, 1× Control Unit, 2× Gas Pipe Segment, 2× Liquid Pipe Segment, and 3 t Water → 1× Drone Depot Kit
 Blueprint unlocks by completing the order **Helios, Frame Order**.
@@ -20542,7 +22506,7 @@ Blueprint unlocks by completing the order **Helios, Drone Hub Stockpile**.
 | Power | 55 W |
 | Production tier | T3 |
 
-##### Frame + Control + Panel + Cell + Liquid Pipe Segment → Drone Service Station Kit `craft_drone_service_station_kit` *(Unlocked)*
+##### Frame + Control + Panel + Cell + Liquid Pipe Segment → Drone Service Station Kit `craft_drone_service_station_kit` *(Not yet unlocked)*
 
 2× Machine Frame, 1× Control Unit, 2× Circuit Panel, 1× Battery Cell, and 1× Liquid Pipe Segment → 1× Drone Service Station Kit
 Blueprint unlocks by completing the order **Spire, Drone Power Trial**.
@@ -20586,7 +22550,7 @@ Blueprint unlocks by completing the order **Helios, Tether Project**.
 | Power | 58 W |
 | Production tier | T3 |
 
-##### Rare Earth + Titanium + Control → Drone (Small) `craft_drone_small` *(Unlocked)*
+##### Rare Earth + Titanium + Control → Drone (Small) `craft_drone_small` *(Not yet unlocked)*
 
 1× Rare Earth Core, 1× Titanium Ingot, 1× Control Unit, and 2 t Water → 1× Drone (Small)
 Blueprint unlocks by completing the order **Helios, Rotor Run**.
@@ -20619,7 +22583,7 @@ Blueprint unlocks by completing the order **Helios, Heavy Drone Build**.
 | Power | 55 W |
 | Production tier | T3 |
 
-##### Rare Earth + Rotor → Electric Thruster `craft_electric_thruster` *(Unlocked)*
+##### Rare Earth + Rotor → Electric Thruster `craft_electric_thruster` *(Not yet unlocked)*
 
 2× Rare Earth Core, 1× Turbine Rotor, and 2 t Steam → 1× Electric Thruster
 Blueprint unlocks by completing the order **Spire, Rare Earth Order**.
@@ -20641,7 +22605,7 @@ Blueprint unlocks by completing the order **Vestibule, Refueling Pad Order**.
 | Power | 50 W |
 | Production tier | T3 |
 
-##### Titanium + Glass → Cargo Pod (Small) `craft_cargo_pod_small` *(Unlocked)*
+##### Titanium + Glass → Cargo Pod (Small) `craft_cargo_pod_small` *(Not yet unlocked)*
 
 1× Titanium Ingot, 1× Glass, and 1 t Steam → 1× Cargo Pod (Small)
 Blueprint unlocks by completing the order **Helios, Drone Fleet Order**.
@@ -20674,7 +22638,7 @@ Blueprint unlocks by completing the order **Helios, Cargo Megaorder**.
 | Power | 45 W |
 | Production tier | T2 |
 
-##### Titanium + Glass + Cell → Battery Pack `craft_battery_pack` *(Unlocked)*
+##### Titanium + Glass + Cell → Battery Pack `craft_battery_pack` *(Not yet unlocked)*
 
 1× Titanium Ingot, 1× Glass, and 1× Battery Cell → 1× Battery Pack
 Blueprint unlocks by completing the order **Spire, Pressure Hardware**.
@@ -20795,7 +22759,7 @@ Blueprint unlocks with the **Dispenser** research.
 | Power | 40 W |
 | Production tier | T3 |
 
-##### Frame + Iron + Panel → Waste Processor Kit `craft_garbage_disposal_kit` *(Unlocked)*
+##### Frame + Iron + Panel → Waste Processor Kit `craft_garbage_disposal_kit` *(Not yet unlocked)*
 
 2× Machine Frame, 4× Iron Ingot, and 1× Circuit Panel → 1× Waste Processor Kit
 Blueprint unlocks with the **Waste Processing** research.
@@ -21065,7 +23029,7 @@ Blueprint unlocks by completing the Bio Order **Basalt Tissue Sample**.
 | Power | 30 W |
 | Production tier | T1 |
 
-##### Forage + Cave/Frost/Coral Fungus → Mycelial Husk Feed `craft_feed_mycelial_husk` *(Not yet unlocked)*
+##### Forage + Cave Fungus + Frost Fungus + Coral Fungus → Mycelial Husk Feed `craft_feed_mycelial_husk` *(Not yet unlocked)*
 
 100× Plant Forage, 1× Cave Fungus, 1× Frost Fungus, and 1× Coral Fungus → 20× Mycelial Husk Feed
 Blueprint unlocks by completing the Bio Order **Trench Specimen Panel**.
@@ -21120,7 +23084,7 @@ Blueprint unlocks by completing the Bio Order **Cold-Seep Assay**.
 | Power | 35 W |
 | Production tier | T1 |
 
-##### Forage + Brine Plankton + Deep Algae + Tide Moss → Tidal Cephalopod Feed `craft_feed_tidal_cephalopod` *(Unlocked)*
+##### Forage + Brine Plankton + Deep Algae + Tide Moss → Tidal Cephalopod Feed `craft_feed_tidal_cephalopod` *(Not yet unlocked)*
 
 100× Plant Forage, 1× Brine Plankton, 1× Deep Algae, and 1× Tide Moss → 20× Tidal Cephalopod Feed
 Blueprint unlocks by completing the Bio Order **Lagoon Specimen Study**.
@@ -21175,7 +23139,7 @@ Blueprint unlocks by completing the Bio Order **Subduction Specimen Cache**.
 | Power | 35 W |
 | Production tier | T1 |
 
-##### Forage + Shore Lichen + Crystal Spores + Vent Fungus → Ferric Sea-Lily Feed `craft_feed_ferric_sea_lily` *(Unlocked)*
+##### Forage + Shore Lichen + Crystal Spores + Vent Fungus → Ferric Sea-Lily Feed `craft_feed_ferric_sea_lily` *(Not yet unlocked)*
 
 100× Plant Forage, 1× Shore Lichen, 1× Crystal Spores, and 1× Vent Fungus → 20× Ferric Sea-Lily Feed
 Blueprint unlocks by completing the Bio Order **Shoal Specimen Cache**.
@@ -21340,6 +23304,16 @@ Burns oil to generate power.
 | Sells for | 2,000 cr |
 | Shop price | 2,000 cr |
 | Component docs | Oil Generator |
+
+##### Steam Turbine `steam_turbine`
+
+Produces up to **108 W** from **90 t/h Steam** at full throttle. A script controls its throttle.
+
+| Field | Value |
+| --- | --- |
+| Sells for | 7,500 cr |
+| Shop price | 7,500 cr |
+| Component docs | Steam Turbine |
 
 ##### Reactor `reactor`
 
@@ -21888,20 +23862,11 @@ Heavy industrial cargo-drone chassis.
 
 ##### Lead Cask `lead_cask`
 
-Shielded storage cask. The only stationary container that holds Raw Uranium and Fuel Rods.
+Shielded storage cask for Raw Uranium and Fuel Rods.
 
 | Field | Value |
 | --- | --- |
 | Produced by | Lead Cask |
-
-##### Storm Glass `storm_glass`
-
-Glass fused where lightning struck open ground. A rare trade good Earth pays well for.
-
-| Field | Value |
-| --- | --- |
-| Sells for | 350 cr |
-| Requested by | Spire, Storm Glass Acquisition and Spire, Storm Glass Contract (Crown) |
 
 *Database / Equipment*
 
@@ -22275,16 +24240,6 @@ Extracts oil from a surveyed oil well.
 | --- | --- |
 | Produced by | Iron + Titanium + Valve + Panel → Oil Pump |
 | Deploys | Oil Pump |
-
-##### Steam Turbine `steam_turbine`
-
-Produces up to **108 W** from **90 t/h Steam** at full throttle. A script controls its throttle.
-
-| Field | Value |
-| --- | --- |
-| Sells for | 7,500 cr |
-| Shop price | 7,500 cr |
-| Component docs | Steam Turbine |
 
 ##### Steam Condenser `steam_condenser`
 
@@ -22811,7 +24766,7 @@ Rolled lead shielding plate for casks, fuel rods, and reactor internals.
 
 ##### Raw Uranium `raw_uranium`
 
-Storm-dealt fissile ore. Hot cargo: Lead Casks are its only stationary home. Any drone can risk extraction, but each unplated batch adds 40 exposure; Shield Plating makes that gain zero.
+Storm-dealt fissile ore. Hot cargo: use Lead Casks for ordinary storage; deliver it to Fuel Assemblers or Supply Docks. Any drone can risk extraction, but each unplated batch adds 40 exposure; Shield Plating makes that gain zero.
 
 | Field | Value |
 | --- | --- |
@@ -22820,7 +24775,7 @@ Storm-dealt fissile ore. Hot cargo: Lead Casks are its only stationary home. Any
 
 ##### Fuel Rod `fuel_rod`
 
-Pressed reactor fuel, enriched uranium in a lead jacket. Hot cargo, cask-to-cask handling only.
+Pressed reactor fuel, enriched uranium in a lead jacket. Hot cargo: use Lead Casks for ordinary storage; deliver it to machines that use fuel rods, such as Reactors, or to Supply Docks.
 
 | Field | Value |
 | --- | --- |
@@ -22896,7 +24851,7 @@ Banked Dewmoss seed line from the `seed_maker`. Needs **Water**, matures after *
 
 ##### Lonethorn Seed `seed_lonethorn`
 
-Banked Lonethorn seed line from the `seed_maker`. Needs every orthogonally adjacent cell empty (directly above, below, left, and right), matures after **24 h** of met conditions, and has a base yield of **25 Forage**.
+Banked Lonethorn seed line from the `seed_maker`. Needs no orthogonally adjacent plant (directly above, below, left, or right; machines may stand there), matures after **24 h** of met conditions, and has a base yield of **25 Forage**.
 
 ##### Packfern Seed `seed_packfern`
 
@@ -22912,7 +24867,7 @@ Banked Spitebud seed line from the `seed_maker`. Needs no orthogonally adjacent 
 
 ##### Sunspur Seed `seed_sunspur`
 
-Banked Sunspur seed line from the `seed_maker`. Needs **Light** and every orthogonally adjacent cell empty (directly above, below, left, and right), matures after **24 h** of met conditions, and has a base yield of **25 Forage**.
+Banked Sunspur seed line from the `seed_maker`. Needs **Light** and no orthogonally adjacent plant (directly above, below, left, or right; machines may stand there), matures after **24 h** of met conditions, and has a base yield of **25 Forage**.
 
 ##### Glowvine Seed `seed_glowvine`
 
@@ -22932,7 +24887,7 @@ Banked Saltbloom seed line from the `seed_maker`. Needs **Salt**, matures after 
 
 ##### Brinethorn Seed `seed_brinethorn`
 
-Banked Brinethorn seed line from the `seed_maker`. Needs **Salt** and every orthogonally adjacent cell empty (directly above, below, left, and right), matures after **72 h** of met conditions, and has a base yield of **120 Forage**.
+Banked Brinethorn seed line from the `seed_maker`. Needs **Salt** and no orthogonally adjacent plant (directly above, below, left, or right; machines may stand there), matures after **72 h** of met conditions, and has a base yield of **120 Forage**.
 
 ##### Saltmate Seed `seed_saltmate`
 
@@ -22940,7 +24895,7 @@ Banked Saltmate seed line from the `seed_maker`. Needs **Salt** and an orthogona
 
 ##### Grandbloom Seed `seed_grandbloom`
 
-Banked Grandbloom seed line from the `seed_maker`. Needs **Light**, **Water**, and every orthogonally adjacent cell empty (directly above, below, left, and right), matures after **72 h** of met conditions, and has a base yield of **150 Forage**.
+Banked Grandbloom seed line from the `seed_maker`. Needs **Light**, **Water**, and no orthogonally adjacent plant (directly above, below, left, or right; machines may stand there), matures after **72 h** of met conditions, and has a base yield of **150 Forage**.
 
 ##### Plant Forage `forage`
 
@@ -22948,7 +24903,7 @@ Physical crop yield collected when a ready plant is harvested and removed. The c
 
 | Field | Value |
 | --- | --- |
-| Used in | Plastic + Forage + Water → Reinforced Biopolymer, Biopolymer + Forage + Water → Enrichment Compound, Forage + Sea Algae + Snow Moss → Salt Tortoise Feed, Forage + Lava Algae + Cave Moss → Magmatic Annelid Feed, Forage + Cave/Frost/Coral Fungus → Mycelial Husk Feed, Forage + Magma Crust + Stone Mat → Mantle Strider Feed, Forage + Heat Lichen + Frost Lichen → Glasswing Mantis Feed, Forage + Cold Spores + Hot Spores → Veil Mantle Feed, Forage + Stone Lichen + Salt Crust → Vault Crab Feed, Forage + Brine Plankton + Deep Algae + Tide Moss → Tidal Cephalopod Feed, Forage + Ice Crust + Ash Spores → Bone Walker Feed, Forage + Vent Algae + Steam Moss + Sea Algae → Vent Drifter Feed, Forage + Hot Spores + Crystal Spores → Hive Sentinel Feed, Forage + Cave Moss + Heat Crust → Hollow Choir Feed, Forage + Shore Lichen + Crystal Spores + Vent Fungus → Ferric Sea-Lily Feed, Forage + Stone Mat + Cinder Lichen → Crustal Echo Feed, Forage + Ice Algae + Frost Lichen + Vent Algae + Black Fungus → Glacial Wyrm Feed, and Forage + Sulfur Moss + Cinder Lichen + Cold Spores + Stone Lichen → Spire Drake Feed |
+| Used in | Plastic + Forage + Water → Reinforced Biopolymer, Biopolymer + Forage + Water → Enrichment Compound, Forage + Sea Algae + Snow Moss → Salt Tortoise Feed, Forage + Lava Algae + Cave Moss → Magmatic Annelid Feed, Forage + Cave Fungus + Frost Fungus + Coral Fungus → Mycelial Husk Feed, Forage + Magma Crust + Stone Mat → Mantle Strider Feed, Forage + Heat Lichen + Frost Lichen → Glasswing Mantis Feed, Forage + Cold Spores + Hot Spores → Veil Mantle Feed, Forage + Stone Lichen + Salt Crust → Vault Crab Feed, Forage + Brine Plankton + Deep Algae + Tide Moss → Tidal Cephalopod Feed, Forage + Ice Crust + Ash Spores → Bone Walker Feed, Forage + Vent Algae + Steam Moss + Sea Algae → Vent Drifter Feed, Forage + Hot Spores + Crystal Spores → Hive Sentinel Feed, Forage + Cave Moss + Heat Crust → Hollow Choir Feed, Forage + Shore Lichen + Crystal Spores + Vent Fungus → Ferric Sea-Lily Feed, Forage + Stone Mat + Cinder Lichen → Crustal Echo Feed, Forage + Ice Algae + Frost Lichen + Vent Algae + Black Fungus → Glacial Wyrm Feed, and Forage + Sulfur Moss + Cinder Lichen + Cold Spores + Stone Lichen → Spire Drake Feed |
 
 ##### Salt Tortoise Feed `feed_salt_tortoise`
 
@@ -22972,7 +24927,7 @@ Feed pressed for the Mycelial Husk, a deep-cavern species. A Habitat colony acce
 
 | Field | Value |
 | --- | --- |
-| Produced by | Forage + Cave/Frost/Coral Fungus → Mycelial Husk Feed |
+| Produced by | Forage + Cave Fungus + Frost Fungus + Coral Fungus → Mycelial Husk Feed |
 
 ##### Mantle Strider Feed `feed_mantle_strider`
 
@@ -23142,7 +25097,7 @@ Rare fruiting bodies that push up through the ice only in the deepest cold. The 
 | --- | --- |
 | Biome | Frozen |
 | Rarity | Rare |
-| Used in | Forage + Cave/Frost/Coral Fungus → Mycelial Husk Feed |
+| Used in | Forage + Cave Fungus + Frost Fungus + Coral Fungus → Mycelial Husk Feed |
 
 ##### Sea Algae `sea_algae`
 
@@ -23202,7 +25157,7 @@ Branching fungal growth that mimics coral along sheltered shores. The coastal bi
 | --- | --- |
 | Biome | Coastal |
 | Rarity | Rare |
-| Used in | Forage + Cave/Frost/Coral Fungus → Mycelial Husk Feed |
+| Used in | Forage + Cave Fungus + Frost Fungus + Coral Fungus → Mycelial Husk Feed |
 
 ##### Vent Algae `vent_algae`
 
@@ -23382,7 +25337,7 @@ Rare glowing fungus fruiting in the deepest chambers. The deep biome's densest e
 | --- | --- |
 | Biome | Deep |
 | Rarity | Rare |
-| Used in | Forage + Cave/Frost/Coral Fungus → Mycelial Husk Feed |
+| Used in | Forage + Cave Fungus + Frost Fungus + Coral Fungus → Mycelial Husk Feed |
 
 *Database / Items*
 
@@ -23453,6 +25408,15 @@ The rarest field find: an unclassified compound Earth's labs pay a premium for.
 | Field | Value |
 | --- | --- |
 | Sells for | 5,000 cr |
+
+##### Storm Glass `storm_glass`
+
+Glass fused where lightning struck open ground. A rare trade good Earth pays well for.
+
+| Field | Value |
+| --- | --- |
+| Sells for | 350 cr |
+| Requested by | Spire, Storm Glass Acquisition and Spire, Storm Glass Contract (Crown) |
 
 *Database / Items*
 
@@ -24643,6 +26607,15 @@ Script-to-script messaging. Adds the Signal Bus tab to the Ship Computer. Script
 | Threshold | Terraform Index 35,000 |
 | Tech id | signal_bus_unlock |
 
+##### Automations `research_automations` *(Unlocked)*
+
+Scripts that run without a machine. Opens Ship Computer > Automations: scripts that belong to no machine and keep running on their own. Use them for base-wide work such as power management, shop purchases, deploying equipment and construction planning.
+
+| Field | Value |
+| --- | --- |
+| Threshold | Terraform Index 50,000 |
+| Tech id | automations_unlock |
+
 ##### Data Archive `research_data_archive` *(Unlocked)*
 
 Persistent learned tables. Adds the Data Archive tab to the Ship Computer. Scripts can store lookup tables, calibration samples, discovered maps, and other learned knowledge that persists across restarts and save/load. Use the Signal Bus for live coordination and the Data Archive for long-lived data.
@@ -24733,7 +26706,7 @@ Every inventory slot holds twice as much. Rebuilds the shelving at Nocturna Base
 | Threshold | Terraform Index 250,000 |
 | Tech id | high_density_storage_unlock |
 
-##### Weather Program `research_weather_program` *(Unlocked)*
+##### Weather Program `research_weather_program` *(Not yet unlocked)*
 
 Track storms and treasure signals. Unlocks the **Weather Network**, installs one free completed Weather Station and its building slot at Nocturna Base, and makes additional stations available in the Shop. Observe local storms, handle live transmissions, and publish optional results to the Signal Board.
 
@@ -24861,7 +26834,7 @@ Unlocks the Bio Luminizer. Unlocks the Bio Luminizer in the shop, the coastal ma
 | Threshold | Temperature 90 |
 | Tech id | luminizer_unlock |
 
-##### Medium Battery Holder `research_battery_holder_medium` *(Unlocked)*
+##### Medium Battery Holder `research_battery_holder_medium` *(Not yet unlocked)*
 
 Double-bay battery mount access. Unlocks the Medium Battery Holder in the shop. Two bays for portable batteries, a compact range upgrade for modular vehicles.
 
@@ -24870,7 +26843,7 @@ Double-bay battery mount access. Unlocks the Medium Battery Holder in the shop. 
 | Threshold | Temperature 280 |
 | Tech id | battery_holder_medium_unlock |
 
-##### Outpost Expansion `research_outpost_expansion` *(Unlocked)*
+##### Outpost Expansion `research_outpost_expansion` *(Not yet unlocked)*
 
 Increase every outpost's building capacity by 5. Raises the soft building capacity of every current and future outpost by **5**. Nocturna Base increases from **25** to **30** buildings, and founded outposts increase from **20** to **25**. Buildings beyond the new cap still incur the normal overcrowding penalty.
 
@@ -24879,7 +26852,7 @@ Increase every outpost's building capacity by 5. Raises the soft building capaci
 | Threshold | Temperature 400 |
 | Tech id | outpost_expansion_unlock |
 
-##### Large Battery `research_large_battery` *(Unlocked)*
+##### Large Battery `research_large_battery` *(Not yet unlocked)*
 
 5× grid storage in one cell. Unlocks the Large Battery in the Shop: **2,500 Wh** of base-station storage, five times the base cell. One unit replaces a cluster of Small Batteries.
 
@@ -24888,7 +26861,7 @@ Increase every outpost's building capacity by 5. Raises the soft building capaci
 | Threshold | Temperature 700 |
 | Tech id | large_battery_unlock |
 
-##### Deep-Sea Conditioning `research_bio_conditioner` *(Unlocked)*
+##### Deep-Sea Conditioning `research_bio_conditioner` *(Not yet unlocked)*
 
 Unlocks the Bio Conditioner. Unlocks the Bio Conditioner in the shop, the deep machine that quality-control-inspects a fragment through a 5-stage accept/reject gauntlet against a published rulebook. Deep Bio Orders require conditioned fragments. Power-only, no fluids or materials.
 
@@ -24897,7 +26870,7 @@ Unlocks the Bio Conditioner. Unlocks the Bio Conditioner in the shop, the deep m
 | Threshold | Temperature 1,200 |
 | Tech id | bio_conditioner_unlock |
 
-##### Oil Generator `research_oil_generator` *(Unlocked)*
+##### Oil Generator `research_oil_generator` *(Not yet unlocked)*
 
 High-density oil-burning power. Unlocks the Oil Generator in the shop. Burns oil to produce up to **700 W** from one machine (several times a Steam Turbine's peak) with full throttle control via script. Consumes **8 t/h** at full output.
 
@@ -25025,7 +26998,7 @@ Bulk-storage building. Unlocks the Warehouse in the shop. A **10,000-unit** mult
 | Threshold | Oxygen 150 |
 | Tech id | warehouse_unlock |
 
-##### Verified Contractor `research_verified_contractor` *(Unlocked)*
+##### Verified Contractor `research_verified_contractor` *(Not yet unlocked)*
 
 New contract batch access. Your terraforming output has passed Earth's vetting threshold. A second batch of contracts (denser puzzles, higher rewards) routes to your terminal. Adds new tiers to the Contractor Reputation ladder.
 
@@ -25034,7 +27007,7 @@ New contract batch access. Your terraforming output has passed Earth's vetting t
 | Threshold | Oxygen 300 |
 | Tech id | verified_contractor_unlock |
 
-##### Volcanic Forge-Casting `research_bio_caster` *(Unlocked)*
+##### Volcanic Forge-Casting `research_bio_caster` *(Not yet unlocked)*
 
 Unlocks the Bio Caster. Unlocks the Bio Caster in the shop, the volcanic machine that heat-casts a fragment with fabricated materials. Volcanic Bio Orders require forged fragments.
 
@@ -25043,7 +27016,7 @@ Unlocks the Bio Caster. Unlocks the Bio Caster in the shop, the volcanic machine
 | Threshold | Oxygen 350 |
 | Tech id | bio_caster_unlock |
 
-##### Liquid Tank `research_liquid_tank` *(Unlocked)*
+##### Liquid Tank `research_liquid_tank` *(Not yet unlocked)*
 
 Buffer any one liquid. Unlocks the Liquid Tank in the Shop, a passive **100**-ton buffer that latches to the first liquid it receives (water, oil, or any biome essence) and holds only that fluid until drained.
 
@@ -25052,7 +27025,7 @@ Buffer any one liquid. Unlocks the Liquid Tank in the Shop, a passive **100**-to
 | Threshold | Oxygen 400 |
 | Tech id | liquid_tank_unlock |
 
-##### Waste Processing `research_garbage_disposal` *(Unlocked)*
+##### Waste Processing `research_garbage_disposal` *(Not yet unlocked)*
 
 Programmable destruction for unwanted items and fluids. Unlocks the **Waste Processor Kit recipe**. The machine permanently destroys one selected stream: any item through its feeder input, any liquid through `liquid_in`, or any gas through `gas_in`. This provides an explicit overflow path for tar, surplus water, and unwanted gases without recovering power or materials. Fabricate the kit at a Fabricator; its script selects and enables the active mode.
 
@@ -25061,7 +27034,7 @@ Programmable destruction for unwanted items and fluids. Unlocks the **Waste Proc
 | Threshold | Oxygen 1,400 |
 | Tech id | garbage_disposal_unlock |
 
-##### Petroleum Survey `research_petroleum_survey` *(Unlocked)*
+##### Petroleum Survey `research_petroleum_survey` *(Not yet unlocked)*
 
 Oil wells visible to Deep Sonar. Unlocks survey of subsurface oil deposits and the **Oil Pump recipe**. **Deep Sonar required**: oil wells are a hidden layer for the late-tier sonar. Fabricate an Oil Pump at a Fabricator, deploy it on a surveyed well, and pipe oil to base for power generation and refining.
 
@@ -25070,7 +27043,7 @@ Oil wells visible to Deep Sonar. Unlocks survey of subsurface oil deposits and t
 | Threshold | Oxygen 1,500 |
 | Tech id | petroleum_survey_unlock |
 
-##### Large Battery Holder `research_battery_holder_large` *(Unlocked)*
+##### Large Battery Holder `research_battery_holder_large` *(Not yet unlocked)*
 
 Triple-bay battery mount access. Unlocks the Large Battery Holder in the shop. Three bays, enough capacity to sustain Heavy Drill power draw on long edge-ring expeditions.
 
@@ -25079,7 +27052,7 @@ Triple-bay battery mount access. Unlocks the Large Battery Holder in the shop. T
 | Threshold | Oxygen 1,800 |
 | Tech id | battery_holder_large_unlock |
 
-##### Large Cargo Rack `research_cargo_rack_large` *(Unlocked)*
+##### Large Cargo Rack `research_cargo_rack_large` *(Not yet unlocked)*
 
 Triple-bin cargo mount access. Unlocks the Large Cargo Rack in the shop. Three bins for maximum haul capacity on large mining runs.
 
@@ -25099,7 +27072,7 @@ Hardness-4 extraction access. Unlocks the Heavy Drill module in the shop. Extrac
 
 ##### Shielded Logistics `research_shielded_logistics` *(Not yet unlocked)*
 
-Lead Casks + hot-cargo handling. Hot cargo needs a shielded lane: **Lead Casks** are the only stationary home for Raw Uranium and Fuel Rods, and **Shield Plating** lets a drone extract Raw Uranium without gaining exposure. Unlocks both items' availability; the fabrication recipes come through contractor orders.
+Lead Casks + hot-cargo handling. Hot cargo needs a shielded lane: **Lead Casks** provide stationary storage for Raw Uranium and Fuel Rods, and **Shield Plating** lets a drone extract Raw Uranium without gaining exposure. Unlocks both items' availability; the fabrication recipes come through contractor orders.
 
 | Field | Value |
 | --- | --- |
@@ -25108,7 +27081,7 @@ Lead Casks + hot-cargo handling. Hot cargo needs a shielded lane: **Lead Casks**
 
 ##### Shielded Depot Operations `research_shielded_depot_ops` *(Not yet unlocked)*
 
-Move nuclear cargo through Drone Depots. Lines every Drone Depot with containment so hot cargo can pass through your logistics network. Until this is researched a depot refuses Raw Uranium and Fuel Rods outright, and a plated drone has nowhere to unload them. Applies to every depot you own and every one you build afterwards.
+Plated drones carry hot cargo between outposts. Plated drones can load hot cargo at any Drone Depot, straight from that outpost's Lead Cask, and unload it into the Lead Cask where they land. Depots never store Raw Uranium or Fuel Rods themselves. Until this is researched, drones can't load or unload hot cargo at depots at all.
 
 | Field | Value |
 | --- | --- |
@@ -25234,16 +27207,16 @@ Double-bin cargo mount access. Unlocks the Medium Cargo Rack and Heavy Portable 
 | Threshold | Pressure 4.5 |
 | Tech id | cargo_rack_medium_unlock |
 
-##### Hydrology Survey `research_hydrology_survey` *(Unlocked)*
+##### Hydrology Survey `research_hydrology_survey` *(Not yet unlocked)*
 
 Water wells visible to sonar. Unlocks survey of subsurface water deposits and the **Water Pump recipe**. Sonar scans now reveal water wells across the map. Wells produce continuous water at their yield tier (1× / 2× / 3×). Fabricate a Water Pump at a Fabricator, deploy it on a surveyed well, and pipe the output to base.
 
 | Field | Value |
 | --- | --- |
-| Threshold | Pressure 30 |
+| Threshold | Pressure 18 |
 | Tech id | hydrology_survey_unlock |
 
-##### Deep Sonar `research_sonar_deep` *(Unlocked)*
+##### Deep Sonar `research_sonar_deep` *(Not yet unlocked)*
 
 Edge-ring survey hardware access. Unlocks the Deep Sonar module in the shop. Extends scan range to **280 m** and detects minerals up to hardness 4, which adds Neutronium at the edge ring. Also deepens thermal/exotic survey detail and is required to reveal oil wells after **Petroleum Survey**.
 
@@ -25531,7 +27504,7 @@ Programmatic identifier of this component.
 
 ##### `.type_id: str`
 
-Which kind of component this is, as the stable type id ("bio_lab", "rover", "drone_small"). Every component of the same kind shares it, so a library function can branch on what it was handed. The same token machine-type queries accept, so `outpost.buildings(self.type_id)` lists this machine's siblings. Use `.id` for which individual one this is.
+Which kind of component this is, as the stable type id ("bio_lab", "rover", "drone_small"). Every component of the same kind shares it, so a library function can branch on what it was handed. For a building at an outpost, `outpost.buildings(self.type_id)` lists buildings of that type there; the query excludes mobile units and sensors. Use `.id` for which individual one this is.
 
 - **Returns** `str`
 
@@ -26964,7 +28937,7 @@ Display name of the currently connected source, or empty string.
 
 ##### `.connected_id() → str`
 
-Stable id of the currently connected source, or empty string. `connect()` accepts an id or a display name, so compare against this when you need the identity to match what you passed: `connected_to()` answers with the renameable name.
+Stable id of the currently connected source, or empty string. `connect()` accepts an id or display name, but this returns the resolved stable id. Compare it with the source's stable id; `connected_to()` returns its renameable display name.
 
 - **Returns** `str`
 
@@ -27014,7 +28987,7 @@ Take up to whole-number `count` units of `item_id` from the connected source. A 
 | `"target_wrong_material"` | rejection | The destination is latched to or accepts a different material. |
 | `"wrong_biome"` | rejection | The destination rejects this biological material because its biome is incompatible. |
 | `"target_unconfigured"` | rejection | The destination lacks the world-state configuration required to accept this material. |
-| `"hot_cargo_requires_cask"` | rejection | This hot cargo must move through a compatible Lead Cask. |
+| `"hot_cargo_requires_cask"` | rejection | A transfer endpoint does not support this hot cargo. |
 | `"order_item_not_required"` | rejection | The active order does not require this item. |
 | `"order_slots_full"` | rejection | Every Supply Dock material slot is assigned to another required item. |
 | `"order_fulfilled"` | rejection | The active order already has all required units of this item loaded or shipped. |
@@ -27070,7 +29043,7 @@ Recover up to whole-number `count` units of `item_id` from this buffer without c
 | `"target_wrong_material"` | rejection | The destination is latched to or accepts a different material. |
 | `"wrong_biome"` | rejection | The destination rejects this biological material because its biome is incompatible. |
 | `"target_unconfigured"` | rejection | The destination lacks the world-state configuration required to accept this material. |
-| `"hot_cargo_requires_cask"` | rejection | This hot cargo must move through a compatible Lead Cask. |
+| `"hot_cargo_requires_cask"` | rejection | A transfer endpoint does not support this hot cargo. |
 | `"cask_accepts_hot_only"` | rejection | Lead Casks accept only supported hot cargo. |
 | `"order_item_not_required"` | rejection | The active order does not require this item. |
 | `"order_slots_full"` | rejection | Every Supply Dock material slot is assigned to another required item. |
@@ -27274,7 +29247,7 @@ Display name of the currently connected target, or empty string.
 
 ##### `.connected_id() → str`
 
-Stable id of the currently connected target, or empty string. `connect()` accepts an id or a display name, so compare against this when you need the identity to match what you passed: `connected_to()` answers with the renameable name.
+Stable id of the currently connected target, or empty string. `connect()` accepts an id or display name, but this returns the resolved stable id. Compare it with the target's stable id; `connected_to()` returns its renameable display name.
 
 - **Returns** `str`
 
@@ -27322,7 +29295,7 @@ Send up to whole-number `count` units of `item_id` to the connected target. A pr
 | `"wrong_biome"` | rejection | The destination rejects this biological material because its biome is incompatible. |
 | `"target_unconfigured"` | rejection | The destination lacks the world-state configuration required to accept this material. |
 | `"mixed_materials"` | rejection | One transfer can contain only one item id. |
-| `"hot_cargo_requires_cask"` | rejection | This hot cargo must move through a compatible Lead Cask. |
+| `"hot_cargo_requires_cask"` | rejection | A transfer endpoint does not support this hot cargo. |
 | `"cask_accepts_hot_only"` | rejection | Lead Casks accept only supported hot cargo. |
 | `"order_item_not_required"` | rejection | The active order does not require this item. |
 | `"order_slots_full"` | rejection | Every Supply Dock material slot is assigned to another required item. |
@@ -27738,7 +29711,7 @@ Load up to whole-number `count` units of `item_id` into vehicle cargo from the c
 | `"target_wrong_material"` | rejection | The destination is latched to or accepts a different material. |
 | `"wrong_biome"` | rejection | The destination rejects this biological material because its biome is incompatible. |
 | `"target_unconfigured"` | rejection | The destination lacks the world-state configuration required to accept this material. |
-| `"hot_cargo_requires_cask"` | rejection | This hot cargo must move through a compatible Lead Cask. |
+| `"hot_cargo_requires_cask"` | rejection | A transfer endpoint does not support this hot cargo. |
 | `"order_item_not_required"` | rejection | The active order does not require this item. |
 | `"order_slots_full"` | rejection | Every Supply Dock material slot is assigned to another required item. |
 | `"order_fulfilled"` | rejection | The active order already has all required units of this item loaded or shipped. |
@@ -28085,6 +30058,7 @@ Move up to whole-number `count` units into this drone's cargo, retaining exact p
 | `"target_moving"` | transient | The destination vehicle must stop before cargo can be handed off. |
 | `"not_at_source"` | rejection | The vehicle is outside the source's service area. |
 | `"source_empty"` | rejection | The source has no matching units available. |
+| `"slots_full"` | rejection | The destination has capacity but no slot for this material identity. |
 | `"target_full"` | rejection | The destination has no capacity for matching units. |
 | `"needs_plating"` | rejection | This hot cargo requires Shield Plating on the drone. |
 | `"cask_missing"` | rejection | No compatible Lead Cask is available at this outpost. |
@@ -28150,7 +30124,7 @@ Permanently destroy up to whole-number `count` units from this drone's cargo. Th
 | `"ok"` | success | Permanently discarded `.discarded` units. |
 | `"partial"` | partial | Permanently discarded `.discarded` of `.requested` requested units. |
 | `"empty"` | success | The selected cargo area was already empty. |
-| `"no_op"` | success | No units were requested, so nothing was discarded. |
+| `"no_op"` | success | No item was specified or the requested count was zero, so nothing was discarded. |
 | `"invalid_properties"` | rejection | The item property selector has an invalid shape or value. |
 | `"invalid_property_match"` | rejection | The requested property matching mode is invalid. |
 | `"source_changed"` | transient | Cargo changed between transfer planning and commit. |
@@ -28299,7 +30273,7 @@ Station id when this ref was returned, or empty string.
 
 ##### `.is_docked: bool`
 
-`True` if the drone was parked at a drone station when this ref was returned.
+`True` if the drone was parked at a Drone Depot or Drone Service Station when this ref was returned.
 
 - **Returns** `bool`
 
@@ -28523,6 +30497,12 @@ Outpost id when this ref was returned, or empty string.
 
 - **Returns** `str`
 
+##### `.current_station: str`
+
+Vehicle Charging Station id the vehicle was docked at when this ref was returned, or empty string.
+
+- **Returns** `str`
+
 ##### `.is_being_rescued: bool`
 
 `True` if a Vehicle Charging Station rescue was active for this vehicle when this ref was returned.
@@ -28548,7 +30528,7 @@ Position snapshot from when this ref was returned.
 
 ## MountSlot
 
-**Returned by:** self.modules() on rover / pioneer
+**Returned by:** modules() on a rover, pioneer, or drone
 
 ### Properties
 
@@ -28673,7 +30653,7 @@ Vehicle speed in m/h.
 
 ##### `.get_distance_to(x: float, y: float) → float`
 
-Distance (meters) from the vehicle to the given point. Arrival loops need a tolerance, normally `> 2`, rather than exact zero. When the next action targets a building, route to its `BuildingRef.position`.
+Distance (meters) from the vehicle to the given point. The vehicle has arrived once this is 2 or less; it rarely reaches exactly zero. A wait loop therefore keeps going `while self.nav.get_distance_to(x, y) > 2:`. When the next action targets a building, route to its `BuildingRef.position`.
 
 *Parameters*
 
@@ -28990,7 +30970,7 @@ Display name of the target declared by this port, or empty string. It does not l
 
 ##### `.connected_id() → str`
 
-Stable id of the target declared by this port, or empty string. `connect()` accepts an id or a display name, so compare against this when you need the identity to match what you passed: `connected_to()` answers with the renameable name. For every effective peer, including declarations owned by the other side, use `connections()`.
+Stable id of the target declared by this port, or empty string. `connect()` accepts an id or display name, but this returns the resolved stable id. Compare it with the target's stable id; `connected_to()` returns its renameable display name. For every effective peer, including declarations owned by the other side, use `connections()`.
 
 - **Returns** `str`
 
@@ -29770,8 +31750,8 @@ card(8, 8, 264, 64, "Section")
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `x` | `float` | X (pixels) |
-| `y` | `float` | Y (pixels) |
+| `x` | `float` | Left edge (pixels) |
+| `y` | `float` | Top edge (pixels) |
 | `w` | `float` | Width (pixels) |
 | `h` | `float` | Height (pixels) |
 | `title` | `str` | Optional card title |
@@ -29797,7 +31777,7 @@ divider(10, 40, 270, 40)
 
 - **Returns** `None`
 
-##### `label(x: float, y: float, text: str, style?: str) → None`
+##### `label(x: float, y: float, text: str, style?: str, color?: str) → None`
 
 Semantically styled text. `style` accepts `"title"` (bright, bold), `"caption"` (muted, uppercase), `"muted"` (secondary), `"value"` (numeric readout). Defaults to `"title"`. Use instead of `draw_text` when you want the dashboard's text hierarchy applied automatically.
 
@@ -29809,16 +31789,17 @@ label(10, 30, "OXYGEN", "caption")
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `x` | `float` | X (pixels) |
-| `y` | `float` | Y (pixels) |
+| `x` | `float` | Left edge of the text (pixels) |
+| `y` | `float` | Vertical middle of the text (pixels) |
 | `text` | `str` | Label text |
 | `style` | `str` | Text style preset. |
+| `color` | `str` | Theme token, or any CSS color (hex, `rgb()`, `hsl()`, named). Defaults to the style's color. |
 
 - **Returns** `None`
 
 ##### `status_dot(x: float, y: float, r: float, status: str) → None`
 
-Colored disc resolved from a status string. Recognized values: `"running"` (green), `"paused"` (warning), `"error"` (error red), `"idle"` (muted). Renders with a subtle outer glow ring. Useful for per-row indicators in machine lists.
+Colored disc resolved from a status string. Recognized values: `"running"` (green), `"paused"` (warning), `"error"` (error red), `"idle"` (muted). It also takes any color a `color` parameter takes, such as `"success"` or `"#ff8800"`. Renders with a subtle outer glow ring. Useful for per-row indicators in machine lists.
 
 ```preview
 status_dot(0, 0, 5, "running")
@@ -29828,10 +31809,10 @@ status_dot(0, 0, 5, "running")
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `x` | `float` | X (pixels) |
-| `y` | `float` | Y (pixels) |
+| `x` | `float` | Center X (pixels) |
+| `y` | `float` | Center Y (pixels) |
 | `r` | `float` | Radius (pixels) |
-| `status` | `str` | Status preset. |
+| `status` | `str` | Status preset (`"running"`, `"paused"`, `"error"`, `"idle"`), or any theme token or CSS color. |
 
 - **Returns** `None`
 
@@ -29847,8 +31828,8 @@ toggle(10, 12, true, "powered")
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `x` | `float` | X (pixels) |
-| `y` | `float` | Y (pixels) |
+| `x` | `float` | Left edge (pixels) |
+| `y` | `float` | Top edge (pixels) |
 | `on` | `bool` | Whether the toggle is on |
 | `label` | `str` | Optional label |
 | `size` | `float` | Pill height in pixels (default 18). The width, knob and label follow it. |
@@ -29867,15 +31848,15 @@ pill(10, 22, "earned", "success")
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `x` | `float` | X (pixels) |
-| `y` | `float` | Y (pixels) |
+| `x` | `float` | Left edge (pixels) |
+| `y` | `float` | Top edge (pixels) |
 | `text` | `str` | Pill text |
 | `color` | `str` | Theme token (e.g. `"accent"`), or any CSS color (hex, `rgb()`, `hsl()`, named). |
 | `size` | `float` | Pill height in pixels (default 18). The text and padding follow it; the width still comes from the text. |
 
 - **Returns** `None`
 
-##### `counter(x: float, y: float, value: object, label?: str, size?: float) → None`
+##### `counter(x: float, y: float, value: object, label?: str, size?: float, color?: str) → None`
 
 Big-number stat block, large value on top, small uppercase label below. Use for headline numbers (credits, day count, ingot inventory). `size` defaults to **24**.
 
@@ -29887,11 +31868,12 @@ counter(16, 38, 87, "shipped", 26)
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `x` | `float` | X (pixels) |
-| `y` | `float` | Y (pixels) |
+| `x` | `float` | Left edge (pixels) |
+| `y` | `float` | Baseline of the number (pixels). The number sits above it and the label hangs below. |
 | `value` | `object` | Value to display |
 | `label` | `str` | Optional label |
 | `size` | `float` | Optional numeric font size in pixels (default 24) |
+| `color` | `str` | Theme token, or any CSS color (hex, `rgb()`, `hsl()`, named), for the number. Defaults to `"text-bright"`; the label stays muted. |
 
 - **Returns** `None`
 
@@ -29907,8 +31889,8 @@ progress_bar(0.72, "success")
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `x` | `float` | X (pixels) |
-| `y` | `float` | Y (pixels) |
+| `x` | `float` | Left edge (pixels) |
+| `y` | `float` | Top edge (pixels) |
 | `w` | `float` | Width (pixels) |
 | `h` | `float` | Height (pixels) |
 | `fraction` | `float` | Fill (0-1) |
@@ -29928,8 +31910,8 @@ vertical_bar(110, 10, 30, 60, 0.6)
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `x` | `float` | X (pixels) |
-| `y` | `float` | Y (pixels) |
+| `x` | `float` | Left edge (pixels) |
+| `y` | `float` | Top edge (pixels) |
 | `w` | `float` | Width (pixels) |
 | `h` | `float` | Height (pixels) |
 | `fraction` | `float` | Fill (0-1) |
@@ -29937,9 +31919,9 @@ vertical_bar(110, 10, 30, 60, 0.6)
 
 - **Returns** `None`
 
-##### `bar_chart(x: float, y: float, w: float, h: float, values: list[float], max?: float, labels?: list[str]) → None`
+##### `bar_chart(x: float, y: float, w: float, h: float, values: list[float], max?: float, labels?: list[str], color?: str) → None`
 
-Multi-bar comparison chart, themed alternating colors, optional labels under each bar. `max` is optional, omit to auto-scale to the largest value.
+Multi-bar comparison chart, themed alternating colors, optional labels under each bar. `max` is optional, omit to auto-scale to the largest value. Pass `color` to paint every bar one color instead.
 
 ```preview
 bar_chart(0, 0, 0, 0, [42, 80, 26, 61, 95], 100)
@@ -29949,19 +31931,20 @@ bar_chart(0, 0, 0, 0, [42, 80, 26, 61, 95], 100)
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `x` | `float` | X (pixels) |
-| `y` | `float` | Y (pixels) |
+| `x` | `float` | Left edge (pixels) |
+| `y` | `float` | Top edge (pixels) |
 | `w` | `float` | Width (pixels) |
 | `h` | `float` | Height (pixels) |
 | `values` | `list[float]` | Numeric values to plot |
 | `max` | `float` | Optional maximum value |
 | `labels` | `list[str]` | Optional labels |
+| `color` | `str` | Theme token, or any CSS color (hex, `rgb()`, `hsl()`, named), for every bar. Without it the bars alternate accent and warning. |
 
 - **Returns** `None`
 
-##### `gauge(x: float, y: float, radius: float, fraction: float, label?: str) → None`
+##### `gauge(x: float, y: float, radius: float, fraction: float, label?: str, color?: str) → None`
 
-Three-quarter-circle dial with arc fill. `fraction` clamps to **0-1**, sweeping **270°** from bottom-left around to bottom-right. Optional center label sits in the middle (typically the value as text).
+Three-quarter-circle dial with arc fill. `fraction` clamps to **0-1**, sweeping **270°** from bottom-left around to bottom-right. Optional center label sits in the middle (typically the value as text). The arc's color defaults to `"accent"`; use `"success"`, `"warning"`, `"error"` for traffic-light cues.
 
 ```preview
 gauge(140, 50, 32, 0.62, "62%")
@@ -29971,31 +31954,38 @@ gauge(140, 50, 32, 0.62, "62%")
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `x` | `float` | X (pixels) |
-| `y` | `float` | Y (pixels) |
+| `x` | `float` | Center X (pixels) |
+| `y` | `float` | Center Y (pixels) |
 | `radius` | `float` | Gauge radius in pixels |
 | `fraction` | `float` | Fill fraction in the **0-1** range |
 | `label` | `str` | Optional label |
+| `color` | `str` | Theme token, or any CSS color (hex, `rgb()`, `hsl()`, named), for the filled arc. |
 
 - **Returns** `None`
 
-##### `spark_line(x: float, y: float, w: float, h: float, values: list[float]) → None`
+##### `spark_line(x: float, y: float, w: float, h: float, values: list[float], color?: str, axis?: bool) → None`
 
-Compact trend line drawn from a numeric series. Player accumulates values into a list and pushes the most recent on each tick, the widget normalizes to the series' min/max range and fills a subtle area below the line. Empty / single-value series no-op.
+Compact trend line drawn from a numeric series. Player accumulates values into a list and pushes the most recent on each tick, the widget normalizes to the series' min/max range and fills a subtle area below the line. The line and its shading default to `"accent"`; pass `color` to change both. Pass `axis` as `True` to label the top, middle and bottom of the scale at the left edge; the line moves over to make room. Empty / single-value series no-op.
 
 ```preview
 spark_line(0, 0, 0, 0)
+```
+
+```preview
+spark_line(0, 0, 0, 0, None, "accent", True)
 ```
 
 *Parameters*
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `x` | `float` | X (pixels) |
-| `y` | `float` | Y (pixels) |
+| `x` | `float` | Left edge (pixels) |
+| `y` | `float` | Top edge (pixels) |
 | `w` | `float` | Width (pixels) |
 | `h` | `float` | Height (pixels) |
 | `values` | `list[float]` | Numeric values to plot |
+| `color` | `str` | Theme token, or any CSS color (hex, `rgb()`, `hsl()`, named), for the line and its shading. |
+| `axis` | `bool` | `True` labels the top, middle and bottom of the line's scale at its left edge. |
 
 - **Returns** `None`
 
@@ -30012,8 +32002,8 @@ button(10, 12, 90, 26, "shed now")
 | Name | Type | Description |
 | --- | --- | --- |
 | `key` | `str` | Unique id for this control |
-| `x` | `float` | X (pixels) |
-| `y` | `float` | Y (pixels) |
+| `x` | `float` | Left edge (pixels) |
+| `y` | `float` | Top edge (pixels) |
 | `w` | `float` | Width in pixels (default 90) |
 | `h` | `float` | Height in pixels (default 26) |
 | `label` | `str` | Optional label |
@@ -30033,10 +32023,10 @@ switch(10, 12, true, "auto-recover")
 | Name | Type | Description |
 | --- | --- | --- |
 | `key` | `str` | Unique id for this control |
-| `x` | `float` | X (pixels) |
-| `y` | `float` | Y (pixels) |
+| `x` | `float` | Left edge (pixels) |
+| `y` | `float` | Top edge (pixels) |
 | `default_on` | `bool` | Initial on/off state |
-| `label` | `str` | Optional label |
+| `label` | `str` | Optional label drawn to the right. Clicking it flips the switch too. |
 | `size` | `float` | Pill height in pixels (default 18). The clickable area follows it. |
 
 - **Returns** `bool`
@@ -30054,8 +32044,8 @@ slider(10, 14, 120, 0.5, "rate")
 | Name | Type | Description |
 | --- | --- | --- |
 | `key` | `str` | Unique id for this control |
-| `x` | `float` | X (pixels) |
-| `y` | `float` | Y (pixels) |
+| `x` | `float` | Left edge (pixels) |
+| `y` | `float` | Top edge (pixels) |
 | `w` | `float` | Width (pixels) |
 | `default` | `float` | Initial value 0-1 |
 | `label` | `str` | Optional label |
@@ -30076,10 +32066,10 @@ checkbox(10, 12, true, "night mode")
 | Name | Type | Description |
 | --- | --- | --- |
 | `key` | `str` | Unique key this box stores its state under. |
-| `x` | `float` | X (pixels) |
-| `y` | `float` | Y (pixels) |
+| `x` | `float` | Left edge (pixels) |
+| `y` | `float` | Top edge (pixels) |
 | `default_on` | `bool` | Checked state the first time the card runs. |
-| `label` | `str` | Optional label drawn to the right. |
+| `label` | `str` | Optional label drawn to the right. Clicking it flips the box too. |
 | `size` | `float` | Box edge length in pixels (default 14). The tick and label follow it. |
 
 - **Returns** `bool`
@@ -30097,8 +32087,8 @@ radio_group(10, 6, ["ore", "ingots", "both"], 1)
 | Name | Type | Description |
 | --- | --- | --- |
 | `key` | `str` | Unique key the whole group stores its choice under. |
-| `x` | `float` | X (pixels) |
-| `y` | `float` | Y (pixels) |
+| `x` | `float` | Left edge (pixels) |
+| `y` | `float` | Top edge (pixels) |
 | `options` | `list[str]` | List of choices, drawn one per row. |
 | `default` | `str \| int` | Option text, or row number, selected the first time the card runs. |
 | `row_height` | `float` | Row pitch in pixels (default 20). The dot and text follow it. |
@@ -30118,8 +32108,8 @@ combo(10, 12, 150, "iron_ingot", "recipe")
 | Name | Type | Description |
 | --- | --- | --- |
 | `key` | `str` | Unique key this box stores its choice under. |
-| `x` | `float` | X (pixels) |
-| `y` | `float` | Y (pixels) |
+| `x` | `float` | Left edge (pixels) |
+| `y` | `float` | Top edge (pixels) |
 | `w` | `float` | Width (pixels) |
 | `options` | `list[str]` | List of choices shown when the player opens the box. |
 | `default` | `str \| int` | Option text, or row number, selected the first time the card runs. |
@@ -30141,12 +32131,12 @@ text_field(10, 12, 180, "outpost_north", "name...")
 | Name | Type | Description |
 | --- | --- | --- |
 | `key` | `str` | Unique key this field stores its text under. |
-| `x` | `float` | X (pixels) |
-| `y` | `float` | Y (pixels) |
+| `x` | `float` | Left edge (pixels) |
+| `y` | `float` | Top edge (pixels) |
 | `w` | `float` | Width (pixels) |
 | `default` | `str` | Text the field holds the first time the card runs. |
 | `placeholder` | `str` | Muted text shown while the field is empty. |
-| `label` | `str` | Title shown on the editor the player types into. |
+| `label` | `str` | Optional label drawn to the right. It also titles the editor the player types into. |
 | `size` | `float` | Field height in pixels (default 24). The text follows it. |
 
 - **Returns** `str`
@@ -30164,8 +32154,8 @@ list(10, 6, 160, 68, ["rover_1", "pioneer_1", "drone_1", "drone_2"], 0)
 | Name | Type | Description |
 | --- | --- | --- |
 | `key` | `str` | Unique key this list stores its selected row under. |
-| `x` | `float` | X (pixels) |
-| `y` | `float` | Y (pixels) |
+| `x` | `float` | Left edge (pixels) |
+| `y` | `float` | Top edge (pixels) |
 | `w` | `float` | Width (pixels) |
 | `h` | `float` | Height (pixels). Rows past it scroll. |
 | `items` | `list[str]` | List of rows to show. |
@@ -30186,8 +32176,8 @@ icon_button(10, 8, 44, "iron_ingot")
 | Name | Type | Description |
 | --- | --- | --- |
 | `key` | `str` | Unique key so the click routes back to this button. |
-| `x` | `float` | X (pixels) |
-| `y` | `float` | Y (pixels) |
+| `x` | `float` | Left edge (pixels) |
+| `y` | `float` | Top edge (pixels) |
 | `size` | `float` | Button edge length in pixels (default 32). |
 | `item_id` | `str` | Icon to draw inside the button. `panel.icon_ids()` lists every id. |
 
@@ -30250,6 +32240,54 @@ Force a text field's contents from code.
 
 - **Returns** `None`
 
+##### `get_switch(key: str) → bool | None`
+
+The stored state of a switch or check box, read without drawing it. Use it for a control on a page the card is not showing right now. `None` while the key has no stored state.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `key` | `str` | Key of the switch or check box to read. |
+
+- **Returns** `bool | None`
+
+##### `get_slider(key: str) → float | None`
+
+The stored value (0-1) of a slider, read without drawing it. `None` while the key has no stored value.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `key` | `str` | Key of the slider to read. |
+
+- **Returns** `float | None`
+
+##### `get_selected(key: str) → int | None`
+
+The stored row number of a radio group, combo box, or list, read without drawing it. Look it up in the same options list you draw the control with. `None` while the key has no stored choice.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `key` | `str` | Key of the radio group, combo box, or list to read. |
+
+- **Returns** `int | None`
+
+##### `get_text(key: str) → str | None`
+
+The stored text of a text field, read without drawing it. `None` while the key has no stored text.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `key` | `str` | Key of the text field to read. |
+
+- **Returns** `str | None`
+
 ##### `forget(key: str) → None`
 
 Drop one stored widget value. The next paint of that widget starts from its declared default again, which is how a card resets one control without disturbing the others.
@@ -30270,7 +32308,7 @@ Drop every stored widget value on this card. Widget keys are never swept automat
 
 ##### `mouse() → PanelMouse`
 
-Where the cursor is on this card, in the same coordinates you draw in. `over` is `False` while the cursor is elsewhere. The sample is taken once per tick and the card repaints at the same rate, so a highlight drawn from it follows the cursor about a frame behind: right for showing what is under the pointer, wrong for anything that must track it exactly.
+Where the cursor is on this card, in the same coordinates you draw in. `over` is `False` while the cursor is elsewhere. The sample is taken once per tick, so a highlight drawn from it follows the cursor about a frame behind. `pressed` and `released` say the left button went down on this card, or back up, since your previous call. Each is handed out once, so read the mouse once per frame. Together they let a card drag things.
 
 ```
 m = panel.mouse()
@@ -30325,8 +32363,8 @@ draw_text(10, 24, "Hello, panel.", 14, "text-bright")
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `x` | `float` | X (pixels) |
-| `y` | `float` | Y (pixels) |
+| `x` | `float` | Left edge of the text (pixels) |
+| `y` | `float` | Vertical middle of the first line (pixels) |
 | `text` | `str` | Text to draw |
 | `size` | `float` | Font size in pixels |
 | `color` | `str` | Theme token, or any CSS color (hex, `rgb()`, `hsl()`, named). |
@@ -30357,14 +32395,14 @@ draw_icon()
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `x` | `float` | X coordinate (pixels) |
-| `y` | `float` | Y coordinate (pixels) |
+| `x` | `float` | Left edge (pixels) |
+| `y` | `float` | Top edge (pixels) |
 | `item_id` | `str` | Item id to draw the icon for |
 | `size` | `float` | Icon size in pixels (default 32) |
 
 - **Returns** `None`
 
-##### `draw_rect(x: float, y: float, w: float, h: float, color?: str) → None`
+##### `draw_rect(x: float, y: float, w: float, h: float, color?: str, width?: float) → None`
 
 Outlined rectangle in the given color (defaults to `"border"`). Use for custom subsection borders or visual frames.
 
@@ -30376,11 +32414,12 @@ draw_rect(10, 10, 260, 60, "accent")
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `x` | `float` | X (pixels) |
-| `y` | `float` | Y (pixels) |
+| `x` | `float` | Left edge (pixels) |
+| `y` | `float` | Top edge (pixels) |
 | `w` | `float` | Width (pixels) |
 | `h` | `float` | Height (pixels) |
 | `color` | `str` | Theme token, or any CSS color (hex, `rgb()`, `hsl()`, named). |
+| `width` | `float` | Line width in pixels (default 1), drawn inside the rectangle. |
 
 - **Returns** `None`
 
@@ -30396,15 +32435,15 @@ fill_rect(10, 10, 260, 60, "success")
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `x` | `float` | X (pixels) |
-| `y` | `float` | Y (pixels) |
+| `x` | `float` | Left edge (pixels) |
+| `y` | `float` | Top edge (pixels) |
 | `w` | `float` | Width (pixels) |
 | `h` | `float` | Height (pixels) |
 | `color` | `str` | Theme token, or any CSS color (hex, `rgb()`, `hsl()`, named). |
 
 - **Returns** `None`
 
-##### `draw_circle(x: float, y: float, r: float, color?: str) → None`
+##### `draw_circle(x: float, y: float, r: float, color?: str, width?: float) → None`
 
 Outlined circle in the given color.
 
@@ -30416,10 +32455,11 @@ draw_circle(140, 40, 24, "accent")
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `x` | `float` | X (pixels) |
-| `y` | `float` | Y (pixels) |
+| `x` | `float` | Center X (pixels) |
+| `y` | `float` | Center Y (pixels) |
 | `r` | `float` | Radius |
 | `color` | `str` | Theme token, or any CSS color (hex, `rgb()`, `hsl()`, named). |
+| `width` | `float` | Line width in pixels (default 1). |
 
 - **Returns** `None`
 
@@ -30435,14 +32475,14 @@ fill_circle(140, 40, 24, "warning")
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `x` | `float` | X (pixels) |
-| `y` | `float` | Y (pixels) |
+| `x` | `float` | Center X (pixels) |
+| `y` | `float` | Center Y (pixels) |
 | `r` | `float` | Radius |
 | `color` | `str` | Theme token, or any CSS color (hex, `rgb()`, `hsl()`, named). |
 
 - **Returns** `None`
 
-##### `draw_line(x1: float, y1: float, x2: float, y2: float, color?: str) → None`
+##### `draw_line(x1: float, y1: float, x2: float, y2: float, color?: str, width?: float) → None`
 
 Single straight line.
 
@@ -30459,10 +32499,11 @@ draw_line(10, 40, 270, 40, "accent")
 | `x2` | `float` | End X (pixels) |
 | `y2` | `float` | End Y (pixels) |
 | `color` | `str` | Theme token, or any CSS color (hex, `rgb()`, `hsl()`, named). |
+| `width` | `float` | Line width in pixels (default 1). |
 
 - **Returns** `None`
 
-##### `draw_polygon(points: list[float], color?: str) → None`
+##### `draw_polygon(points: list[float], color?: str, width?: float) → None`
 
 Outlined closed shape through a flat list of coordinates: `[x1, y1, x2, y2, ...]`. Needs at least two points. Up to 4096 points per call.
 
@@ -30476,6 +32517,7 @@ draw_polygon([40, 10, 120, 30, 100, 70, 30, 60], "accent")
 | --- | --- | --- |
 | `points` | `list[float]` | Flat list of coordinates: `[x1, y1, x2, y2, ...]`. |
 | `color` | `str` | Theme token, or any CSS color (hex, `rgb()`, `hsl()`, named). |
+| `width` | `float` | Line width in pixels (default 1). |
 
 - **Returns** `None`
 
@@ -30514,6 +32556,61 @@ polyline([10, 60, 60, 20, 110, 50, 160, 15, 210, 40], "accent", 2)
 
 - **Returns** `None`
 
+##### `texture(key: str, rows: list[str], palette: dict[str, str | None]) → None`
+
+Create a small picture for `draw_texture` to draw. `rows` is the picture, one string per row, and each character is looked up in `palette`, which maps it to a hex colour or to `None` for a transparent pixel. Every row is the same length, up to **128** by **128** pixels. Using the same key again replaces that texture. A card holds up to **32** textures and **131,072** pixels of them in total. Textures belong to the running script, so create them at the top, before your loop.
+
+```
+panel.texture("floor", [
+  "abab",
+  "baba",
+], {"a": "#1b2230", "b": "#26314a"})
+```
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `key` | `str` | Name for the texture. Using a name again replaces that texture. |
+| `rows` | `list[str]` | The picture, one string per row of pixels. Every row is the same length, at most 128 by 128 pixels. |
+| `palette` | `dict[str, str \| None]` | Maps each character in `rows` to a hex colour such as `"#1b2230"`, or to `None` for a transparent pixel. |
+
+- **Returns** `None`
+
+*Raises*
+
+| Exception | Condition |
+| --- | --- |
+| `TypeError` | The key is not a non-empty string, `rows` is not a non-empty list of strings, `palette` is not a dict, a palette key is not a string, or a palette colour is neither a string nor `None`. |
+| `ValueError` | A row is empty, the rows differ in length or exceed 128 by 128 pixels, a palette key is not exactly one character, a palette colour is not a hex colour, a row uses a character the palette does not have, or adding or replacing the texture would exceed the card's limits of 32 textures or 131,072 total pixels. |
+
+##### `draw_texture(key: str, x: float, y: float, w?: float, h?: float) → None`
+
+Draw a texture made with `panel.texture()`. Without `w` and `h` it draws at its own size. With them it stretches and keeps its pixels sharp, so a small tile can fill the whole card.
+
+```
+panel.draw_texture("floor", 0, 0, panel.width(), panel.height())
+```
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `key` | `str` | Name given to `panel.texture()`. |
+| `x` | `float` | Left edge (pixels) |
+| `y` | `float` | Top edge (pixels) |
+| `w` | `float` | Width to draw at, in pixels. Defaults to the texture's own width. |
+| `h` | `float` | Height to draw at, in pixels. Defaults to the texture's own height. |
+
+- **Returns** `None`
+
+*Raises*
+
+| Exception | Condition |
+| --- | --- |
+| `TypeError` | The texture key must be a non-empty string. |
+| `KeyError` | The running script has not created a texture under this key. |
+
 ##### `clip_rect(x: float, y: float, w: float, h: float) → None`
 
 Confine every later drawing call to a rectangle, until `clear_clip()`. Use it to keep a scrolling or oversized drawing inside its box. A widget drawn under a clip takes clicks only where it shows, so one clipped out of sight takes none. Clips nest up to 16 deep; any left open are closed for you when the frame finishes.
@@ -30528,8 +32625,8 @@ panel.clear_clip()
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `x` | `float` | X (pixels) |
-| `y` | `float` | Y (pixels) |
+| `x` | `float` | Left edge (pixels) |
+| `y` | `float` | Top edge (pixels) |
 | `w` | `float` | Width (pixels) |
 | `h` | `float` | Height (pixels) |
 
@@ -30553,6 +32650,37 @@ Wipe the panel canvas, and with it every widget's clickable area. Call at the to
 
 - **Returns** `None`
 
+##### `last_bounds() → PanelBounds | None`
+
+The box the last widget you drew takes up, as `.x`, `.y`, `.w` and `.h`, with `.x` and `.y` at its top-left corner whichever point that widget is placed by. Use it to put the next widget after one whose size comes from its text, such as a `pill` or `draw_text`, without guessing its width. `None` until the card draws its first widget.
+
+```
+panel.pill(10, 10, "online", "success")
+b = panel.last_bounds()
+panel.pill(b.x + b.w + 6, 10, "docked")
+```
+
+- **Returns** `PanelBounds | None`
+
+##### `measure_text(text: str, size?: float, wrap?: float) → PanelSize`
+
+The size `draw_text` would give this text, as `.w` and `.h`, without drawing it. Pass the same `size` and `wrap` you will draw with. Use it to right-align or center text before you paint it.
+
+```
+s = panel.measure_text("42 kWh", 14)
+panel.draw_text(panel.width() - s.w - 10, 20, "42 kWh", 14)
+```
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `text` | `str` | Text to measure. |
+| `size` | `float` | Font size in pixels (default 12), as you will pass it to `draw_text`. |
+| `wrap` | `float` | Optional wrap width in pixels, as you will pass it to `draw_text`. |
+
+- **Returns** `PanelSize`
+
 ##### `width() → int`
 
 Current logical canvas width in pixels: **500** for a one-column card or **1000** for a two-column card. Use for ratio-based positioning.
@@ -30564,6 +32692,38 @@ Current logical canvas width in pixels: **500** for a one-column card or **1000*
 Current logical canvas height in pixels: **200** for a one-row card or **400** for a two-row card. Use for ratio-based positioning.
 
 - **Returns** `int`
+
+*Types / Panels*
+
+## PanelBounds
+
+**Returned by:** `panel.last_bounds()` (panel scripts only)
+
+### Properties
+
+##### `.x: float`
+
+Left edge in panel coordinates.
+
+- **Returns** `float`
+
+##### `.y: float`
+
+Top edge in panel coordinates.
+
+- **Returns** `float`
+
+##### `.w: float`
+
+Width in pixels.
+
+- **Returns** `float`
+
+##### `.h: float`
+
+Height in pixels.
+
+- **Returns** `float`
 
 *Types / Panels*
 
@@ -30648,6 +32808,38 @@ Cursor Y in panel coordinates.
 True while the cursor is over this card.
 
 - **Returns** `bool`
+
+##### `.pressed: bool`
+
+True if the left button went down on this card since the previous `mouse()` call.
+
+- **Returns** `bool`
+
+##### `.released: bool`
+
+True if the left button came back up since the previous `mouse()` call, even when it was released off the card.
+
+- **Returns** `bool`
+
+*Types / Panels*
+
+## PanelSize
+
+**Returned by:** `panel.measure_text()` (panel scripts only)
+
+### Properties
+
+##### `.w: float`
+
+Width in pixels.
+
+- **Returns** `float`
+
+##### `.h: float`
+
+Height in pixels, every wrapped line included.
+
+- **Returns** `float`
 
 *Types / Contracts*
 
@@ -32123,6 +34315,249 @@ Vault key string when `.status == "ok"`; otherwise `None`.
 
 *Types / Built-in Types*
 
+## Counter
+
+**Returned by:** `Counter(iterable)` from `collections`
+
+### Methods
+
+##### `.most_common(n: int | None = None, /) → list[tuple[K, int]]`
+
+The counts from highest to lowest as `(item, count)` pairs; with `n`, only the top `n`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `n` | `int \| None` | How many of the largest counts (default all) |
+
+- **Returns** `list[tuple[K, int]]`
+
+##### `.elements() → Iterator[K]`
+
+Each item repeated as many times as its count, skipping counts below one.
+
+- **Returns** `Iterator[K]`
+
+##### `.total() → int`
+
+The sum of all counts.
+
+- **Returns** `int`
+
+##### `.update(iterable: object = None, /, **kwargs: int) → None`
+
+Add counts from an iterable of items, a mapping of counts, or keywords.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `iterable` | `object` | Items to count, or a mapping of counts to add |
+| `**kwargs` | `int` | Counts to add by name |
+
+- **Returns** `None`
+
+##### `.subtract(iterable: object = None, /, **kwargs: int) → None`
+
+Take counts away, the opposite of `update`; a count may go to zero or below.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `iterable` | `object` | Items to uncount, or a mapping of counts to take away |
+| `**kwargs` | `int` | Counts to take away by name |
+
+- **Returns** `None`
+
+##### `.copy() → Counter[K]`
+
+A new Counter with the same counts.
+
+- **Returns** `Counter[K]`
+
+*Types / Built-in Types*
+
+## defaultdict
+
+**Returned by:** `defaultdict(factory)` from `collections`
+
+### Properties
+
+##### `.default_factory: Callable | None`
+
+The function called to make a missing key's value, or `None`.
+
+- **Returns** `Callable | None`
+
+### Methods
+
+##### `.copy() → defaultdict[K, V]`
+
+A new defaultdict with the same items and factory.
+
+- **Returns** `defaultdict[K, V]`
+
+*Types / Built-in Types*
+
+## deque
+
+**Returned by:** `deque(iterable)` from `collections`
+
+### Properties
+
+##### `.maxlen: int | None`
+
+The size limit given when the deque was made, or `None`.
+
+- **Returns** `int | None`
+
+### Methods
+
+##### `.append(x: T, /) → None`
+
+Add an item to the right end.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `x` | `T` | Item to add |
+
+- **Returns** `None`
+
+##### `.appendleft(x: T, /) → None`
+
+Add an item to the left end.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `x` | `T` | Item to add |
+
+- **Returns** `None`
+
+##### `.pop() → T`
+
+Remove and return the rightmost item.
+
+- **Returns** `T`
+
+##### `.popleft() → T`
+
+Remove and return the leftmost item.
+
+- **Returns** `T`
+
+##### `.extend(iterable: Iterable[T], /) → None`
+
+Add every item of an iterable to the right end.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `iterable` | `Iterable[T]` | Items to add |
+
+- **Returns** `None`
+
+##### `.extendleft(iterable: Iterable[T], /) → None`
+
+Add every item of an iterable to the left end, one at a time, so they end up reversed.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `iterable` | `Iterable[T]` | Items to add |
+
+- **Returns** `None`
+
+##### `.rotate(n: int = 1, /) → None`
+
+Move items from the right end to the left `n` times, or the other way when `n` is negative.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `n` | `int` | Steps to rotate |
+
+- **Returns** `None`
+
+##### `.clear() → None`
+
+Remove every item.
+
+- **Returns** `None`
+
+##### `.copy() → deque[T]`
+
+A new deque with the same items and `maxlen`.
+
+- **Returns** `deque[T]`
+
+##### `.count(x: object, /) → int`
+
+How many items equal `x`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `x` | `object` | Value to count |
+
+- **Returns** `int`
+
+##### `.index(x: object, start: int = 0, stop: int | None = None, /) → int`
+
+Position of the first item equal to `x`, searching from `start` up to `stop`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `x` | `object` | Value to find |
+| `start` | `int` | First position to search |
+| `stop` | `int \| None` | Position to stop before |
+
+- **Returns** `int`
+
+##### `.insert(i: int, x: T, /) → None`
+
+Insert `x` before position `i`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `i` | `int` | Position to insert before |
+| `x` | `T` | Item to insert |
+
+- **Returns** `None`
+
+##### `.remove(value: object, /) → None`
+
+Remove the first item equal to `value`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `value` | `object` | Value to remove |
+
+- **Returns** `None`
+
+##### `.reverse() → None`
+
+Reverse the items in place.
+
+- **Returns** `None`
+
+*Types / Built-in Types*
+
 ## dict
 
 **Returned by:** dict literals `{k: v}` · `dict()` · methods returning dicts
@@ -32225,6 +34660,19 @@ Merge entries into this dict, overwriting matching keys. Accepts another dict, a
 
 - **Returns** `None`
 
+##### `.fromkeys(iterable: Iterable[object], value: object = None, /) → dict`
+
+A new dict with every item of `iterable` as a key, each set to `value`: `dict.fromkeys(["iron", "copper"], 0)` → `{"iron": 0, "copper": 0}`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `iterable` | `Iterable[object]` | Keys for the new dict |
+| `value` | `object` | Value for every key (default `None`) |
+
+- **Returns** `dict`
+
 ##### `.copy() → dict[K, V]`
 
 Return a shallow copy of the dictionary. Top-level keys/values are duplicated to a fresh dict; nested mutable values (lists, dicts) are shared with the original.
@@ -32236,6 +34684,46 @@ Return a shallow copy of the dictionary. Top-level keys/values are duplicated to
 Remove all entries.
 
 - **Returns** `None`
+
+*Types / Built-in Types*
+
+## float
+
+**Returned by:** decimal literals · `float(value)` · division with `/`
+
+### Properties
+
+##### `.real: float`
+
+The number itself, so any number can be read as `x.real`.
+
+- **Returns** `float`
+
+##### `.imag: float`
+
+Always `0`: a real number has no imaginary part.
+
+- **Returns** `float`
+
+### Methods
+
+##### `.conjugate() → float`
+
+The number itself.
+
+- **Returns** `float`
+
+##### `.as_integer_ratio() → tuple[int, int]`
+
+The exact fraction the number holds, in lowest terms: `(0.75).as_integer_ratio()` → `(3, 4)`.
+
+- **Returns** `tuple[int, int]`
+
+##### `.is_integer() → bool`
+
+`True` when the number has no fractional part: `(2.0).is_integer()` → `True`.
+
+- **Returns** `bool`
 
 *Types / Built-in Types*
 
@@ -32303,6 +34791,70 @@ Resume the generator with `None` and return its next yielded value. Completion r
 
 *Types / Built-in Types*
 
+## int
+
+**Returned by:** whole-number literals · `int(value)` · `len()` and other counts
+
+### Properties
+
+##### `.real: int`
+
+The number itself, so any number can be read as `x.real`.
+
+- **Returns** `int`
+
+##### `.imag: int`
+
+Always `0`: a real number has no imaginary part.
+
+- **Returns** `int`
+
+##### `.numerator: int`
+
+The number itself, as the top of a fraction over 1.
+
+- **Returns** `int`
+
+##### `.denominator: int`
+
+Always `1`.
+
+- **Returns** `int`
+
+### Methods
+
+##### `.conjugate() → int`
+
+The number itself.
+
+- **Returns** `int`
+
+##### `.bit_length() → int`
+
+How many binary digits the number needs, ignoring its sign: `(10).bit_length()` → `4`.
+
+- **Returns** `int`
+
+##### `.bit_count() → int`
+
+How many 1 bits the number has, ignoring its sign: `(7).bit_count()` → `3`.
+
+- **Returns** `int`
+
+##### `.as_integer_ratio() → tuple[int, int]`
+
+The number as a fraction: `(6).as_integer_ratio()` → `(6, 1)`.
+
+- **Returns** `tuple[int, int]`
+
+##### `.is_integer() → bool`
+
+Always `True` for a whole number.
+
+- **Returns** `bool`
+
+*Types / Built-in Types*
+
 ## list
 
 **Returned by:** list literals `[1, 2, 3]` · `list(iterable)` · methods returning lists
@@ -32343,7 +34895,7 @@ Remove and return one element. Default removes the last (`pop()`). Pass an integ
 
 ##### `.remove(item: T, /) → None`
 
-Remove the first occurrence of `item` by value. Raises if not found. Use `.index(item)` first if you need to check.
+Remove the first occurrence of `item` by value. Raises if not found. Use `item in lst` first if you need to check.
 
 *Parameters*
 
@@ -32434,6 +34986,45 @@ Append every item from another finite iterable to the end of this list. Mutates 
 Remove all items. Returns `None`. Equivalent to `lst[:] = []`.
 
 - **Returns** `None`
+
+*Types / Built-in Types*
+
+## OrderedDict
+
+**Returned by:** `OrderedDict(...)` from `collections`
+
+### Methods
+
+##### `.move_to_end(key: K, last: bool = True) → None`
+
+Move an existing key to the end, or to the front with `last=False`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `key` | `K` | Key to move |
+| `last` | `bool` | True for the end, False for the front |
+
+- **Returns** `None`
+
+##### `.popitem(last: bool = True) → tuple[K, V]`
+
+Remove and return the last `(key, value)` pair, or the first with `last=False`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `last` | `bool` | True for the last pair, False for the first |
+
+- **Returns** `tuple[K, V]`
+
+##### `.copy() → OrderedDict[K, V]`
+
+A new OrderedDict with the same items.
+
+- **Returns** `OrderedDict[K, V]`
 
 *Types / Built-in Types*
 
@@ -32752,6 +35343,19 @@ Split into substrings. With `sep=None`, every Python whitespace character separa
 
 - **Returns** `list[str]`
 
+##### `.rsplit(sep: str | None = None, maxsplit: int = -1) → list[str]`
+
+Like `split()`, but a `maxsplit` counts from the right, so the unsplit rest is the first item: `"a/b/c".rsplit("/", 1)` → `["a/b", "c"]`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `sep` | `str \| None` | Non-empty string separator or None for whitespace |
+| `maxsplit` | `int` | Maximum splits (default -1) |
+
+- **Returns** `list[str]`
+
 ##### `.splitlines(keepends: bool = False) → list[str]`
 
 Split on Python line boundaries, including `\n`, `\r\n`, `\r`, vertical tab, form feed, Unicode NEL, and Unicode line/paragraph separators. Trailing boundaries do not add an extra empty item. Pass `keepends=True` to retain each boundary.
@@ -32977,6 +35581,36 @@ Swap the case of every character (lowercase ↔ uppercase).
 
 - **Returns** `bool`
 
+##### `.isdecimal() → bool`
+
+`True` when the string is not empty and every character is a decimal digit, `0` to `9` in any writing system. Stricter than `isdigit()`, which also accepts `²`.
+
+- **Returns** `bool`
+
+##### `.isnumeric() → bool`
+
+`True` when the string is not empty and every character is numeric: digits, fractions such as `½` and numerals such as `Ⅷ`.
+
+- **Returns** `bool`
+
+##### `.isascii() → bool`
+
+`True` when every character is ASCII, code point below 128. An empty string is `True`.
+
+- **Returns** `bool`
+
+##### `.isidentifier() → bool`
+
+`True` when the string is spelled like a Python name, such as a variable name. Keywords such as `class` count too.
+
+- **Returns** `bool`
+
+##### `.isprintable() → bool`
+
+`True` when every character prints visibly or is a space, and `False` for a line break, a tab or another control character. An empty string is `True`.
+
+- **Returns** `bool`
+
 ##### `.rfind(substring: str, start: int | None = 0, end: int | None = None, /) → int`
 
 Return the highest index where `substring` appears, or `-1` if not found. Mirror of `find()` from the right: useful for parsing the last separator of a string.
@@ -33007,7 +35641,7 @@ Like `rfind()`, but raises if the substring isn't present.
 
 ##### `.format(*args: object, **kwargs: object) → str`
 
-Replace placeholders with arguments. Auto-numbered `{}` consumes the next positional arg, explicit `{0}`/`{1}` reference specific positionals, and `{name}` looks up a keyword arg: `"hi {name}".format(name="world")` → `"hi world"`. For format specs / conversions (`{x:>10}`, `{x!r}`), prefer f-strings.
+Replace placeholders with arguments. `{}` takes the next positional argument, `{0}` a numbered one and `{name}` a keyword one, and a field can add a conversion and a format spec exactly like an f-string: `"{:>8.2f}|{name!r}".format(3.14159, name="ore")` → `"    3.14|'ore'"`.
 
 *Parameters*
 
@@ -33015,6 +35649,56 @@ Replace placeholders with arguments. Auto-numbered `{}` consumes the next positi
 | --- | --- | --- |
 | `args` | `object` | Values for the numbered `{}` fields |
 | `kwargs` | `object` | Values for the named fields, by keyword (`name="world"`) |
+
+- **Returns** `str`
+
+##### `.format_map(mapping: dict[str, object], /) → str`
+
+Like `.format()` with every `{name}` field read from one dict: `"{name} is done".format_map(job)`. A numbered or `{}` field is a `ValueError`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `mapping` | `dict[str, object]` | Dict the named fields read their values from |
+
+- **Returns** `str`
+
+##### `.expandtabs(tabsize: int = 8) → str`
+
+Replace each tab with spaces up to the next multiple of `tabsize` columns, counted from the last line break: `"a\tb".expandtabs(4)` → `"a   b"`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `tabsize` | `int` | Columns between tab stops (default 8) |
+
+- **Returns** `str`
+
+##### `.maketrans(x: str | dict[str | int, str | int | None], y: str | None = None, z: str | None = None, /) → dict[float, object]`
+
+Build a table for `translate()`. `str.maketrans("abc", "xyz")` maps each character of the first string to the one at the same place in the second, a third string lists characters to delete, and one dict maps characters to their replacements.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `x` | `str \| dict[str \| int, str \| int \| None]` | Characters to replace, or a dict of replacements |
+| `y` | `str \| None` | Replacement characters, as many as in `x` |
+| `z` | `str \| None` | Characters to delete |
+
+- **Returns** `dict[float, object]`
+
+##### `.translate(table: dict[int, str | int | None], /) → str`
+
+Replace characters through a table from `str.maketrans()`, or any dict from code points to a string, a code point, or `None` to delete: `"cab".translate(str.maketrans("abc", "xyz"))` → `"zxy"`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `table` | `dict[int, str \| int \| None]` | Table from `str.maketrans()` |
 
 - **Returns** `str`
 
@@ -33639,17 +36323,48 @@ The string that was searched.
 
 - **Returns** `str`
 
+##### `.lastindex: int | None`
+
+Number of the last group that matched, or `None` if no group did.
+
+- **Returns** `int | None`
+
+##### `.lastgroup: str | None`
+
+Name of the last group that matched, or `None` if it has no name or no group matched.
+
+- **Returns** `str | None`
+
+##### `.pos: int`
+
+Where the search started in the string.
+
+- **Returns** `int`
+
+##### `.endpos: int`
+
+Where the search stopped in the string.
+
+- **Returns** `int`
+
+##### `.re: Pattern`
+
+The compiled `Pattern` that produced this match.
+
+- **Returns** `Pattern`
+
 ### Methods
 
-##### `.group(index: int = 0) → str | None`
+##### `.group(group: int | str = 0, /, *groups: int | str) → str | None`
 
-Return the matched text for group `index`. Group `0` is the whole match. Optional groups that did not match return `None`; an out-of-range group raises.
+Return the matched text for a group, by number or by `(?P<name>...)` name. Group `0` is the whole match, and several groups return a tuple: `m.group(1, "unit")`. Optional groups that did not match return `None`; an unknown group raises. `m[1]` is the same as `m.group(1)`.
 
 *Parameters*
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `index` | `int` | Capture group index; default 0 |
+| `group` | `int \| str` | Capture group number or name; default 0 |
+| `groups` | `int \| str` | More groups, which make the result a tuple |
 
 - **Returns** `str | None`
 
@@ -33665,7 +36380,7 @@ Return a tuple of captured groups, excluding group `0`. Groups that did not matc
 
 - **Returns** `tuple[str | None, ...]`
 
-##### `.start(index: int = 0) → int`
+##### `.start(index: int | str = 0) → int`
 
 Start character index for the group. Unmatched optional groups return `-1`.
 
@@ -33673,11 +36388,11 @@ Start character index for the group. Unmatched optional groups return `-1`.
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `index` | `int` | Capture group index; default 0 |
+| `index` | `int \| str` | Capture group index; default 0 |
 
 - **Returns** `int`
 
-##### `.end(index: int = 0) → int`
+##### `.end(index: int | str = 0) → int`
 
 End character index for the group. Unmatched optional groups return `-1`.
 
@@ -33685,11 +36400,11 @@ End character index for the group. Unmatched optional groups return `-1`.
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `index` | `int` | Capture group index; default 0 |
+| `index` | `int \| str` | Capture group index; default 0 |
 
 - **Returns** `int`
 
-##### `.span(index: int = 0) → tuple[int, ...]`
+##### `.span(index: int | str = 0) → tuple[int, ...]`
 
 Return `(start, end)` for the group. Unmatched optional groups return `(-1, -1)`.
 
@@ -33697,9 +36412,190 @@ Return `(start, end)` for the group. Unmatched optional groups return `(-1, -1)`
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `index` | `int` | Capture group index; default 0 |
+| `index` | `int \| str` | Capture group index; default 0 |
 
 - **Returns** `tuple[int, ...]`
+
+##### `.__getitem__(group: int | str, /) → str | None`
+
+`m[1]` or `m["name"]`: the same text as `m.group(1)`, or `None` for a group that took no part in the match.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `group` | `int \| str` | Capture group number or name; default 0 |
+
+- **Returns** `str | None`
+
+##### `.groupdict(default: object = None) → dict[str, str | None]`
+
+Return a dict of every named group's text, by name. Named groups that did not match use `default`, which is `None` if omitted.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `default` | `object` | Value for unmatched optional groups |
+
+- **Returns** `dict[str, str | None]`
+
+##### `.expand(template: str, /) → str`
+
+Fill in a replacement template the way `re.sub()` does, from this match: `m.expand(r"\2-\1")`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `template` | `str` | Template with backreferences |
+
+- **Returns** `str`
+
+*Types / Built-in Modules*
+
+## Pattern
+
+**Returned by:** `re.compile()`
+
+### Properties
+
+##### `.pattern: str`
+
+The pattern text this was compiled from.
+
+- **Returns** `str`
+
+##### `.flags: int`
+
+The flags this was compiled with.
+
+- **Returns** `int`
+
+##### `.groups: int`
+
+How many capture groups the pattern has.
+
+- **Returns** `int`
+
+##### `.groupindex: dict[str, float]`
+
+Dict from each `(?P<name>...)` group name to its number.
+
+- **Returns** `dict[str, float]`
+
+### Methods
+
+##### `.search(string: str, pos: int = 0, endpos: int | None = None) → Match | None`
+
+Like `re.search()` with this pattern, looking only between `pos` and `endpos`: a `Match`, or `None` if nothing there matches.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `string` | `str` | Text to search |
+| `pos` | `int` | Index to start at (default 0) |
+| `endpos` | `int \| None` | Index to stop before (default the end) |
+
+- **Returns** `Match | None`
+
+##### `.match(string: str, pos: int = 0, endpos: int | None = None) → Match | None`
+
+Like `re.match()` with this pattern, anchored at `pos`: a `Match`, or `None` if the text at `pos` does not match.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `string` | `str` | Text to search |
+| `pos` | `int` | Index to start at (default 0) |
+| `endpos` | `int \| None` | Index to stop before (default the end) |
+
+- **Returns** `Match | None`
+
+##### `.fullmatch(string: str, pos: int = 0, endpos: int | None = None) → Match | None`
+
+Like `re.fullmatch()` with this pattern, over the text from `pos` to `endpos`: a `Match`, or `None` if any part is left unmatched.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `string` | `str` | Text to search |
+| `pos` | `int` | Index to start at (default 0) |
+| `endpos` | `int \| None` | Index to stop before (default the end) |
+
+- **Returns** `Match | None`
+
+##### `.findall(string: str, pos: int = 0, endpos: int | None = None) → list`
+
+Like `re.findall()` with this pattern, between `pos` and `endpos`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `string` | `str` | Text to search |
+| `pos` | `int` | Index to start at (default 0) |
+| `endpos` | `int \| None` | Index to stop before (default the end) |
+
+- **Returns** `list`
+
+##### `.finditer(string: str, pos: int = 0, endpos: int | None = None) → Iterator[Match]`
+
+Like `re.finditer()` with this pattern, between `pos` and `endpos`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `string` | `str` | Text to search |
+| `pos` | `int` | Index to start at (default 0) |
+| `endpos` | `int \| None` | Index to stop before (default the end) |
+
+- **Returns** `Iterator[Match]`
+
+##### `.sub(repl: str | Callable, string: str, count: int = 0) → str`
+
+Like `re.sub()` with this pattern.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `repl` | `str \| Callable` | Replacement text, or a function from `Match` to text |
+| `string` | `str` | Text to search |
+| `count` | `int` | Maximum replacements; 0 means all |
+
+- **Returns** `str`
+
+##### `.subn(repl: str | Callable, string: str, count: int = 0) → tuple[str, int]`
+
+Like `re.subn()` with this pattern.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `repl` | `str \| Callable` | Replacement text, or a function from `Match` to text |
+| `string` | `str` | Text to search |
+| `count` | `int` | Maximum replacements; 0 means all |
+
+- **Returns** `tuple[str, int]`
+
+##### `.split(string: str, maxsplit: int = 0) → list`
+
+Like `re.split()` with this pattern.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `string` | `str` | Text to search |
+| `maxsplit` | `int` | Maximum splits; 0 means all |
+
+- **Returns** `list`
 
 *Types / Exploration*
 
@@ -33894,7 +36790,7 @@ Newly created blueprint ids. Empty for every outcome except `"ok"`.
 Stable result code for scripts to check. `.message` explains what happened.
 
 - **Returns** `str`
-- **Possible values** `"ok"`, `"not_mounted"`, `"invalid"`, `"out_of_bounds"`, `"busy"`, `"not_at_site"`, `"not_surveyed"`, `"too_hard"`, `"no_cargo_space"`, `"no_power"`, `"not_enough_power"`, `"not_found"`, `"locked"`, `"already_active"`, `"wrong_position"`, `"insufficient_materials"`, `"paused_no_power"`, `"cargo_present"`, `"blocked"`, `"paused"`, `"canceled"`, `"not_ready"`, `"not_local"`, `"same_endpoint"`, `"unsupported_source"`, `"source_is_vehicle"`, `"unsupported_target"`, `"target_is_vehicle"`, `"incompatible"`, `"duplicate"`, `"invalid_type"`, `"path"`, `"wall"`, `"exit"`, `"in_progress"`, `"ongoing"`, `"win"`, `"loss"`, `"draw"`, `"occupied"`, `"no_game"`, `"rejected"`, `"booting"`, `"already_booted"`, `"activating"`, `"already_online"`, `"boot_required"`, `"initializing"`, `"power_required"`, `"insufficient_credits"`, `"inventory_full"`, `"not_toggleable"`, `"under_construction"`, `"not_connected"`, `"no_script"`, `"script_running"`, `"script_paused"`, `"editor_busy"`, `"variant_not_found"`, `"incompatible_variant"`, `"source_too_large"`, `"already_running"`, `"not_powered"`, `"started"`, `"already_repaired"`, `"no_source"`, `"already_testing"`, `"too_far"`, `"already_here"`, `"overheated"`, `"moving"`, `"dropped"`, `"empty"`, `"invalid_seed"`, `"no_seed"`, `"holding"`, `"not_empty"`, `"base_sector"`, `"no_kit"`, `"invalid_kit"`, `"not_plantable"`, `"insufficient_water"`, `"tank_empty"`, `"already_full"`, `"no_salt"`, `"invalid_input"`, `"no_plant"`, `"already_mature"`, `"tier_conflict"`, `"no_dose"`, `"nothing"`, `"script_present"`, `"partial"`, `"not_mature"`, `"no_forage"`, `"correct"`, `"incorrect"`, `"already_completed_correct"`, `"already_completed_incorrect"`, `"accepted"`, `"wrong_planet"`, `"wrong_contract"`, `"unknown_contract"`, `"key_is_planet"`, `"unknown_key"`, `"not_at_service_point"`, `"item_not_in_inventory"`, `"unknown_module"`, `"slot_not_compatible"`, `"slot_occupied"`, `"invalid_slot"`, `"capability_already_mounted"`, `"slot_empty"`, `"holder_not_empty"`, `"invalid_internal_slot"`, `"not_container"`, `"item_not_accepted"`, `"internal_slot_occupied"`, `"internal_slot_empty"`, `"container_not_empty"`, `"charging"`, `"queued"`, `"target_reached"`, `"not_docked"`, `"station_offline"`, `"already_dispatched"`, `"unknown_recipe"`, `"offline"`, `"recipe_locked"`, `"material_mismatch"`, `"material_present"`, `"invalid_channel"`, `"invalid_value"`, `"channel_limit"`, `"invalid_key"`, `"invalid_coords"`, `"invalid_icon"`, `"invalid_color"`, `"invalid_text"`, `"limit_reached"`, `"entry_limit"`, `"unknown_order"`, `"completed"`, `"station_not_found"`, `"out_of_range"`, `"scrambled"`, `"drill_not_found"`, `"invalid_target"`, `"not_at_station"`, `"wrong_engine_for_module"`, `"cargo_capacity_exceeded"`, `"module_not_mounted"`, `"hot_cargo_requires_plating"`, `"refueling"`, `"no_oil"`, `"not_stranded"`, `"no_rescue"`, `"worker_not_present"`, `"construction_dependency"`, `"not_undeployable"`, `"self_target"`, `"docked_drone"`, `"is_home"`, `"name_empty"`, `"name_too_long"`, `"name_taken"`, `"output_full"`, `"complete"`, `"no_input"`, `"no_active"`, `"cargo_occupied"`, `"no_fragment"`, `"input_occupied"`, `"source_empty"`, `"source_busy"`, `"wrong_outpost"`, `"invalid_source"`, `"invalid_reagent"`, `"invalid_qty"`, `"invalid_properties"`, `"invalid_property_match"`, `"insufficient_input"`, `"recipe_mismatch"`, `"input_empty"`, `"not_analyzed"`, `"invalid_specimen"`, `"chamber_occupied"`, `"not_in_input"`, `"invalid_fragment"`, `"destroyed"`, `"unknown_gene"`, `"invalid_recipe"`, `"wrong_materials"`, `"wrong_fragment"`, `"no_recipe"`, `"conditioned"`, `"burned"`, `"no_run"`, `"species_exists"`, `"unknown_creature"`, `"not_cataloged"`, `"no_target"`, `"wrong_feed"`, `"insufficient_feed"`, `"insufficient_reagents"`, `"no_colony"`, `"not_established"`, `"insufficient_capacity"`, `"unknown_node"`, `"already_purchased"`, `"population_locked"`, `"insufficient_insight"`, `"output_busy"`, `"no_op"`, `"no_material"`
+- **Possible values** `"ok"`, `"not_mounted"`, `"invalid"`, `"out_of_bounds"`, `"busy"`, `"not_at_site"`, `"not_surveyed"`, `"too_hard"`, `"no_cargo_space"`, `"no_power"`, `"not_enough_power"`, `"not_found"`, `"locked"`, `"already_active"`, `"wrong_position"`, `"insufficient_materials"`, `"paused_no_power"`, `"cargo_present"`, `"blocked"`, `"paused"`, `"canceled"`, `"not_ready"`, `"not_local"`, `"same_endpoint"`, `"unsupported_source"`, `"source_is_vehicle"`, `"unsupported_target"`, `"target_is_vehicle"`, `"incompatible"`, `"duplicate"`, `"invalid_type"`, `"path"`, `"wall"`, `"exit"`, `"in_progress"`, `"ongoing"`, `"win"`, `"loss"`, `"draw"`, `"occupied"`, `"no_game"`, `"rejected"`, `"booting"`, `"already_booted"`, `"activating"`, `"already_online"`, `"boot_required"`, `"initializing"`, `"power_required"`, `"insufficient_credits"`, `"inventory_full"`, `"not_toggleable"`, `"under_construction"`, `"not_connected"`, `"no_script"`, `"script_running"`, `"script_paused"`, `"editor_busy"`, `"variant_not_found"`, `"incompatible_variant"`, `"source_too_large"`, `"already_running"`, `"not_powered"`, `"started"`, `"already_repaired"`, `"no_source"`, `"already_testing"`, `"too_far"`, `"already_here"`, `"overheated"`, `"moving"`, `"dropped"`, `"empty"`, `"invalid_seed"`, `"no_seed"`, `"holding"`, `"not_empty"`, `"base_sector"`, `"no_kit"`, `"invalid_kit"`, `"not_plantable"`, `"insufficient_water"`, `"tank_empty"`, `"already_full"`, `"no_salt"`, `"invalid_input"`, `"no_plant"`, `"already_mature"`, `"tier_conflict"`, `"no_dose"`, `"nothing"`, `"script_present"`, `"partial"`, `"not_mature"`, `"no_forage"`, `"correct"`, `"incorrect"`, `"already_completed_correct"`, `"already_completed_incorrect"`, `"accepted"`, `"wrong_planet"`, `"wrong_contract"`, `"unknown_contract"`, `"key_is_planet"`, `"unknown_key"`, `"station_not_found"`, `"not_at_station"`, `"not_at_service_point"`, `"item_not_in_inventory"`, `"unknown_module"`, `"slot_not_compatible"`, `"slot_occupied"`, `"invalid_slot"`, `"capability_already_mounted"`, `"slot_empty"`, `"holder_not_empty"`, `"invalid_internal_slot"`, `"not_container"`, `"item_not_accepted"`, `"internal_slot_occupied"`, `"internal_slot_empty"`, `"container_not_empty"`, `"charging"`, `"queued"`, `"target_reached"`, `"not_docked"`, `"station_offline"`, `"already_dispatched"`, `"unknown_recipe"`, `"offline"`, `"recipe_locked"`, `"material_mismatch"`, `"material_present"`, `"invalid_channel"`, `"invalid_value"`, `"channel_limit"`, `"invalid_key"`, `"invalid_coords"`, `"invalid_icon"`, `"invalid_color"`, `"invalid_text"`, `"limit_reached"`, `"entry_limit"`, `"unknown_order"`, `"completed"`, `"out_of_range"`, `"scrambled"`, `"drill_not_found"`, `"invalid_target"`, `"wrong_engine_for_module"`, `"cargo_capacity_exceeded"`, `"module_not_mounted"`, `"hot_cargo_requires_plating"`, `"refueling"`, `"no_oil"`, `"not_stranded"`, `"no_rescue"`, `"worker_not_present"`, `"construction_dependency"`, `"not_undeployable"`, `"self_target"`, `"docked_drone"`, `"is_home"`, `"name_empty"`, `"name_too_long"`, `"name_taken"`, `"output_full"`, `"complete"`, `"no_input"`, `"no_active"`, `"cargo_occupied"`, `"no_fragment"`, `"input_occupied"`, `"source_empty"`, `"source_busy"`, `"wrong_outpost"`, `"invalid_source"`, `"invalid_reagent"`, `"invalid_qty"`, `"invalid_properties"`, `"invalid_property_match"`, `"insufficient_input"`, `"recipe_mismatch"`, `"input_empty"`, `"not_analyzed"`, `"invalid_specimen"`, `"chamber_occupied"`, `"not_in_input"`, `"invalid_fragment"`, `"destroyed"`, `"unknown_gene"`, `"invalid_recipe"`, `"wrong_materials"`, `"wrong_fragment"`, `"no_recipe"`, `"conditioned"`, `"burned"`, `"no_run"`, `"species_exists"`, `"unknown_creature"`, `"not_cataloged"`, `"no_target"`, `"wrong_feed"`, `"insufficient_feed"`, `"insufficient_reagents"`, `"no_colony"`, `"not_established"`, `"insufficient_capacity"`, `"unknown_node"`, `"already_purchased"`, `"population_locked"`, `"insufficient_insight"`, `"output_busy"`, `"no_op"`, `"no_material"`
 
 ##### `.message: str`
 
@@ -34895,7 +37791,7 @@ Publish one transmission into its declared numbered slot. A different event repl
 | `"ok"` | success | The operation completed successfully. |
 | `"no_power"` | transient | The component has no available power. |
 | `"duplicate"` | rejection | That entry is already present and nothing was added or changed. |
-| `"invalid_type"` | rejection | The supplied value does not carry the required API type and provenance. |
+| `"invalid_type"` | rejection | A supplied value has the wrong type or structure, or is missing required content. |
 
 ##### `.reject(transmission: SignalTransmission | TransmissionRecord) → ActionResult`
 
@@ -34917,7 +37813,7 @@ Add one to the supplied event's refusal count without opening a slot. A differen
 | --- | --- | --- |
 | `"ok"` | success | The operation completed successfully. |
 | `"no_power"` | transient | The component has no available power. |
-| `"invalid_type"` | rejection | The supplied value does not carry the required API type and provenance. |
+| `"invalid_type"` | rejection | A supplied value has the wrong type or structure, or is missing required content. |
 
 ##### `.resolve(event_id: str, info: dict[str, object]) → ActionResult`
 
@@ -34940,7 +37836,7 @@ Publish up to **6** labelled rows for an event. A different event replaces this 
 | --- | --- | --- |
 | `"ok"` | success | The operation completed successfully. |
 | `"no_power"` | transient | The component has no available power. |
-| `"invalid_type"` | rejection | The supplied value does not carry the required API type and provenance. |
+| `"invalid_type"` | rejection | A supplied value has the wrong type or structure, or is missing required content. |
 
 ##### `.clear() → ActionResult`
 

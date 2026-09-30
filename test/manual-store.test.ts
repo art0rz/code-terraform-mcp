@@ -6,7 +6,7 @@ import test from "node:test";
 import { DEFAULT_MANUAL_PATH, ManualStore } from "../src/manual-store.js";
 import { sampleManual } from "./fixtures.js";
 
-test("ManualStore loads a manual and exposes file metadata", async () => {
+void test("ManualStore loads a manual and exposes file metadata", async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), "code-terraform-docs-mcp-test-"));
   const manualPath = path.join(directory, "manual.md");
   await writeFile(manualPath, sampleManual);
@@ -21,12 +21,15 @@ test("ManualStore loads a manual and exposes file metadata", async () => {
   assert.match(manual.loadedAt, /^\d{4}-\d{2}-\d{2}T/);
 });
 
-test("default manual path is resolved from the process working directory", () => {
+void test("default manual path is resolved from the process working directory", () => {
   assert.equal(DEFAULT_MANUAL_PATH, path.resolve(process.cwd(), "Code-Terraform-DOCS-Manual.md"));
   assert.equal(new ManualStore().manualPath, DEFAULT_MANUAL_PATH);
 });
 
-test("ManualStore gives an actionable missing-file error", async () => {
+void test("ManualStore gives an actionable missing-file error", async () => {
   const store = new ManualStore("/tmp/definitely-not-a-code-terraform-manual.md");
-  await assert.rejects(store.load(), /Place Code-Terraform-DOCS-Manual\.md in the working directory/);
+  await assert.rejects(
+    store.load(),
+    /Place Code-Terraform-DOCS-Manual\.md in the working directory/,
+  );
 });

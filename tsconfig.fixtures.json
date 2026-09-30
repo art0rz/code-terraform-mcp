@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "rootDir": "test/fixtures",
+    "outDir": "dist/fixtures"
+  },
+  "include": ["test/fixtures/*.cts"]
+}

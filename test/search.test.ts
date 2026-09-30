@@ -6,29 +6,32 @@ import { sampleManual } from "./fixtures.js";
 
 const manual = parseManual(sampleManual);
 
-test("searchManual ranks focused results and returns snippets", () => {
+void test("searchManual ranks focused results and returns snippets", () => {
   const results = searchManual(manual, "vehicle charging station");
-  assert.equal(results[0].id, 0);
-  assert.match(results[0].snippet, /vehicle charging station/i);
-  assert.ok(results[0].score > 0);
+  assert.equal(results[0]!.id, 0);
+  assert.match(results[0]!.snippet, /vehicle charging station/i);
+  assert.ok(results[0]!.score > 0);
 });
 
-test("searchManual searches inline API symbols and filters sections", () => {
+void test("searchManual searches inline API symbols and filters sections", () => {
   const results = searchManual(manual, "self charge", { section: "Components", limit: 3 });
   assert.equal(results.length, 1);
-  assert.equal(results[0].section, "Components");
+  assert.equal(results[0]!.section, "Components");
 });
 
-test("resolveEntry supports IDs and reports ambiguous titles", () => {
+void test("resolveEntry supports IDs and reports ambiguous titles", () => {
   assert.equal(resolveEntry(manual, 0).title, "Batteries & Charging");
   assert.equal(resolveEntry(manual, "/generated/components/power/battery").badge, "Component");
   assert.throws(() => resolveEntry(manual, "Battery"), /ambiguous/);
   assert.throws(() => resolveEntry(manual, "missing"), /No manual entry/);
 });
 
-test("listSections preserves manual order and counts groups", () => {
+void test("listSections preserves manual order and counts groups", () => {
   const sections = listSections(manual);
-  assert.deepEqual(sections.map((section) => section.name), ["Guide", "Components", "Types"]);
-  assert.equal(sections[0].groups[0].name, "Basics");
-  assert.equal(sections[0].entryCount, 1);
+  assert.deepEqual(
+    sections.map((section) => section.name),
+    ["Guide", "Components", "Types"],
+  );
+  assert.equal(sections[0]!.groups[0]!.name, "Basics");
+  assert.equal(sections[0]!.entryCount, 1);
 });

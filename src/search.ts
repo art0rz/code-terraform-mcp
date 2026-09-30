@@ -1,9 +1,11 @@
 import { normalizeSearchText, slugify } from "./parser.js";
 
+import type { Manual, ManualEntry } from "./parser.js";
+
 const MAX_LIMIT = 20;
 const DEFAULT_LIMIT = 8;
 
-function occurrences(haystack, needle, cap = 5) {
+function occurrences(haystack: string, needle: string, cap = 5) {
   if (!needle) return 0;
   let count = 0;
   let cursor = 0;
@@ -16,7 +18,7 @@ function occurrences(haystack, needle, cap = 5) {
   return count;
 }
 
-function scoreEntry(entry, phrase, tokens) {
+function scoreEntry(entry: ManualEntry, phrase: string, tokens: string[]) {
   let score = 0;
 
   if (entry.search.title === phrase) score += 180;
@@ -38,7 +40,7 @@ function scoreEntry(entry, phrase, tokens) {
   return score;
 }
 
-function plainText(markdown) {
+function plainText(markdown: string) {
   return markdown
     .replace(/```[\s\S]*?```/g, (block) => block.replace(/^```[^\n]*\n?|```$/g, " "))
     .replace(/<[^>]+>/g, " ")
@@ -49,7 +51,7 @@ function plainText(markdown) {
     .trim();
 }
 
-function snippetFor(entry, phrase, tokens) {
+function snippetFor(entry: ManualEntry, phrase: string, tokens: string[]) {
   const text = plainText(entry.body);
   const lower = text.toLowerCase();
   const candidates = [phrase, ...tokens].filter(Boolean);
@@ -66,25 +68,34 @@ function snippetFor(entry, phrase, tokens) {
   return `${start > 0 ? "…" : ""}${text.slice(start, end).trim()}${end < text.length ? "…" : ""}`;
 }
 
-export function searchManual(manual, query, options = {}) {
+export function searchManual(
+  manual: Manual,
+  query: string,
+  options: { section?: string | undefined; limit?: number | undefined } = {},
+) {
   const phrase = normalizeSearchText(query);
   if (!phrase) throw new Error("Search query must contain at least one letter or number.");
 
   const tokens = [...new Set(phrase.split(" ").filter(Boolean))];
   const sectionFilter = options.section ? normalizeSearchText(options.section) : "";
-  const requestedLimit = Number.isInteger(options.limit) ? options.limit : DEFAULT_LIMIT;
+  const requestedLimit = Number.isInteger(options.limit) ? options.limit! : DEFAULT_LIMIT;
   const limit = Math.min(Math.max(requestedLimit, 1), MAX_LIMIT);
 
   return manual.entries
     .filter((entry) => !sectionFilter || entry.search.hierarchy.includes(sectionFilter))
     .map((entry) => ({ entry, score: scoreEntry(entry, phrase, tokens) }))
-    .filter(({ entry, score }) => score > 0 && tokens.every((token) => (
-      entry.search.title.includes(token) ||
-      entry.search.hierarchy.includes(token) ||
-      entry.search.headings.includes(token) ||
-      entry.search.terms.includes(token) ||
-      entry.search.body.includes(token)
-    )))
+    .filter(
+      ({ entry, score }) =>
+        score > 0 &&
+        tokens.every(
+          (token) =>
+            entry.search.title.includes(token) ||
+            entry.search.hierarchy.includes(token) ||
+            entry.search.headings.includes(token) ||
+            entry.search.terms.includes(token) ||
+            entry.search.body.includes(token),
+        ),
+    )
     .sort((left, right) => right.score - left.score || left.entry.id - right.entry.id)
     .slice(0, limit)
     .map(({ entry, score }) => ({
@@ -95,11 +106,11 @@ export function searchManual(manual, query, options = {}) {
       group: entry.group,
       url: entry.url,
       score,
-      snippet: snippetFor(entry, phrase, tokens)
+      snippet: snippetFor(entry, phrase, tokens),
     }));
 }
 
-export function resolveEntry(manual, identifier) {
+export function resolveEntry(manual: Manual, identifier: string | number) {
   const raw = String(identifier).trim();
   if (!raw) throw new Error("Entry identifier cannot be empty.");
 
@@ -109,26 +120,29 @@ export function resolveEntry(manual, identifier) {
   }
 
   const normalized = normalizeSearchText(raw);
-  const matches = manual.entries.filter((entry) => (
-    entry.url === raw ||
-    entry.search.title === normalized ||
-    slugify(entry.title) === raw.toLowerCase()
-  ));
+  const matches = manual.entries.filter(
+    (entry) =>
+      entry.url === raw ||
+      entry.search.title === normalized ||
+      slugify(entry.title) === raw.toLowerCase(),
+  );
 
-  if (matches.length === 1) return matches[0];
+  if (matches.length === 1) return matches[0]!;
   if (matches.length > 1) {
-    const choices = matches.map((entry) => `${entry.id}: ${entry.hierarchy} / ${entry.title}`).join("; ");
+    const choices = matches
+      .map((entry) => `${entry.id}: ${entry.hierarchy} / ${entry.title}`)
+      .join("; ");
     throw new Error(`Entry identifier is ambiguous. Use a numeric ID: ${choices}`);
   }
 
   throw new Error(`No manual entry matches '${raw}'. Use search_manual to find an entry ID.`);
 }
 
-export function listSections(manual) {
-  const sections = new Map();
+export function listSections(manual: Manual) {
+  const sections = new Map<string, Map<string, number>>();
   for (const entry of manual.entries) {
     if (!sections.has(entry.section)) sections.set(entry.section, new Map());
-    const groups = sections.get(entry.section);
+    const groups = sections.get(entry.section)!;
     const groupName = entry.group || entry.section;
     groups.set(groupName, (groups.get(groupName) ?? 0) + 1);
   }
@@ -136,6 +150,6 @@ export function listSections(manual) {
   return [...sections].map(([name, groups]) => ({
     name,
     entryCount: [...groups.values()].reduce((sum, count) => sum + count, 0),
-    groups: [...groups].map(([groupName, entryCount]) => ({ name: groupName, entryCount }))
+    groups: [...groups].map(([groupName, entryCount]) => ({ name: groupName, entryCount })),
   }));
 }

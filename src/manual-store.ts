@@ -6,9 +6,11 @@ import { logger } from "./logger.js";
 export const DEFAULT_MANUAL_PATH = path.resolve(process.cwd(), "Code-Terraform-DOCS-Manual.md");
 
 export class ManualStore {
-  #manualPath;
-  #cached;
-  #signature;
+  #manualPath: string;
+  #cached:
+    | (ReturnType<typeof parseManual> & { loadedAt: string; modifiedAt: string; byteSize: number })
+    | undefined;
+  #signature: string | undefined;
 
   constructor(manualPath = DEFAULT_MANUAL_PATH) {
     this.#manualPath = path.resolve(manualPath);
@@ -23,8 +25,10 @@ export class ManualStore {
     try {
       fileStat = await stat(this.#manualPath);
     } catch (error) {
-      if (error?.code === "ENOENT") {
-        throw new Error(`Manual not found at ${this.#manualPath}. Place Code-Terraform-DOCS-Manual.md in the working directory, set CODE_TERRAFORM_DOCS_MANUAL, or pass --manual.`);
+      if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+        throw new Error(
+          `Manual not found at ${this.#manualPath}. Place Code-Terraform-DOCS-Manual.md in the working directory, set CODE_TERRAFORM_DOCS_MANUAL, or pass --manual.`,
+        );
       }
       throw error;
     }
@@ -39,7 +43,7 @@ export class ManualStore {
       ...parsed,
       loadedAt: new Date().toISOString(),
       modifiedAt: fileStat.mtime.toISOString(),
-      byteSize: fileStat.size
+      byteSize: fileStat.size,
     };
     this.#signature = signature;
     logger.info(`Loaded manual build ${this.#cached.build} (${this.#cached.entryCount} entries).`);

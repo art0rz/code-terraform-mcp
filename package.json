@@ -3,24 +3,49 @@
   "version": "1.2.0",
   "private": true,
   "description": "MCP server for Code: Terraform docs, script analysis, game control, and debugging",
-  "type": "module",
   "bin": {
-    "code-terraform-docs-mcp": "src/index.js"
+    "code-terraform-docs-mcp": "dist/index.js"
   },
+  "type": "module",
   "scripts": {
-    "start": "node src/index.js",
-    "check": "node --check src/index.js && node --check src/server.js && node --check src/extra-tools.js && node --check src/debug-service.js && node --check src/manual-store.js && node --check src/parser.js && node --check src/search.js && node --check src/workspace-store.js && node --check src/language-service.js && node --check src/logger.js && node --check src/heartbeat.js",
-    "test": "node --test",
-    "verify": "npm run check && npm test"
-  },
-  "engines": {
-    "node": ">=20"
+    "clean": "node --input-type=module -e \"import { rmSync } from 'node:fs'; rmSync('dist', { recursive: true, force: true });\"",
+    "build": "npm run clean && tsc -p tsconfig.build.json && node scripts/copy-assets.mjs",
+    "start": "node dist/index.js",
+    "dev": "node --import tsx src/index.ts",
+    "check": "tsc --noEmit",
+    "lint": "oxlint --type-aware --deny-warnings",
+    "lint:fix": "npm run lint -- --fix",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "test": "npm run build && tsc -p tsconfig.fixtures.json && node --import tsx --test test/*.test.ts",
+    "verify": "npm run check && npm run lint && npm run format:check && npm test",
+    "prepare": "husky",
+    "precommit": "lint-staged && npm run check && npm run lint",
+    "commitlint": "commitlint"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "ajv": "^8.20.0"
+    "@commitlint/cli": "^21.2.3",
+    "@commitlint/config-conventional": "^21.2.3",
+    "@types/node": "^22.20.4",
+    "@vscode/debugprotocol": "^1.68.0",
+    "ajv": "^8.20.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
+    "oxfmt": "^0.71.0",
+    "oxlint": "^1.86.0",
+    "oxlint-tsgolint": "^7.0.2003",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vscode-languageserver-types": "^3.18.4"
+  },
+  "lint-staged": {
+    "*.{ts,cts,mts,js,mjs,cjs,json,md,yml,yaml,toml}": "oxfmt --write"
+  },
+  "engines": {
+    "node": ">=22.22.1"
   }
 }

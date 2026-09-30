@@ -8,30 +8,30 @@ When a live save workspace is configured, the server also launches the game's bu
 
 ## Tools
 
-| Tool | Purpose |
-| --- | --- |
-| `search_manual` | Search titles, hierarchy, headings, inline API symbols, and body text. |
-| `get_manual_entry` | Read the complete Markdown for one result. |
-| `list_manual_sections` | Browse sections, groups, and entry counts. |
-| `get_manual_build` | Check the loaded build, source path, size, and timestamps. |
-| `list_script_targets` | List registered scripts and Libraries, including component owner types. |
-| `validate_script` | Return game-aware diagnostics for complete supplied source. |
-| `inspect_symbol` | Return hover, signature, and definition information at a position. |
-| `complete_at` | Return a limited, optionally filtered contextual completion list. |
-| `get_game_status`, `list_fleet` | Read the game's published connection, object, and script status snapshots. |
-| `list_script_symbols`, `find_references`, `preview_rename` | Browse symbols and references, or preview rename edits without applying them. |
-| `get_semantic_tokens`, `format_script`, `list_code_actions` | Inspect syntax tokens, preview Ruff formatting edits, and list actions without executing them. |
-| `run_script`, `stop_script` | Start or stop a registered script in the active game. |
-| `create_library`, `import_library`, `rename_library` | Create or rename the active game's Libraries. Importing never replaces an existing Library. |
-| `apply_library`, `apply_all_libraries` | Deploy saved Library source and restart the scripts that import it. Update a Library by writing its synced `lib/<name>.py` file, then applying it; saving alone does not deploy. |
-| `debug_start`, `debug_set_breakpoints`, `debug_control` | Attach a persistent debug session (optionally starting an idle script), set breakpoints, pause, continue, or step. |
-| `debug_inspect`, `debug_evaluate`, `debug_events`, `debug_end` | Inspect a halted script, evaluate an expression, read events, or detach. |
+| Tool                                                           | Purpose                                                                                                                                                                          |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `search_manual`                                                | Search titles, hierarchy, headings, inline API symbols, and body text.                                                                                                           |
+| `get_manual_entry`                                             | Read the complete Markdown for one result.                                                                                                                                       |
+| `list_manual_sections`                                         | Browse sections, groups, and entry counts.                                                                                                                                       |
+| `get_manual_build`                                             | Check the loaded build, source path, size, and timestamps.                                                                                                                       |
+| `list_script_targets`                                          | List registered scripts and Libraries, including component owner types.                                                                                                          |
+| `validate_script`                                              | Return game-aware diagnostics for complete supplied source.                                                                                                                      |
+| `inspect_symbol`                                               | Return hover, signature, and definition information at a position.                                                                                                               |
+| `complete_at`                                                  | Return a limited, optionally filtered contextual completion list.                                                                                                                |
+| `get_game_status`, `list_fleet`                                | Read the game's published connection, object, and script status snapshots.                                                                                                       |
+| `list_script_symbols`, `find_references`, `preview_rename`     | Browse symbols and references, or preview rename edits without applying them.                                                                                                    |
+| `get_semantic_tokens`, `format_script`, `list_code_actions`    | Inspect syntax tokens, preview Ruff formatting edits, and list actions without executing them.                                                                                   |
+| `run_script`, `stop_script`                                    | Start or stop a registered script in the active game.                                                                                                                            |
+| `create_library`, `import_library`, `rename_library`           | Create or rename the active game's Libraries. Importing never replaces an existing Library.                                                                                      |
+| `apply_library`, `apply_all_libraries`                         | Deploy saved Library source and restart the scripts that import it. Update a Library by writing its synced `lib/<name>.py` file, then applying it; saving alone does not deploy. |
+| `debug_start`, `debug_set_breakpoints`, `debug_control`        | Attach a persistent debug session (optionally starting an idle script), set breakpoints, pause, continue, or step.                                                               |
+| `debug_inspect`, `debug_evaluate`, `debug_events`, `debug_end` | Inspect a halted script, evaluate an expression, read events, or detach.                                                                                                         |
 
 Manual, status, source analysis, and debug inspection tools are read-only. Run, Stop, Library management, breakpoint/control, expression evaluation, and debug-session lifecycle tools change the live game and are annotated accordingly. The MCP never writes source into the save workspace itself; game commands are forwarded through the game's language server or debug adapter.
 
 ## Requirements
 
-- Node.js 20 or newer
+- Node.js 22.22.1 or newer
 - Python 3 (transparent stdio relay for the bundled Node language server and debug adapter)
 - Optional: Ruff for `format_script`. The game's server finds it on PATH or in common pipx/uv/cargo locations; set `CODE_TERRAFORM_RUFF` to an executable path otherwise
 - The exported `Code-Terraform-DOCS-Manual.md`
@@ -40,7 +40,7 @@ Manual, status, source analysis, and debug inspection tools are read-only. Run, 
 ## Install and verify
 
 ```bash
-npm install
+npm ci
 npm run verify
 ```
 
@@ -60,7 +60,7 @@ Run the server from the project directory:
 
 ```bash
 cd /path/to/my-code-terraform-project
-node /path/to/code-terraform-docs-mcp/src/index.js
+node /path/to/code-terraform-docs-mcp/dist/index.js
 ```
 
 The server writes MCP messages to stdout and concise logs to stderr. It logs startup,
@@ -78,11 +78,11 @@ it is not a separate live game-connection flag.
 Use another manual path with either form:
 
 ```bash
-node src/index.js --manual /absolute/path/to/Code-Terraform-DOCS-Manual.md
+node dist/index.js --manual /absolute/path/to/Code-Terraform-DOCS-Manual.md
 
 CODE_TERRAFORM_DOCS_MANUAL=/absolute/path/to/Code-Terraform-DOCS-Manual.md npm start
 
-node src/index.js \
+node dist/index.js \
   --manual /absolute/path/to/Code-Terraform-DOCS-Manual.md \
   --workspace /absolute/path/to/save_scripts
 ```
@@ -94,7 +94,7 @@ Add the local STDIO server from the command line:
 ```bash
 codex mcp add code_terraform_docs \
   --env CODE_TERRAFORM_WORKSPACE=/path/to/your/code-terraform/save/scripts \
-  -- node /path/to/code-terraform-docs-mcp/src/index.js
+  -- node /path/to/code-terraform-docs-mcp/dist/index.js
 ```
 
 Codex launches the server in the active project's working directory, so no
@@ -140,25 +140,49 @@ There is no embedding service, database, network call, or OpenAI API key. Numeri
 ## Development
 
 ```bash
-npm run check
-npm test
-npm run verify
+npm run dev -- --help  # Run TypeScript directly while developing
+npm run build         # Compile into dist/ and copy the Python relay
+npm start             # Run the compiled server (build first)
+npm run check         # Strict TypeScript checks for source, tests, and fixtures
+npm run lint          # Oxlint with type-aware rules; warnings fail
+npm run lint:fix      # Apply available lint fixes
+npm run format        # Format with Oxfmt
+npm run format:check  # Check formatting without changing files
+npm test              # Build, compile fake servers, and run integration/unit tests
+npm run verify        # All checks, formatting, build, and tests
 ```
+
+TypeScript uses NodeNext ESM resolution with `strict`, `noUncheckedIndexedAccess`,
+`exactOptionalPropertyTypes`, and unused-code checks. Source imports retain `.js`
+extensions so the compiled code runs directly in Node. `dist/` is generated and
+ignored by Git; rebuild after updating the source. Existing MCP configurations
+must change their executable path from `src/index.js` to `dist/index.js`.
+
+[Oxlint type-aware linting](https://oxc.rs/docs/guide/usage/linter/type-aware.html)
+uses `oxlint-tsgolint`. Oxfmt handles formatting separately. The exported game
+manual is excluded from formatting to preserve its authoritative contents.
+
+`npm ci` installs Husky hooks: pre-commit formats staged files with lint-staged
+and checks project types and lint; commit-msg enforces Conventional Commits
+(for example, `feat: add a manual tool`); pre-push runs `npm run verify`.
+[Commitlint's local setup](https://commitlint.js.org/guides/local-setup) describes
+the commit-message convention. CI runs verification on Node 22 and 24, and
+checks every commit in pull requests. Python 3 is required for integration tests.
 
 Project structure:
 
 ```text
 src/
-├── index.js          # CLI and STDIO transport
-├── language-service.js # Isolated LSP lifecycle and normalized results
-├── debug-service.js   # Persistent game DAP sessions
-├── extra-tools.js     # Additional LSP, game-control, and debug tool schemas
-├── manual-store.js   # File resolution, caching, and live reload
-├── parser.js         # Markdown-to-entry parser
-├── search.js         # Ranking, filtering, snippets, and lookup
-├── server.js         # MCP server and tool schemas
+├── index.ts          # CLI and STDIO transport
+├── language-service.ts # Isolated LSP lifecycle and normalized results
+├── debug-service.ts   # Persistent game DAP sessions
+├── extra-tools.ts     # Additional LSP, game-control, and debug tool schemas
+├── manual-store.ts   # File resolution, caching, and live reload
+├── parser.ts         # Markdown-to-entry parser
+├── search.ts         # Ranking, filtering, snippets, and lookup
+├── server.ts         # MCP server and tool schemas
 ├── stdio-proxy.py    # Transparent stdio relay for the bundled Node server
-└── workspace-store.js # Registered-target and workspace validation
+└── workspace-store.ts # Registered-target and workspace validation
 ```
 
 The manual and workspace roots are fixed when the process starts. Language and debug tools resolve only game-registered targets, reject paths outside the workspace, and refuse language-server workspace edits. Game commands and debug controls can alter running scripts and their game state.

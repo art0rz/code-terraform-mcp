@@ -30,13 +30,14 @@ Default:
   (Code-Terraform-DOCS-Manual.md in the process working directory)`;
 }
 
-function parseArguments(argv) {
+function parseArguments(argv: string[]) {
   let manualPath = process.env.CODE_TERRAFORM_DOCS_MANUAL || DEFAULT_MANUAL_PATH;
   let workspacePath = process.env.CODE_TERRAFORM_WORKSPACE || null;
 
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
-    if (argument === "--help" || argument === "-h") return { help: true, manualPath, workspacePath };
+    if (argument === "--help" || argument === "-h")
+      return { help: true, manualPath, workspacePath };
     if (argument === "--manual") {
       const value = argv[index + 1];
       if (!value) throw new Error("--manual requires a path.");
@@ -86,9 +87,15 @@ async function main() {
     await debugService.dispose();
     process.exit(0);
   };
-  process.once("SIGINT", shutdown);
-  process.once("SIGTERM", shutdown);
-  process.stdin.once("end", shutdown);
+  const onShutdown = () => {
+    void shutdown().catch((error: unknown) => {
+      logger.error(error);
+      process.exitCode = 1;
+    });
+  };
+  process.once("SIGINT", onShutdown);
+  process.once("SIGTERM", onShutdown);
+  process.stdin.once("end", onShutdown);
   await server.connect(transport);
   logger.info(`Ready; workspace ${workspaceStore.configured ? "configured" : "not configured"}.`);
   heartbeat.start();

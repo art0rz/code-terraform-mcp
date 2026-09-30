@@ -4,68 +4,123 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { logger } from "./logger.js";
 
+import type { ChildProcessWithoutNullStreams } from "node:child_process";
+import type * as Lsp from "vscode-languageserver-types";
+import type { WorkspaceStore, Workspace, WorkspaceDocument } from "./workspace-store.js";
+import type {
+  SessionOptions,
+  Position,
+  Pending,
+  Capabilities,
+  Fleet,
+  GameStatus,
+  LspMessage,
+  RequestResults,
+  DocumentResults,
+} from "./protocol.js";
+
 const DEFAULT_TIMEOUT_MS = 30_000;
 const MAX_STDERR = 8_000;
 const DEFAULT_PROXY_PATH = fileURLToPath(new URL("./stdio-proxy.py", import.meta.url));
 
-function delay(ms) {
+function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function withTimeout(promise, timeoutMs, label) {
-  let timer;
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
   return Promise.race([
     promise,
-    new Promise((_, reject) => {
-      timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs} ms.`)), timeoutMs);
-    })
+    new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () => reject(new Error(`${label} timed out after ${timeoutMs} ms.`)),
+        timeoutMs,
+      );
+    }),
   ]).finally(() => clearTimeout(timer));
 }
 
-function markdownText(value) {
+function markdownText(
+  value: Lsp.MarkedString | Lsp.MarkedString[] | Lsp.MarkupContent | undefined | null,
+): string | null {
   if (value == null) return null;
   if (typeof value === "string") return value;
   if (Array.isArray(value)) return value.map(markdownText).filter(Boolean).join("\n\n");
-  if (typeof value.language === "string" && typeof value.value === "string") {
+  if (
+    "language" in value &&
+    typeof value.language === "string" &&
+    typeof value.value === "string"
+  ) {
     return `\`\`\`${value.language}\n${value.value}\n\`\`\``;
   }
   if (typeof value.value === "string") return value.value;
   return JSON.stringify(value);
 }
 
-function normalizePosition(position) {
+function normalizePosition(position: Position) {
   return { line: position.line - 1, character: position.column - 1 };
 }
 
-function normalizeRange(range) {
+function normalizeRange(range: Lsp.Range) {
   return {
     start: { line: range.start.line + 1, column: range.start.character + 1 },
-    end: { line: range.end.line + 1, column: range.end.character + 1 }
+    end: { line: range.end.line + 1, column: range.end.character + 1 },
   };
 }
 
-function normalizeDiagnostic(diagnostic) {
-  const severityNames = { 1: "error", 2: "warning", 3: "information", 4: "hint" };
-  const output = {
-    severity: severityNames[diagnostic.severity] ?? "unknown",
-    message: String(diagnostic.message ?? ""),
-    range: normalizeRange(diagnostic.range)
+function normalizeDiagnostic(diagnostic: Lsp.Diagnostic) {
+  const severityNames: Record<number, string> = {
+    1: "error",
+    2: "warning",
+    3: "information",
+    4: "hint",
+  };
+  const output: {
+    severity: string;
+    message: string;
+    range: ReturnType<typeof normalizeRange>;
+    code?: string;
+    source?: string;
+  } = {
+    severity: severityNames[diagnostic.severity ?? 0] ?? "unknown",
+    message: markdownText(diagnostic.message) ?? "",
+    range: normalizeRange(diagnostic.range),
   };
   if (diagnostic.code !== undefined) output.code = String(diagnostic.code);
   if (diagnostic.source !== undefined) output.source = String(diagnostic.source);
   return output;
 }
 
-function normalizeLocation(location) {
-  const range = location.targetSelectionRange ?? location.targetRange ?? location.range;
+function normalizeLocation(location: Lsp.Location | Lsp.LocationLink) {
+  const range = "targetUri" in location ? location.targetSelectionRange : location.range;
   return {
-    uri: location.targetUri ?? location.uri,
-    range: range ? normalizeRange(range) : null
+    uri: "targetUri" in location ? location.targetUri : location.uri,
+    range: range ? normalizeRange(range) : null,
   };
 }
 
 class LspSession {
-  constructor(workspace, options = {}) {
+  workspace: Workspace;
+  nodePath: string;
+  pythonPath: string;
+  proxyPath: string;
+  timeoutMs: number;
+  ruffPath: string | null;
+  child: ChildProcessWithoutNullStreams | null;
+  buffer: Buffer;
+  nextId: number;
+  pending: Map<number, Pending<unknown> & { method: string }>;
+  diagnosticWaiters: Map<string, Pending<Lsp.Diagnostic[]>[]>;
+  latestDiagnostics: Map<string, Lsp.Diagnostic[]>;
+  stderr: string;
+  version: number;
+  initialized: boolean;
+  expectedExit: boolean;
+  gameStatus: GameStatus | null;
+  fleet: Fleet | null;
+  capabilities: Capabilities = {};
+
+  constructor(workspace: Workspace, options: SessionOptions = {}) {
     this.workspace = workspace;
     this.nodePath = options.nodePath ?? process.execPath;
     this.pythonPath = options.pythonPath ?? process.env.CODE_TERRAFORM_PYTHON ?? "python3";
@@ -88,12 +143,16 @@ class LspSession {
   }
 
   async start() {
-    this.child = spawn(this.pythonPath, [this.proxyPath, this.nodePath, this.workspace.serverPath, "--stdio"], {
-      cwd: this.workspace.rootPath,
-      stdio: ["pipe", "pipe", "pipe"]
-    });
-    this.child.stdout.on("data", (chunk) => this.onData(chunk));
-    this.child.stderr.on("data", (chunk) => {
+    this.child = spawn(
+      this.pythonPath,
+      [this.proxyPath, this.nodePath, this.workspace.serverPath, "--stdio"],
+      {
+        cwd: this.workspace.rootPath,
+        stdio: ["pipe", "pipe", "pipe"],
+      },
+    );
+    this.child.stdout.on("data", (chunk: Buffer) => this.onData(chunk));
+    this.child.stderr.on("data", (chunk: Buffer) => {
       this.stderr = `${this.stderr}${chunk.toString("utf8")}`.slice(-MAX_STDERR);
     });
     this.child.on("error", (error) => this.failAll(error));
@@ -101,7 +160,9 @@ class LspSession {
       if (!this.expectedExit) {
         const detail = this.stderr.trim() ? ` ${this.stderr.trim()}` : "";
         logger.warn(`Language server exited unexpectedly (${code ?? signal}).`);
-        this.failAll(new Error(`Code: Terraform language server exited (${code ?? signal}).${detail}`));
+        this.failAll(
+          new Error(`Code: Terraform language server exited (${code ?? signal}).${detail}`),
+        );
       }
       this.initialized = false;
     });
@@ -109,7 +170,10 @@ class LspSession {
     const initializeResult = await this.request("initialize", {
       processId: process.pid,
       clientInfo: { name: "code-terraform-docs-mcp", version: "1.2.0" },
-      initializationOptions: { notifications: true, ...(this.ruffPath && { formatter: { ruffPath: this.ruffPath } }) },
+      initializationOptions: {
+        notifications: true,
+        ...(this.ruffPath && { formatter: { ruffPath: this.ruffPath } }),
+      },
       locale: "en",
       rootPath: this.workspace.rootPath,
       rootUri: this.workspace.rootUri,
@@ -117,42 +181,56 @@ class LspSession {
         workspace: { configuration: true, workspaceFolders: true },
         textDocument: {
           publishDiagnostics: { relatedInformation: true, versionSupport: true },
-          completion: { completionItem: { documentationFormat: ["markdown", "plaintext"], snippetSupport: false } },
+          completion: {
+            completionItem: {
+              documentationFormat: ["markdown", "plaintext"],
+              snippetSupport: false,
+            },
+          },
           hover: { contentFormat: ["markdown", "plaintext"] },
-          signatureHelp: { signatureInformation: { documentationFormat: ["markdown", "plaintext"] } },
-          definition: { linkSupport: true }
-        }
+          signatureHelp: {
+            signatureInformation: { documentationFormat: ["markdown", "plaintext"] },
+          },
+          definition: { linkSupport: true },
+        },
       },
-      workspaceFolders: [{ uri: this.workspace.rootUri, name: path.basename(this.workspace.rootPath) }]
+      workspaceFolders: [
+        { uri: this.workspace.rootUri, name: path.basename(this.workspace.rootPath) },
+      ],
     });
     this.capabilities = initializeResult?.capabilities ?? {};
     this.notify("initialized", {});
     this.initialized = true;
   }
 
-  send(message) {
-    if (!this.child?.stdin.writable) throw new Error("Code: Terraform language server is not running.");
+  send(message: object) {
+    if (!this.child?.stdin.writable)
+      throw new Error("Code: Terraform language server is not running.");
     const body = Buffer.from(JSON.stringify({ jsonrpc: "2.0", ...message }), "utf8");
     this.child.stdin.write(`Content-Length: ${body.length}\r\n\r\n`);
     this.child.stdin.write(body);
   }
 
-  request(method, params, timeoutMs = this.timeoutMs) {
+  request<M extends keyof RequestResults>(method: M, params: unknown, timeoutMs = this.timeoutMs) {
     const id = this.nextId++;
-    const response = new Promise((resolve, reject) => this.pending.set(id, { resolve, reject, method }));
+    const response = new Promise<unknown>((resolve, reject) =>
+      this.pending.set(id, { resolve, reject, method }),
+    );
     this.send({ id, method, params });
-    return withTimeout(response, timeoutMs, method).finally(() => this.pending.delete(id));
+    return withTimeout(response, timeoutMs, method).finally(() =>
+      this.pending.delete(id),
+    ) as Promise<RequestResults[M]>;
   }
 
-  notify(method, params) {
+  notify(method: string, params: unknown) {
     this.send({ method, params });
   }
 
-  respond(id, result = null, error = null) {
+  respond(id: number, result: unknown = null, error: unknown = null) {
     this.send(error ? { id, error } : { id, result });
   }
 
-  onData(chunk) {
+  onData(chunk: Buffer) {
     this.buffer = Buffer.concat([this.buffer, chunk]);
     while (true) {
       const headerEnd = this.buffer.indexOf("\r\n\r\n");
@@ -169,27 +247,36 @@ class LspSession {
       const body = this.buffer.subarray(bodyStart, bodyStart + length).toString("utf8");
       this.buffer = this.buffer.subarray(bodyStart + length);
       try {
-        this.onMessage(JSON.parse(body));
+        this.onMessage(JSON.parse(body) as LspMessage);
       } catch (error) {
-        this.failAll(new Error(`Invalid language server message: ${error instanceof Error ? error.message : String(error)}`));
+        this.failAll(
+          new Error(
+            `Invalid language server message: ${error instanceof Error ? error.message : String(error)}`,
+          ),
+        );
       }
     }
   }
 
-  onMessage(message) {
+  onMessage(message: LspMessage) {
     if (message.id !== undefined && message.method === undefined) {
       const pending = this.pending.get(message.id);
       if (!pending) return;
-      if (message.error) pending.reject(new Error(`${pending.method}: ${message.error.message ?? "language server error"}`));
+      if (message.error)
+        pending.reject(
+          new Error(`${pending.method}: ${message.error.message ?? "language server error"}`),
+        );
       else pending.resolve(message.result);
       return;
     }
-    if (message.id !== undefined && message.method) {
+    if (message.id !== undefined && message.method !== undefined) {
       this.handleServerRequest(message);
       return;
     }
     if (message.method === "textDocument/publishDiagnostics") {
-      const diagnostics = Array.isArray(message.params?.diagnostics) ? message.params.diagnostics : [];
+      const diagnostics = Array.isArray(message.params?.diagnostics)
+        ? message.params.diagnostics
+        : [];
       this.latestDiagnostics.set(message.params.uri, diagnostics);
       const waiters = this.diagnosticWaiters.get(message.params.uri) ?? [];
       this.diagnosticWaiters.delete(message.params.uri);
@@ -199,13 +286,18 @@ class LspSession {
     if (message.method === "codeterraform/fleet") this.fleet = message.params?.fleet ?? null;
   }
 
-  handleServerRequest(message) {
+  handleServerRequest(message: Extract<LspMessage, { id: number; method: string }>) {
     if (message.method === "workspace/configuration") {
-      this.respond(message.id, (message.params?.items ?? []).map(() => null));
+      this.respond(
+        message.id,
+        (message.params?.items ?? []).map(() => null),
+      );
       return;
     }
     if (message.method === "workspace/workspaceFolders") {
-      this.respond(message.id, [{ uri: this.workspace.rootUri, name: path.basename(this.workspace.rootPath) }]);
+      this.respond(message.id, [
+        { uri: this.workspace.rootUri, name: path.basename(this.workspace.rootPath) },
+      ]);
       return;
     }
     if (message.method === "workspace/applyEdit") {
@@ -215,7 +307,7 @@ class LspSession {
     this.respond(message.id, null);
   }
 
-  failAll(error) {
+  failAll(error: Error) {
     for (const pending of this.pending.values()) pending.reject(error);
     this.pending.clear();
     for (const waiters of this.diagnosticWaiters.values()) {
@@ -224,28 +316,36 @@ class LspSession {
     this.diagnosticWaiters.clear();
   }
 
-  waitForDiagnostics(uri, timeoutMs) {
+  waitForDiagnostics(uri: string, timeoutMs: number) {
     this.latestDiagnostics.delete(uri);
-    const promise = new Promise((resolve, reject) => {
+    const promise = new Promise<Lsp.Diagnostic[]>((resolve, reject) => {
       const waiters = this.diagnosticWaiters.get(uri) ?? [];
       waiters.push({ resolve, reject });
       this.diagnosticWaiters.set(uri, waiters);
     });
-    return withTimeout(promise, timeoutMs, "diagnostics").finally(() => this.diagnosticWaiters.delete(uri));
+    return withTimeout(promise, timeoutMs, "diagnostics").finally(() =>
+      this.diagnosticWaiters.delete(uri),
+    );
   }
 
-  open(document, source) {
+  open(document: WorkspaceDocument, source: string) {
     this.version += 1;
     this.notify("textDocument/didOpen", {
-      textDocument: { uri: document.uri, languageId: "python", version: this.version, text: source }
+      textDocument: {
+        uri: document.uri,
+        languageId: "python",
+        version: this.version,
+        text: source,
+      },
     });
   }
 
-  close(document) {
-    if (this.child?.stdin.writable) this.notify("textDocument/didClose", { textDocument: { uri: document.uri } });
+  close(document: WorkspaceDocument) {
+    if (this.child?.stdin.writable)
+      this.notify("textDocument/didClose", { textDocument: { uri: document.uri } });
   }
 
-  async validate(document, source, timeoutMs) {
+  async validate(document: WorkspaceDocument, source: string, timeoutMs: number) {
     const diagnostics = this.waitForDiagnostics(document.uri, timeoutMs);
     this.open(document, source);
     try {
@@ -255,44 +355,60 @@ class LspSession {
     }
   }
 
-  async inspect(document, source, position) {
+  async inspect(document: WorkspaceDocument, source: string, position: Position) {
     this.open(document, source);
     const params = { textDocument: { uri: document.uri }, position: normalizePosition(position) };
     try {
       const [hover, signature, definition] = await Promise.all([
         this.request("textDocument/hover", params),
         this.request("textDocument/signatureHelp", params),
-        this.request("textDocument/definition", params)
+        this.request("textDocument/definition", params),
       ]);
-      const definitions = definition == null ? [] : (Array.isArray(definition) ? definition : [definition]);
+      const definitions =
+        definition == null ? [] : Array.isArray(definition) ? definition : [definition];
       return {
-        hover: hover ? { contents: markdownText(hover.contents), range: hover.range ? normalizeRange(hover.range) : null } : null,
-        signature: signature ? {
-          activeSignature: signature.activeSignature ?? 0,
-          activeParameter: signature.activeParameter ?? 0,
-          signatures: (signature.signatures ?? []).map((item) => ({
-            label: item.label,
-            documentation: markdownText(item.documentation),
-            parameters: (item.parameters ?? []).map((parameter) => ({
-              label: Array.isArray(parameter.label) ? parameter.label.join(":") : String(parameter.label),
-              documentation: markdownText(parameter.documentation)
-            }))
-          }))
-        } : null,
-        definitions: definitions.map(normalizeLocation)
+        hover: hover
+          ? {
+              contents: markdownText(hover.contents),
+              range: hover.range ? normalizeRange(hover.range) : null,
+            }
+          : null,
+        signature: signature
+          ? {
+              activeSignature: signature.activeSignature ?? 0,
+              activeParameter: signature.activeParameter ?? 0,
+              signatures: (signature.signatures ?? []).map((item) => ({
+                label: item.label,
+                documentation: markdownText(item.documentation),
+                parameters: (item.parameters ?? []).map((parameter) => ({
+                  label: Array.isArray(parameter.label)
+                    ? parameter.label.join(":")
+                    : String(parameter.label),
+                  documentation: markdownText(parameter.documentation),
+                })),
+              })),
+            }
+          : null,
+        definitions: definitions.map(normalizeLocation),
       };
     } finally {
       this.close(document);
     }
   }
 
-  async complete(document, source, position, query, limit) {
+  async complete(
+    document: WorkspaceDocument,
+    source: string,
+    position: Position,
+    query: string | undefined,
+    limit: number,
+  ) {
     this.open(document, source);
     try {
       const response = await this.request("textDocument/completion", {
         textDocument: { uri: document.uri },
         position: normalizePosition(position),
-        context: { triggerKind: 1 }
+        context: { triggerKind: 1 },
       });
       const rawItems = Array.isArray(response) ? response : (response?.items ?? []);
       const needle = query?.toLowerCase();
@@ -304,23 +420,33 @@ class LspSession {
           kind: item.kind ?? null,
           detail: item.detail ?? null,
           documentation: markdownText(item.documentation),
-          insertText: item.insertText ?? item.textEdit?.newText ?? null
+          insertText: item.insertText ?? item.textEdit?.newText ?? null,
         }));
     } finally {
       this.close(document);
     }
   }
 
-  async documentRequest(document, source, method, params, timeoutMs = this.timeoutMs) {
+  async documentRequest<M extends keyof DocumentResults>(
+    document: WorkspaceDocument,
+    source: string,
+    method: M,
+    params: object,
+    timeoutMs = this.timeoutMs,
+  ) {
     this.open(document, source);
     try {
-      return await this.request(method, { textDocument: { uri: document.uri }, ...params }, timeoutMs);
+      return await this.request(
+        method,
+        { textDocument: { uri: document.uri }, ...params },
+        timeoutMs,
+      );
     } finally {
       this.close(document);
     }
   }
 
-  async gameCommand(command, argument) {
+  async gameCommand(command: string, argument: object) {
     return this.request("codeterraform/gameCommand", { command, arguments: [argument] }, 25_000);
   }
 
@@ -329,7 +455,7 @@ class LspSession {
     try {
       await this.request("shutdown", null, 2_000);
       this.expectedExit = true;
-      const exited = new Promise((resolve) => this.child.once("exit", resolve));
+      const exited = new Promise((resolve) => this.child!.once("exit", resolve));
       this.notify("exit", null);
       await Promise.race([exited, delay(500)]);
     } catch {
@@ -341,7 +467,13 @@ class LspSession {
 }
 
 export class LanguageService {
-  constructor(workspaceStore, options = {}) {
+  workspaceStore: WorkspaceStore;
+  options: SessionOptions;
+  session: LspSession | null;
+  signature: string | null;
+  queue: Promise<unknown>;
+
+  constructor(workspaceStore: WorkspaceStore, options: SessionOptions = {}) {
     this.workspaceStore = workspaceStore;
     this.options = options;
     this.session = null;
@@ -349,16 +481,18 @@ export class LanguageService {
     this.queue = Promise.resolve();
   }
 
-  runExclusive(operation) {
+  runExclusive<T>(operation: () => Promise<T>) {
     const result = this.queue.then(operation, operation);
     this.queue = result.catch(() => {});
     return result;
   }
 
-  async sessionFor(workspace) {
+  async sessionFor(workspace: Workspace) {
     const signature = `${workspace.rootPath}\0${workspace.serverPath}\0${workspace.analysisVersion}`;
     if (this.session && (this.signature !== signature || !this.session.initialized)) {
-      logger.info(`Restarting language server (${this.signature !== signature ? "workspace changed" : "session ended"}).`);
+      logger.info(
+        `Restarting language server (${this.signature !== signature ? "workspace changed" : "session ended"}).`,
+      );
       await this.session.dispose();
       this.session = null;
     }
@@ -371,7 +505,7 @@ export class LanguageService {
     return this.session;
   }
 
-  async validate(target, source, timeoutMs = 15_000) {
+  async validate(target: string, source: string, timeoutMs = 15_000) {
     return this.runExclusive(async () => {
       const { workspace, document } = await this.workspaceStore.resolveTarget(target);
       const session = await this.sessionFor(workspace);
@@ -380,7 +514,7 @@ export class LanguageService {
     });
   }
 
-  async inspect(target, source, position) {
+  async inspect(target: string, source: string, position: Position) {
     return this.runExclusive(async () => {
       const { workspace, document } = await this.workspaceStore.resolveTarget(target);
       const session = await this.sessionFor(workspace);
@@ -388,15 +522,30 @@ export class LanguageService {
     });
   }
 
-  async complete(target, source, position, query, limit) {
+  async complete(
+    target: string,
+    source: string,
+    position: Position,
+    query: string | undefined,
+    limit: number,
+  ) {
     return this.runExclusive(async () => {
       const { workspace, document } = await this.workspaceStore.resolveTarget(target);
       const session = await this.sessionFor(workspace);
-      return { workspace, document, items: await session.complete(document, source, position, query, limit) };
+      return {
+        workspace,
+        document,
+        items: await session.complete(document, source, position, query, limit),
+      };
     });
   }
 
-  async documentRequest(target, source, method, params = {}) {
+  async documentRequest<M extends keyof DocumentResults>(
+    target: string,
+    source: string,
+    method: M,
+    params: object = {},
+  ) {
     return this.runExclusive(async () => {
       const { workspace, document } = await this.workspaceStore.resolveTarget(target);
       const session = await this.sessionFor(workspace);
@@ -405,22 +554,30 @@ export class LanguageService {
     });
   }
 
-  async gameCommand(command, target, options = {}) {
+  async gameCommand(
+    command: string,
+    target: string,
+    options: { kind?: string; arguments?: object } = {},
+  ) {
     return this.runExclusive(async () => {
       const { workspace, document } = await this.workspaceStore.resolveTarget(target);
-      if (options.kind && document.kind !== options.kind) throw new Error(`Target ${target} must be a ${options.kind}.`);
+      if (options.kind && document.kind !== options.kind)
+        throw new Error(`Target ${target} must be a ${options.kind}.`);
       await this.workspaceStore.verifyDocumentFile(workspace, document);
       const session = await this.sessionFor(workspace);
-      const result = await session.gameCommand(command, { uri: document.uri, ...options.arguments });
+      const result = await session.gameCommand(command, {
+        uri: document.uri,
+        ...options.arguments,
+      });
       return { workspace, document, result };
     });
   }
 
-  async createLibrary(name) {
+  async createLibrary(name: string) {
     return this.workspaceCommand("codeTerraform.createLibrary", { name });
   }
 
-  async importLibrary(name, source) {
+  async importLibrary(name: string, source: string) {
     return this.workspaceCommand("codeTerraform.importLibrary", { name, source });
   }
 
@@ -435,7 +592,7 @@ export class LanguageService {
    * @param {string} command Game command ID.
    * @param {object} argument Command argument.
    */
-  async workspaceCommand(command, argument) {
+  async workspaceCommand(command: string, argument: object) {
     return this.runExclusive(async () => {
       const workspace = await this.workspaceStore.load();
       const session = await this.sessionFor(workspace);
@@ -452,8 +609,13 @@ export class LanguageService {
       // snapshot is available on disk for an immediate, deterministic response.
       let fleet = session.fleet;
       if (!fleet) {
-        try { fleet = JSON.parse(await readFile(path.join(workspace.rootPath, "codeterraform-fleet.json"), "utf8")); }
-        catch { fleet = null; }
+        try {
+          fleet = JSON.parse(
+            await readFile(path.join(workspace.rootPath, "codeterraform-fleet.json"), "utf8"),
+          ) as Fleet;
+        } catch {
+          fleet = null;
+        }
       }
       return { workspace, status: session.gameStatus, fleet };
     });
@@ -464,11 +626,12 @@ export class LanguageService {
       const workspace = await this.workspaceStore.load();
       const session = await this.sessionFor(workspace);
       const document = workspace.documents[0];
-      if (document) await session.documentRequest(document, "", "textDocument/documentSymbol", {}, 5_000);
+      if (document)
+        await session.documentRequest(document, "", "textDocument/documentSymbol", {}, 5_000);
       return {
         responsive: Boolean(document),
         ready: session.gameStatus?.ready ?? null,
-        fleetPublished: session.fleet !== null
+        fleetPublished: session.fleet !== null,
       };
     });
   }

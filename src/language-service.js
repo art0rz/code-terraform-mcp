@@ -417,18 +417,29 @@ export class LanguageService {
   }
 
   async createLibrary(name) {
-    return this.runExclusive(async () => {
-      const workspace = await this.workspaceStore.load();
-      const session = await this.sessionFor(workspace);
-      return { workspace, result: await session.gameCommand("codeTerraform.createLibrary", { name }) };
-    });
+    return this.workspaceCommand("codeTerraform.createLibrary", { name });
   }
 
   async importLibrary(name, source) {
+    return this.workspaceCommand("codeTerraform.importLibrary", { name, source });
+  }
+
+  /** Deploy every Library's saved source and restart the scripts that import them. */
+  async applyAllLibraries() {
+    return this.workspaceCommand("codeTerraform.applyAllLibraries", {});
+  }
+
+  /**
+   * Send a game command that addresses the workspace rather than one registered document.
+   *
+   * @param {string} command Game command ID.
+   * @param {object} argument Command argument.
+   */
+  async workspaceCommand(command, argument) {
     return this.runExclusive(async () => {
       const workspace = await this.workspaceStore.load();
       const session = await this.sessionFor(workspace);
-      return { workspace, result: await session.gameCommand("codeTerraform.importLibrary", { name, source }) };
+      return { workspace, result: await session.gameCommand(command, argument) };
     });
   }
 

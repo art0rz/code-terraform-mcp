@@ -53,6 +53,9 @@ test("language service validates, inspects, and completes in memory", async (con
   assert.equal(overview.fleet.scripts.pioneer_1.status, "running");
   assert.deepEqual(await service.heartbeat(), { responsive: true, ready: true, fleetPublished: true });
   await assert.rejects(() => service.gameCommand("codeTerraform.run", "../secret.py", { kind: "script" }), /Unknown script target/);
+  await assert.rejects(() => service.gameCommand("codeTerraform.applyLibrary", "pioneer_1", { kind: "library" }), /must be a library/);
+  const appliedAll = await service.applyAllLibraries();
+  assert.deepEqual(appliedAll.result, { ok: true, action: "codeTerraform.applyAllLibraries" });
 
   assert.equal(await (await import("node:fs/promises")).readFile(path.join(root, "pioneer_1.py"), "utf8"), "print('live source')\n");
 });

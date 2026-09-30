@@ -24,6 +24,7 @@ test("MCP handshake lists and calls the manual and language tools", async (conte
     ]
   };
   const workspaceStore = { load: async () => workspace };
+  const gameCommands = [];
   const languageService = {
     validate: async () => ({
       workspace,
@@ -48,7 +49,14 @@ test("MCP handshake lists and calls the manual and language tools", async (conte
         range: { start: { line: 0, character: 4 }, end: { line: 0, character: 10 } } }] : [],
       capabilities: {}
     }),
-    gameCommand: async () => ({ result: { ok: true } })
+    gameCommand: async (command, target, options) => {
+      gameCommands.push({ command, target, kind: options.kind });
+      return { result: { ok: true } };
+    },
+    applyAllLibraries: async () => {
+      gameCommands.push({ command: "codeTerraform.applyAllLibraries" });
+      return { result: { ok: true } };
+    }
   };
   const server = createServer(new ManualStore(manualPath), { workspaceStore, languageService });
   const client = new Client({ name: "test-client", version: "1.0.0" });
@@ -106,4 +114,14 @@ test("MCP handshake lists and calls the manual and language tools", async (conte
   assert.equal(refs.structuredContent.data.references[0].range.start.column, 5);
   const run = await client.callTool({ name: "run_script", arguments: { target: "pioneer_1" } });
   assert.equal(run.structuredContent.data.ok, true);
+  const applied = await client.callTool({ name: "apply_library", arguments: { target: "helpers" } });
+  assert.equal(applied.structuredContent.data.ok, true);
+  const appliedAll = await client.callTool({ name: "apply_all_libraries", arguments: {} });
+  assert.equal(appliedAll.structuredContent.data.ok, true);
+  assert.deepEqual(gameCommands.slice(-2), [
+    { command: "codeTerraform.applyLibrary", target: "helpers", kind: "library" },
+    { command: "codeTerraform.applyAllLibraries" }
+  ]);
+  const automations = await client.callTool({ name: "list_fleet", arguments: { kind: "automations" } });
+  assert.deepEqual(automations.structuredContent.data.items, []);
 });

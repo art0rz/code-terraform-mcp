@@ -22,7 +22,8 @@ When a live save workspace is configured, the server also launches the game's bu
 | `list_script_symbols`, `find_references`, `preview_rename` | Browse symbols and references, or preview rename edits without applying them. |
 | `get_semantic_tokens`, `format_script`, `list_code_actions` | Inspect syntax tokens, preview Ruff formatting edits, and list actions without executing them. |
 | `run_script`, `stop_script` | Start or stop a registered script in the active game. |
-| `create_library`, `import_library`, `rename_library` | Create or rename the active game's Libraries. Importing never replaces an existing Library; update one by writing its synced `lib/<name>.py` file. |
+| `create_library`, `import_library`, `rename_library` | Create or rename the active game's Libraries. Importing never replaces an existing Library. |
+| `apply_library`, `apply_all_libraries` | Deploy saved Library source and restart the scripts that import it. Update a Library by writing its synced `lib/<name>.py` file, then applying it; saving alone does not deploy. |
 | `debug_start`, `debug_set_breakpoints`, `debug_control` | Attach a persistent debug session (optionally starting an idle script), set breakpoints, pause, continue, or step. |
 | `debug_inspect`, `debug_evaluate`, `debug_events`, `debug_end` | Inspect a halted script, evaluate an expression, read events, or detach. |
 

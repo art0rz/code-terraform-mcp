@@ -57,7 +57,7 @@ export function registerExtraTools(server, { languageService, debugService }) {
 
   register(server, "list_fleet", "List registered game objects and script states",
     "Read the game-published fleet snapshot, optionally filtering scripts by status or name.", {
-      kind: z.enum(["scripts", "machines", "panels", "contracts", "libraries", "outposts"]).default("scripts"),
+      kind: z.enum(["scripts", "machines", "panels", "contracts", "libraries", "outposts", "automations"]).default("scripts"),
       query: z.string().max(200).optional(), limit: z.number().int().min(1).max(500).default(100)
     }, async ({ kind, query, limit }) => {
       const { fleet } = await requireLanguage().gameOverview();
@@ -153,13 +153,22 @@ export function registerExtraTools(server, { languageService, debugService }) {
     { name: z.string().min(1).max(100) }, async ({ name }) => ({ name, ...(await requireLanguage().createLibrary(name)).result }), true);
   register(server, "import_library", "Import a game Library",
     "Create a new Library from supplied complete source in the live game. Fails with duplicate_name if the Library exists; "
-    + "to update an existing Library, write its synced lib/<name>.py file in the save workspace instead.",
+    + "to update an existing Library, write its synced lib/<name>.py file and call apply_library.",
     { name: z.string().min(1).max(100), source: z.string().max(1_000_000) },
     async ({ name, source }) => ({ name, ...(await requireLanguage().importLibrary(name, source)).result }), true);
   register(server, "rename_library", "Rename a game Library", "Rename a registered Library in the live game.",
     { target: z.string().min(1), name: z.string().min(1).max(100) },
     async ({ target, name }) => ({ target, name, ...(await requireLanguage().gameCommand("codeTerraform.renameLibrary", target,
       { kind: "library", arguments: { name } })).result }), true);
+
+  register(server, "apply_library", "Apply a game Library",
+    "Deploy a registered Library's saved lib/<name>.py source to the live game and restart the scripts that import it. "
+    + "Saving the file only syncs it; the game runs the new code after Apply.",
+    { target: z.string().min(1) }, async ({ target }) => ({ target, ...(await requireLanguage().gameCommand("codeTerraform.applyLibrary", target,
+      { kind: "library" })).result }), true);
+  register(server, "apply_all_libraries", "Apply all game Libraries",
+    "Deploy every Library's saved source to the live game and restart every script that imports any of them.",
+    {}, async () => (await requireLanguage().applyAllLibraries()).result, true);
 
   register(server, "debug_start", "Start a game debug session",
     "Open a persistent DAP session for a registered script. By default it attaches to a running script and never starts an idle one; "

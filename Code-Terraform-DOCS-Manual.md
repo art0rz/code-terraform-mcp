@@ -2,7 +2,7 @@
 
 *Player Documentation*
 
-Build 3b1b03e
+Build 58191a1
 
 ## Contents
 
@@ -15,14 +15,20 @@ Build 3b1b03e
 - Start Here / Frequently Asked Questions
 - Tutorials / How This Game Works
 - Tutorials / Choosing Your First Credit Path
+- Tutorials / Terraform Index and planetary completion
 - Tutorials / Power & Terraforming Machines
 - Tutorials / First Biology Loop
 - Tutorials / First Harvesting Route
 - Tutorials / Contracts
 - Tutorials / Reading Errors and Console Output
 - Tutorials / First Pioneer
+- Tutorials / Sonar: scanning and surveying
+- Tutorials / Mining: from discovery to delivery
 - Tutorials / Using Plan Mode
 - Tutorials / First Outpost
+- Tutorials / Storage and remote outpost logistics
+- Tutorials / Industrial upgrades and deep oil
+- Tutorials / Nuclear power: uranium to electricity
 - Tutorials / Expanding Production
 - Programming / Variables
 - Programming / Operators
@@ -52,7 +58,7 @@ Build 3b1b03e
 - Editor & Tools / External Editor
 - Editor & Tools / Keyboard Shortcuts
 - Automation Systems / Contracts
-- Automation Systems / Vehicle Proximity & Service
+- Automation Systems / Vehicle Proximity & Service Areas
 - Automation Systems / Earth Orders
 - Automation Systems / Signal Bus
 - Automation Systems / Automations
@@ -140,6 +146,7 @@ Build 3b1b03e
 - Classes / Operators & dunder methods
 - Classes / Decorators
 - Classes / @property
+- Classes / Generic types
 
 **Components**
 
@@ -161,6 +168,7 @@ Build 3b1b03e
 - Exploration / Map Markers
 - Exploration / Scanner
 - Power / Battery
+- Power / Battery Charger
 - Power / Lightning Rod
 - Power / Oil Generator
 - Power / Reactor
@@ -181,6 +189,7 @@ Build 3b1b03e
 - Terraforming / Oxygen Generator
 - Terraforming / Pressure Generator
 - Terraforming / Refiner
+- Terraforming / Terraforming
 - Production & Storage / Fabricator
 - Production & Storage / Fuel Assembler
 - Production & Storage / Harvester
@@ -235,8 +244,8 @@ Build 3b1b03e
 **Database**
 
 - Production / Production Tiers
-- Recipes / Smelter Recipes
 - Recipes / Fabricator Recipes
+- Recipes / Smelter Recipes
 - Recipes / Feed Maker Recipes
 - Recipes / Refiner Recipes
 - Recipes / Fuel Assembler Recipes
@@ -267,6 +276,7 @@ Build 3b1b03e
 - Core Data / PointOfInterest
 - Core Data / Position
 - Core Data / ScriptCommand
+- Core Data / ScriptStatusReport
 - World & Sites / Outpost
 - World & Sites / OutpostNetwork
 - World & Sites / OutpostRef
@@ -408,6 +418,7 @@ Build 3b1b03e
 - Exploration / CatalogedFragment
 - Exploration / Marker
 - Infrastructure / BlueprintPlanResult
+- Power / BatteryChargerSlot
 - System / ActionResult
 - System / CommandResult
 - System / CountResult
@@ -424,7 +435,9 @@ Build 3b1b03e
 - Terraforming / HabitatBonusTree
 - Terraforming / HabitatInsight
 - Terraforming / Specimen
+- Terraforming / TerraformPillar
 - Terraforming / WasteDumpResult
+- Vehicles & Modules / BatterySwapResult
 - Weather & Sky / SignalReceiver
 - Weather & Sky / SignalTransmission
 - Weather & Sky / Storm
@@ -456,7 +469,7 @@ The console shows your output and any errors. Sensor readings update as you acti
 ### Looking things up while you code
 
 - **Hover** over any method or function name in your script to see its signature, description, and return type inline.
-- **`Cmd+click` (macOS) / `Ctrl+click` (Windows / Linux)** on any method, function, or component id to open DOCS and jump straight to that entry. The block you clicked is briefly highlighted so you can see where you landed.
+- **Cmd+click (macOS) / Ctrl+click (Windows / Linux)** on any method, function, or component id to open DOCS and jump straight to that entry. The block you clicked is briefly highlighted so you can see where you landed.
 
 See the **Code Editor** DOCS page for the full set of editor shortcuts (rename, autocomplete, parameter hints, find/replace, debug stepping).
 
@@ -538,7 +551,7 @@ else:
   print(analysis.message)
 ```
 
-Rejected results keep the same result type. They do not turn into `False`, `None`, an empty dict, or a bare status string.
+Rejected results keep the same result type. They do not turn into `False`, `None`, an empty `dict`, or a bare status string.
 
 ### Queries return natural values
 
@@ -552,7 +565,7 @@ Do not assume that every timed system waits in the same way. The command descrip
 
 ### Busy and exceptions
 
-`"busy"` is an ordinary transient outcome for commands that define it. Store that result, allow game time or the blocking state to change, then call the command again when your script wants a fresh result. Do not retry every non-success status as though all outcomes meant busy.
+`"busy"` is an ordinary transient outcome for commands that define it. Store that result, allow game time or the blocking state to change, then call the command again when your script wants a fresh result. Do not retry every non-success status as though all outcomes meant `"busy"`.
 
 Wrong argument types and documented malformed values can raise precise exceptions such as `TypeError` or `ValueError`. Ordinary mutable world conditions use the result statuses listed for that command. Open the command's DOCS entry for its exact statuses, payload fields, timing, and exceptions. See **Long-Running Scripts** for using these results in automation that remains safe after a game load.
 
@@ -574,7 +587,7 @@ Build a long-running script as a reconciliation loop. Each pass should:
 2. Decide which step is still missing.
 3. Attempt that step once.
 4. Check the returned `.status`.
-5. Let game time pass before retrying a transient blocker.
+5. After a transient blocker such as `"busy"`, let game time pass before retrying the step.
 
 Do not depend on a local variable from an earlier pass to remember what the machine contains. Read the chamber, cargo, ports, queue, or current job again.
 
@@ -619,7 +632,7 @@ The payload rule matters here: `analysis.info` is available after `analysis.stat
 
 ### Make writes safe to repeat
 
-Before transferring, buying, loading, or queuing something, inspect what is already present. Calculate the missing amount instead of submitting the full planned amount again. Drain completed output before starting more work, and distinguish a transient `"busy"` from blockers such as `"output_full"`, `"insufficient_input"`, or an invalid argument. The command's DOCS entry lists which outcomes can change when the world changes.
+Before transferring, buying, loading, or queuing something, inspect what is already present. Calculate the missing quantity instead of submitting the full planned quantity again. Drain completed output before starting more work, and distinguish a transient `"busy"` from blockers such as `"output_full"`, `"insufficient_input"`, or an invalid argument. The command's DOCS entry lists which outcomes can change when the world changes.
 
 ### Persist knowledge deliberately
 
@@ -774,6 +787,54 @@ Start with manual Biology if you want the simplest first payout. Choose Harvesti
 
 *Guide / Tutorials*
 
+## Terraform Index and planetary completion
+
+The Terraform Index is your overall progress toward a livable planet. It has a fixed goal of **1,000,000 Terraform Points (TP)**. Those points come from six pillars, so steady progress eventually means looking beyond the first machines you built.
+
+### The six pillars
+
+| Group | Pillars | Maximum share of the Index |
+|---|---|---|
+| Atmosphere | Temperature, oxygen and pressure | 700,000 TP together |
+| Biosphere | Biomass, plants and wildlife | 100,000 TP each |
+
+The three atmospheric pillars are available first. **Biosphere** research opens at **210,000 TP**, making the other three pillars visible. Their production systems open along the later research path. Unlocking Biosphere does not change the million-point goal or take away points you already earned.
+
+Each pillar advances through named phases. You earn progress between phase boundaries as well as when crossing them. The meters use different units and different phase thresholds, so one extra unit of heat, oxygen or biomass does not mean one TP. Compare progress and the next milestone rather than adding raw readings yourself.
+
+### A finished pillar cannot replace another one
+
+Each pillar's Index contribution stops growing when it reaches its final target. Extra output in that pillar cannot make up for unfinished plants or wildlife. Even a completely finished atmosphere contributes at most **700,000 TP**.
+
+If the Index slows while one set of machines is still producing, check whether their pillar is already complete. Put the next expansion into an unfinished pillar or its supply chain. Do not shut down a useful supply blindly: some machines also support other systems, such as the atmospheric carbon cycle.
+
+### Use research to choose the next project
+
+Research unlocks automatically when its own requirement is reached. Some entries follow the combined Terraform Index; others follow temperature, oxygen, pressure or a Biosphere pillar. Read the requirement on the research card. More pressure will not satisfy a target that asks for plants.
+
+Oxygen- and pressure-based research also need their matching sensors repaired and online. If an expected unlock is missing, check the sensor as well as the production reading.
+
+**Research and recipe rewards are separate.** An unlock can open a machine, a shop item or a particular recipe. Earth Orders supply other recipes and blueprints. If you own a machine but cannot select the recipe you want, check its recipe list and the order rewards instead of simply producing more TP. See `orders_guide` for that progression.
+
+### Check what is actually holding you back
+
+Start with an unfinished pillar, then follow its inputs. Is its machinery powered? Does it have the required material or fluid? Is an output full? Does it need an upgrade for the current stage? Expanding a stopped machine's fleet usually repeats the same shortage.
+
+Scripts can read current pillar snapshots:
+
+```
+terraforming = get_component("terraforming")
+print(terraforming.total_tp(), terraforming.index_progress())
+for pillar in terraforming.pillars():
+  print(pillar.id, pillar.progress, pillar.complete)
+```
+
+The pillar list contains the currently unlocked pillars. Each also exposes `.value`, `.target` and `.next_target` for planning. Query again when you need fresh readings.
+
+For the first atmospheric setup, see `power_and_terraforming_machines`. The later production paths are in `biosphere_tier`, `plants_overview` and `wildlife_overview`. All these guides are available before the corresponding equipment unlocks, so you can plan ahead.
+
+*Guide / Tutorials*
+
 ## Power & Terraforming Machines
 
 Terraforming machines are the core engines of the base. Heat Generators, Oxygen Generators, and Pressure Generators turn power into planetary progress.
@@ -799,6 +860,8 @@ Oxygen Generators convert atmospheric CO2 into oxygen, one-for-one. The planet s
 Good machine scripts read state before acting. A generator can react to sun angle. A battery or power monitor can warn when storage is low. A terraforming machine can throttle down when power is tight and resume when the base recovers.
 
 If generators stop at night or terraforming machines pause from low power, that is usually not a bug. Power production, storage, and consumption have to fit together.
+
+See `terraforming_progress` for how the six pillars contribute to the Index and open research. For the late-game uranium supply chain, see `nuclear_power`.
 
 *Guide / Tutorials*
 
@@ -832,9 +895,9 @@ if input_link.status != "ok":
 - Biome machines transform the sample.
 - The Bio Exchange delivers it toward an active Bio Order.
 
-Every gameplay command returns a result object. Branch on `.status`, use `.message` for the exact reason, and read any method-specific payload. For example, `analyze()` returns `AnalyzeResult.info`, while item transfers return `TransferResult.moved`. Statuses such as `"busy"`, `"no_input"`, and `"output_full"` are never bare strings.
+Every gameplay command returns a result object. Branch on `.status`, use `.message` for the exact reason, and read any method-specific payload. For example, `analyze()` returns `AnalyzeResult.info`, while item transfers return `TransferResult.moved`. Statuses such as `"busy"`, `"no_input"`, and `"output_full"` never arrive on their own: a call always returns them inside a result object.
 
-Properties belong to each item stack and survive supported transfers. Bio Orders come from a Bio Exchange, not the Earth Supply Dock orders component. Subtract both `.delivered` and `.in_transit` when planning production. See **Long-Running Scripts** for the restart-safe loop pattern used by unattended automation.
+Properties belong to each item stack and survive supported transfers. Bio Orders come from a Bio Exchange, not the Earth Supply Dock `orders` component. Subtract both `.delivered` and `.in_transit` when planning production. See **Long-Running Scripts** for the restart-safe loop pattern used by unattended automation.
 
 *Guide / Tutorials*
 
@@ -933,6 +996,124 @@ The Info tab explains the module APIs available through `self`. Plan Mode shows 
 
 *Guide / Tutorials*
 
+## Sonar: scanning and surveying
+
+Sonar helps a Rover or Pioneer find resources on the Planet Map. **Scan** to identify nearby contacts, then **survey** a site to learn its extraction details. Driving past a contact does not scan it automatically.
+
+### Choose a sonar
+
+| Sonar | Range | Mineral hardness limit | Energy per scan or paid survey |
+|---|---|---|---|
+| Basic (Sonar Module) | 50 m | 1 | 0.5 Wh |
+| Extended Sonar | 180 m | 3 | 1 Wh |
+| Deep Sonar | 280 m | 4 | 2 Wh |
+| Seismic Sonar | 280 m | 4 | 3 Wh |
+
+The hardness limit includes every softer mineral. Basic detects Iron and Silicon. Extended adds Titanium, Cobalt, Lead and Rare Earth. Deep and Seismic also detect Neutronium. **Detecting a mineral does not mean your drill can mine it**: the drill has its own hardness limit.
+
+Basic fits the Rover's Sonar slot or a Pioneer universal slot. Extended, Deep and Seismic require a **Pioneer universal slot**. Replace the previous sonar when upgrading. Research **Sonar Module**, **Extended Sonar** or **Deep Sonar** to buy the corresponding module; **Advanced Oil Extraction** unlocks Seismic Sonar.
+
+### What each survey reveals
+
+For **thermal vents and exotic deposits**, Basic reveals the active or dormant phase; an exotic survey also identifies the fluid, medium and rarity. Extended adds the base and current flow rates. Deep adds active and dormant durations and the time until the next phase. Seismic provides the same details as Deep, plus deep oil prospecting beneath inert formations.
+
+A mineral survey reveals the mineral, hardness and purity. A water or oil well survey reveals its yield and flow rate. These sites do not use the gradual thermal/exotic detail levels.
+
+**Research and sonar capability both matter.** A stronger sonar does not bypass research:
+
+| Contact | Required research | Sonar needed |
+|---|---|---|
+| Thermal vents | Geological Survey | Any |
+| Water wells | Hydrology Survey | Any |
+| Ordinary oil wells | Petroleum Survey | Deep or Seismic |
+| Common and uncommon exotic deposits | Exotic Fluids | Any |
+| Rare exotic deposits | Rare Exotics | Any |
+| Deep oil beneath inert formations | Petroleum Survey and Advanced Oil Extraction | Seismic |
+
+### Scan, then survey
+
+Use the Planet Map's question-mark contacts to choose where to explore. Scripts can read them with `get_component("nocturna").points_of_interest()`. Travel within the mounted sonar's range, stop, and call `self.sonar.scan()`. The sweep checks around the vehicle's current position and records classified sites in the **Journal**.
+
+Read the scan's `.sites` for usable contacts and `.blocked` for contacts it could not classify. **A sweep can find usable sites and blocked contacts together**, so inspect both even when some contacts need better equipment or research. Repeating the same scan cannot overcome those requirements. Biological contacts need a Portable Bio Scanner instead of vehicle sonar.
+
+Call `self.sonar.survey(site)` on a discovered site while it remains in range. A scan takes **0.15 h**; an ordinary paid survey takes **0.25 h**. For ordinary sites, repeating a survey at the same or a lower sonar tier is free and instant. After upgrading sonar, survey known thermal vents and exotic deposits again to unlock the deeper details.
+
+Run this from a stopped vehicle with sonar and enough battery charge. It surveys productive contacts; inert formations use the deep-oil workflow below:
+
+```
+sweep = self.sonar.scan()
+print(sweep.message)
+for site in sweep.sites:
+  if site.kind() != "inert":
+    result = self.sonar.survey(site)
+    if result.status == "ok":
+      print(result.site.id, result.site.kind())
+    else:
+      print(result.message)
+```
+
+Query `get_component("journal").discovered_sites("nocturna")` for previously classified sites. The Journal remembers discoveries, so you can plan return trips without scanning the whole map again.
+
+### Revisit inert formations for deep oil
+
+**Inert formations are the targets for Seismic Sonar.** Any sonar can identify them as `GeologicalAnomaly` sites with `site.kind() == "inert"`. Ordinary scanning marks them surveyed, but that does not rule out oil deeper underground. **Revisit them even if the Journal already marks them surveyed.**
+
+After Petroleum Survey and Advanced Oil Extraction, mount Seismic Sonar and scan within **280 m**. Read `site.seismic_status`: `"potential"` means a possible deep reservoir; `"dry"` means no deep oil. Survey a potential contact with `self.sonar.survey(site)` to confirm an Oil Well at the same coordinates. A new deep-oil survey takes **0.5 h** and costs **3 Wh**; re-surveying a known dry formation is free. Three inert formations on each map conceal these additional reservoirs.
+
+See `industrial_upgrades` for the full deep-oil example and Oil Pump upgrades. For individual commands and returned fields, see `SonarModule`.
+
+For turning surveyed mineral sites into delivered ore, continue with `mining_guide`.
+
+*Guide / Tutorials*
+
+## Mining: from discovery to delivery
+
+Finding a deposit is the first step. To turn it into useful supplies, you need a drill that can cut it, somewhere for the ore to go, and a way to bring that ore to your machines.
+
+### Start with a surveyed site
+
+Use sonar to find a mineral contact, then survey it. A `MiningSite` tells you the mineral, its hardness and its purity. See `sonar_guide` for choosing sonar and working through blocked contacts.
+
+**Sonar and drills have separate hardness limits.** Better sonar can show you Titanium while your starter drill still cannot mine it. Check both before sending a vehicle on a long trip.
+
+| Hardness limit | Vehicle drill | Stationary Mining Drill |
+|---|---|---|
+| 1 | Basic Drill Module | Mk I |
+| 3 | Industrial Drill | Mk II |
+| 4 | Heavy Drill | Mk III |
+
+Each tier handles every hardness up to and including its limit. Hardness 1 covers Iron and Silicon; hardness 3 also covers Titanium, Cobalt, Lead and Rare Earth; hardness 4 adds Neutronium. The Rover takes the basic drill. The advanced vehicle drills need a Pioneer's universal slot.
+
+### Take a vehicle, or leave a drill there?
+
+**A Rover or Pioneer mines into its own cargo.** Mount the right Drill Module, drive to the surveyed deposit, brake, and call `self.drill.mine()`. Each successful dig adds one unit. You need enough charge to finish the dig and cargo space for that mineral. This is a useful way to bring home your first batches without building field infrastructure.
+
+**A stationary Mining Drill keeps extracting while powered.** Fabricate its kit after earning the recipe, place a blueprint on the surveyed site, and have a Constructor-equipped Pioneer bring the kit and build it. Connect it to a working power network. Ore collects in the drill's own stockpile, so the vehicle that built it can leave.
+
+The stationary drill needs no repeated dig command. Its script can inspect output, but collection is the carrier's job. See `plan_mode` for construction and `power_networks` for supplying field machines.
+
+### Purity changes the trip
+
+A rich site mines **2×** as fast as a standard site; a pure site mines **3×** as fast. Higher vehicle drill tiers also finish sooner, but draw more power while digging. A faster drill can therefore use more energy per unit. The worked time and energy comparison is in `batteries`.
+
+For a vehicle, budget for **the outward trip, the ore you want to dig, and the return trip**. More cargo space does not help if the battery runs out before you get home. On a Pioneer, bins latch to one material each, so check space for the particular ore you are collecting, not just total empty capacity.
+
+### Bring the ore home
+
+A field drill's output is **pickup-only**. It does not send ore through a pipe or directly to Inventory. When the stockpile fills, extraction pauses until a carrier makes room.
+
+- A Rover or Pioneer parks at the drill, connects its own input to the drill and takes ore. Automated item transfers need Auto Feeders research.
+- A drone completes `go_to_drill(...)`, loads through `cargo.load(...)`, and carries the ore back to a Drone Depot.
+- At the destination, unload into home Inventory or compatible local storage. Remote factories need the ore delivered to their own outpost.
+
+Start with one deposit, one carrier and one destination. Make that route work before adding more drills. See `remote_logistics` for the delivery rules and `drone` for aerial carriers.
+
+### When mining stops
+
+Check the full route: surveyed deposit, compatible drill, power or vehicle charge, free cargo or stockpile space, then destination capacity. A stationary drill that reports zero extraction may simply be full. A vehicle beside a site may still be moving; brake before mining or loading. If ore reaches storage but your Smelter sits idle, check its recipe and input transfers next. See `refinement` for the first processing loop.
+
+*Guide / Tutorials*
+
 ## Using Plan Mode
 
 Plan Mode is the visual construction-planning layer on the Planet Map. It does not build instantly. It creates persistent blueprints that a Constructor-equipped Pioneer can execute later.
@@ -948,7 +1129,7 @@ Plan Mode is the visual construction-planning layer on the Planet Map. It does n
 
 ### Script planning
 
-Scripts write to the same queue through `get_component("construction_blueprint")`. Use `plan_structure(kind, x, y)` for Outposts, caps, pumps, taps, and Mining Drills; use `plan_pipe`, `plan_power_line`, and `plan_bridge` for utilities. A successful planning call places the ghost immediately without sending a vehicle there. The Pioneer is still required for the physical build.
+Scripts write to the same queue through `get_component("construction_blueprint")`. Use `plan_structure(kind, x, y)` for Outposts, Thermal Caps, Exotic Gas Caps, Water Pumps, Oil Pumps, Exotic Spring Taps, and Mining Drills; use `plan_pipe`, `plan_power_line`, and `plan_bridge` for utilities. A successful planning call places the ghost immediately without sending a vehicle there. The Pioneer is still required for the physical build.
 
 ```
 plans = get_component("construction_blueprint")
@@ -988,6 +1169,200 @@ Place the outpost footprint first. Plan Mode gives visual placement feedback; th
 ### Why this matters
 
 A single home base becomes slow later. The outpost step is when terraforming becomes geographic: more build areas, more machines, more local power, and eventually networks that connect distant production.
+
+Once the outpost is built, use `remote_logistics` to plan its first supply route.
+
+*Guide / Tutorials*
+
+## Storage and remote outpost logistics
+
+A new outpost gives you somewhere to build. It still needs supplies. Think through a delivery the same way you would a vehicle trip: where are the goods now, who carries them, and where will they be unloaded?
+
+### Pick the right store
+
+| Store | What it is for |
+|---|---|
+| Base Inventory | Purchases and general stock at Nocturna Base |
+| Storage Bin | A local supply of one item type; empty it to change the material |
+| Warehouse | Local storage for several item types and their property variants |
+| Vehicle cargo | Carrying goods between sites and outposts |
+| Lead Cask | Raw Uranium or Fuel Rods, one radioactive material per cask |
+
+You can open Inventory from anywhere, but **its goods are physically at Nocturna Base**. A machine at a remote outpost cannot pull them across the map. Give that outpost a local store and bring supplies by Pioneer or drone.
+
+A connection does not move goods on its own. After **Auto Feeders** research, an input uses `take(...)` and a routed output uses `send(...)`. These transfers take time and can move fewer items than requested if supply or capacity runs short. Read the result's `.moved` value before deciding that a delivery is complete.
+
+### Your first remote delivery
+
+Suppose you want a remote Smelter to process Iron Ore.
+
+1. Deploy the Smelter and a Warehouse at the founded outpost, and provide power.
+2. Park a cargo-equipped Pioneer at home. Connect its input to `"inventory"` and load Iron Ore with `take(...)`.
+3. Drive to the destination outpost and brake inside its service area.
+4. Connect the Pioneer's output to that outpost's Warehouse and unload with `send(...)`.
+5. From the Smelter's own script, connect its input to the Warehouse, select the iron recipe and take ore into the input. Move finished ingots out of its output as they become ready.
+
+Use your actual machine ids or display names in connections. A connection remembers its target; it does not follow the vehicle or switch to a new store when you arrive. Reconnect deliberately for the next leg.
+
+A drone route uses its cargo commands and Drone Depots instead. Either way, the useful pattern is **load, travel, unload, process**. Check the receiving store has room before sending the next load. See `refinement` for processing and `io_slots` for transfer examples.
+
+### Close enough, and stopped
+
+Stationary machines and ordinary stores exchange goods within the same outpost. A ground vehicle must be parked in the target's service area to load or unload. Vehicle-to-vehicle handoffs need both vehicles stopped within about **2 m**. A connection to a faraway target does not make it reachable.
+
+Route to the destination's service position, wait for arrival, then brake before starting the handoff. A ground vehicle's movement also stops if its controlling script ends or fails. See `vehicle_service` for the complete parking and docking rules.
+
+### Buying a machine is different from feeding it
+
+**Deploying a shop kit needs no delivery.** Inventory can deploy an ordinary outpost building straight into a founded outpost. You do not need a cargo trip just to commission that building. Its working supplies still follow the local delivery rules above.
+
+**Planet Map construction needs a Pioneer and materials.** Field Mining Drills, pumps, caps and utilities use blueprints. Their kits or segments must be in the Constructor-equipped Pioneer's cargo. Creating the blueprint does not move the materials or build the machine. See `first_outpost` and `plan_mode`.
+
+Manual Biology has a separate stockroom choice. It uses Inventory at home and one selected local Warehouse at a remote outpost. Changing that selection does not transport anything, and scripted machine ports still need their own connections.
+
+### When a transfer will not go through
+
+Check location, parking, research, available items, free space and whether either endpoint is already busy. A bin may have room but be latched to another material; a Warehouse may need a free physical slot for a different property variant. Raw Uranium and Fuel Rods need the shielded route in `nuclear_power`.
+
+If the wrong goods are already inside a machine input, `input.eject(...)` can recover them to a compatible destination. **`input.flush()` destroys the contents**; it is not an unload command. Read the returned message when a transfer is refused, fix that condition, then try again.
+
+*Guide / Tutorials*
+
+## Industrial upgrades and deep oil
+
+Research unlocks the means to expand production. Manufacture one pack for each machine you want to upgrade.
+
+### Faster factories
+
+Industrial Machinery Mk II unlocks at **375,000 Terraform Index**. Smelters and Fabricators upgraded to Mk II process at **2×** original speed with **1.5×** operating power. Industrial Machinery Mk III unlocks at **625,000 Terraform Index**; a Mk III machine processes at **4×** original speed with **3×** operating power. Install Mk II before Mk III. Recipes consume the same ingredients and produce the same batch quantities.
+
+Make packs in a **Fabricator** using their named recipes. The recipe browser shows the exact ingredients, Water intake and operating power. Mk II packs use Machine Frames, Control Units and either Circuit Panels (the Fabricator pack) or Pressure Valves (the Smelter and Oil Pump packs). The pump pack also needs Cobalt Ingots. Mk III packs add Rare Earth Cores. Completing the corresponding Earth Orders unlocks those intermediate recipes.
+
+Packs are manufactured goods and cannot be purchased. Apply factory packs through **Inventory -> Upgrade** or `computer.upgrade(item_id, machine)` after Ship Computer research. Check power headroom first. Upgrading preserves the machine, its recipe, connections, scripts, stored goods and batch progress. Undeploying returns the base kit and installed packs.
+
+### Better Oil Pumps
+
+Advanced Oil Extraction unlocks at **475,000 Terraform Index**. A Mk II Oil Pump extracts **1.5×** its well's active rate and uses **100 W** at full throttle. Dormant phases still stop production. Stockpile active-phase oil in Liquid Tanks to keep factories supplied between phases.
+
+Fabricate an **Oil Pump Mk II Upgrade Pack**, transfer it into a **Pioneer cargo bin**, and mount a **Constructor Module**. Select **Plan Upgrade** on the pump's Extraction card, or call `construction_blueprint.plan_upgrade("oil_pump_upgrade_pack_mk2", pump)` from a script. Park the Pioneer within the pump's service area and run `self.constructor.execute(blueprint_id)`. Installation takes **0.5 h**. The pump keeps working at Mk I until completion. Paused jobs retain their paid pack and progress; resume the same blueprint. Cancelling a paid job requires a Pioneer with cargo room at the pump to reclaim the pack. Dismantling requires room for both the original pump kit and installed pack.
+
+### Find three more reservoirs
+
+Advanced Oil Extraction also unlocks **Seismic Sonar** in the Shop for **7,500 credits**. Mount it in a Pioneer universal slot, replacing its previous sonar. It has Deep Sonar's **280 m** range and hardness-4 mineral capability, with a **3 Wh** charge per scan or survey. Ordinary Petroleum Survey research remains necessary for oil discovery.
+
+Look for **inert formations**, returned by sonar as `GeologicalAnomaly` sites with `site.kind() == "inert"`. Three of these formations on each map conceal additional deep oil reservoirs. Their positions stay fixed across save/load. Any sonar can classify a formation as inert, but seeing it on the map or scanning it with ordinary sonar does not reveal its deep oil potential. **Revisit inert formations even if they are already marked as surveyed.** That earlier survey does not rule out deep oil.
+
+Mount **Seismic Sonar**, move within **280 m** of an inert formation and call `self.sonar.scan()`. The scan distinguishes **potential deep oil** (`site.seismic_status == "potential"`) from **dry** formations (`"dry"`). Call `self.sonar.survey(site)` on a potential contact to confirm the reservoir. A deep geological survey takes **0.5 h** and turns a confirmed reservoir into a rich **16 t/h** Oil Well at the same location; a Mk II pump extracts **24 t/h** while it is active. A dry survey consumes its first charge and time; revisiting a known dry formation is free. Journal queries thereafter return the confirmed contact as an Oil Well. Survey it, plan an Oil Pump and connect its output to your network.
+
+### Script examples
+
+Choose this recipe from a Fabricator script after Mk II research:
+
+```
+result = self.set_recipe("craft_fabricator_pack_mk2")
+print(result.status, result.message)
+```
+
+Apply a fabricated factory pack from Base Inventory. Replace the example machine id with yours:
+
+```
+computer = get_component("computer")
+result = computer.upgrade("fabricator_upgrade_pack_mk2", "fabricator_1")
+print(result.status, result.message)
+```
+
+From a Pioneer fitted with Seismic Sonar, scan within range of inert formations, including previously surveyed ones, and survey the potential contacts:
+
+```
+sweep = self.sonar.scan()
+print(sweep.status)
+for site in sweep.sites:
+  if site.kind() == "inert" and site.seismic_status == "potential":
+    result = self.sonar.survey(site)
+    print(result.status, result.message)
+```
+
+Park a Constructor-equipped Pioneer at your pump with its pack in cargo, then plan and execute its installation:
+
+```
+planner = get_component("construction_blueprint")
+plan = planner.plan_upgrade("oil_pump_upgrade_pack_mk2", "oil_pump_1")
+if plan.status == "ok":
+  result = self.constructor.execute(plan.blueprint_ids[0])
+  print(result.status, result.message)
+else:
+  print(plan.message)
+```
+
+An upgraded pump uses the same control script. Connect a completed liquid route to the named tank, then stop drawing power during dormancy or when the tank is nearly full:
+
+```
+tank = get_component("liquid_tank_1")
+result = self.oil_out.connect("liquid_tank_1")
+print(result.status, result.message)
+while True:
+  target = 1.0 if self.well_active() and tank.fill_pct() < 0.9 else 0.0
+  result = self.set_throttle(target)
+  if result.status != "ok":
+    print(result.message)
+  sleep(1)
+```
+
+Upgraded factories need enough ingredients, liquid flow, cargo transport and output space to sustain their faster work. Spread exploration and upgrades across the supply chain; a blocked output or empty input still stops production.
+
+*Guide / Tutorials*
+
+## Nuclear power: uranium to electricity
+
+A Reactor can supply up to **5,000 W**, but it needs a working fuel chain and steady cooling. Build that chain before relying on it to keep the rest of the base running.
+
+### What you are building
+
+The route is: **dust-storm aftermath, drone collection, Raw Uranium Lead Cask, Fuel Assembler, Fuel Rod Lead Cask, Reactor**. Ordinary storage supplies Lead Plates to the assembler, and a water connection cools the Reactor.
+
+Research opens the machinery; Earth Orders provide important recipes. Nuclear Program unlocks the Reactor, while Fuel Assembler research opens the assembler. Check the order rewards for Lead Casks, Shield Plating and Fuel Rods. The Fuel Rod recipe comes from the Vestibule order that requests **12 Raw Uranium**. Owning the assembler does not grant every recipe it can make.
+
+### Collect uranium and bring it back
+
+Dust storms can leave Raw Uranium after they end. Decode the weather message to recover the coordinate, then send a drone there before the aftermath expires. Sonar does not find this supply. See `weather_overview` for receiving weather signals and recovering the location.
+
+One successful `collect()` takes at most **5 units**. Without Shield Plating, each uranium collection adds **40 exposure**; at **100**, the drone scrambles. The collected cargo stays aboard. Shield Plating prevents that collection exposure, but halves Cargo Pod capacity and increases fuel burn **1.5×**. Plan room and range for the shielded trip, not the empty drone's usual trip.
+
+Drone Service Stations handle decontamination and rescue. Do not wait for the third unshielded collection to discover that the drone needs help. The `drone` guide covers service and recovery.
+
+### Keep radioactive cargo in Lead Casks
+
+Raw Uranium and Fuel Rods are radioactive cargo. Ordinary Inventory, Storage Bins, Warehouses and Depot stockpiles are not their storage route. Use a **Lead Cask** and the compatible nuclear-machine ports. Drones move radioactive cargo directly through the outpost's Lead Cask, rather than stocking it in a Depot.
+
+Use **two casks** near the assembler: one for incoming uranium and one for finished rods. A cask holds **100 units** and latches to one radioactive material at a time, so a cask still holding uranium cannot also receive rods. Lead Plates belong in ordinary local storage.
+
+### Make the first rods
+
+One Fuel Rod needs **4 Raw Uranium + 2 Lead Plates**, takes **6 h**, and draws **1,800 W** while crafting. Have solar, steam, oil or stored energy ready to support that first batch. A Reactor waiting for its first rod cannot power the assembler making it.
+
+The assembler's input has one source connection at a time. Take uranium from its cask, reconnect to the local Lead Plate supply and take the plates. Select `"craft_fuel_rod"`, and keep its output clear by sending finished rods to the second cask. Transfers need Auto Feeders research. A full output or missing ingredient can stall the chain even when power is available.
+
+The assembler can also make Nuclear Batteries after their recipe unlocks. Those are ordinary power-storage products, not Reactor fuel, and can go to compatible ordinary storage.
+
+### Start the Reactor with both supplies ready
+
+Connect the Reactor's input to the Fuel Rod cask and use `take(...)` to keep rods in its input buffer. It automatically starts the next buffered rod when the active one runs out. That does not pull replacements from the cask for you.
+
+Connect `water_in` to a reachable water provider or Liquid Tank. The cooling loop consumes **0.5-1 t/h** while heating. Missing water pauses heating and fuel use until the supply returns. See `flow_networks` for local connections, remote pipes and explicit tank buffering.
+
+`self.set_heat(...)` accepts **0-1**, but temperature responds gradually:
+
+| Core temperature | What happens |
+|---|---|
+| Below 300 °C | No power output |
+| 300-600 °C | Output rises to 50% |
+| 600-900 °C | Output rises to 100% |
+| 900-950 °C | Output falls as the core gets hotter |
+| 950 °C | Shutdown and automatic cooling; recovery at 600 °C |
+
+**More heat is not always more power.** Read `self.temperature()` and `self.power_output()` as you adjust. The core's internal condition changes every **12 h**, so a heat setting that worked earlier may need correction. Let the temperature respond between adjustments. The Reactor's Info tab explains how to build a controller that adapts to these changes and to the world's pacing.
+
+If output disappears, read `self.status()` first: an empty fuel buffer, lost cooling and overheating need different fixes. Keep some backup power and a reserve of rods and water while you get the loop working.
 
 *Guide / Tutorials*
 
@@ -1090,9 +1465,9 @@ value % 2 == 0 # even
 value % 2 == 1 # odd
 ```
 
-### Membership and None
+### Membership and `None`
 
-Use `in` to check whether a value is inside a list, tuple, set, string, or dict keys. Use `is None` for the special empty value.
+Use `in` to check whether a value is inside a `list`, `tuple`, `set` or string, or among a `dict`'s keys. Use `is None` for the special empty value.
 
 ```
 if target in scanned:
@@ -1109,7 +1484,7 @@ if result is None:
 
 Numbers are one family, there is no separate stored `int` and `float` type. `int`, `float`, and `number` are three **views of the same value**, decided by the value itself.
 
-### int, float, number
+### `int`, `float`, `number`
 
 - `int`, a **whole** numeric value (no decimal part)
 - `float`, a value **with a decimal part**
@@ -1180,7 +1555,7 @@ Choose the tolerance from what the value represents, such as meters, Wh, or a **
 
 ## Print
 
-Use print() to output normal text to the console.
+Use `print()` to output normal text to the console.
 
 ```
 print("Hello")
@@ -1194,14 +1569,14 @@ temp = -63
 print("Temperature:", temp, "°C")
 ```
 
-Use warn() for monitor messages you want to stand out in the persistent console without showing a toast:
+Use `warn()` for monitor messages you want to stand out in the persistent console without showing a toast:
 
 ```
 if self.efficiency() < 100:
   warn("oxygen generator below 100% efficiency")
 ```
 
-Use debug() for noisy telemetry you only want while tuning a script. Debug lines are hidden from ALL unless you enable debug output from the console options menu:
+Use `debug()` for noisy telemetry you only want while tuning a script. Debug lines are hidden from ALL unless you enable debug output from the console options menu:
 
 ```
 debug("target", target_sector, "heat", self.get_heat())
@@ -1278,7 +1653,7 @@ else:
   print("Dangerously cold")
 ```
 
-The first branch whose condition is true runs, and every branch after it is skipped. That is why the order matters: write the most specific condition first. Putting `temp > -40` first would print `Cold` for every temperature above -40, including temperatures that should print `Warm` or `Above freezing`.
+The first branch whose condition is true runs, and every branch after it is skipped. That is why the order matters: write the most specific condition first. Putting `temp > -40` first would print Cold for every temperature above -40, including temperatures that should print Warm or Above freezing.
 
 `elif` is not the same as a second `if`. A chain runs at most one branch. With `else`, exactly one branch runs; separate `if` statements each get tested, so more than one can run.
 
@@ -1304,7 +1679,7 @@ A condition is any expression. Comparisons and `and` / `or` / `not` are covered 
 
 - `False` and `None`
 - the number `0`
-- an empty string, list, tuple, dict, or set
+- an empty string, `list`, `tuple`, `dict`, or `set`
 
 Everything else is true, so `if result.sites:` reads as "if the scan found any sites".
 
@@ -1351,7 +1726,7 @@ A long chain that tests the same value over and over is what `match` is for. Rea
 
 ## Loops & Scripts
 
-Scripts run once by default. To keep a script running continuously, use a while loop:
+Scripts run once by default. To keep a script running continuously, use a `while` loop:
 
 ```
 while True:
@@ -1369,7 +1744,7 @@ while True:
   sleep(5)
 ```
 
-For loops iterate over a list:
+`for` loops iterate over a list:
 
 ```
 for i in range(5):
@@ -1443,7 +1818,7 @@ int("7")    # 7
 float("3.14") # 3.14
 ```
 
-Character conversion, useful for building sector IDs (A1, B2, etc.):
+Character conversion, useful for building sector IDs (`"A1"`, `"B2"`, etc.):
 
 ```
 chr(65)  # "A"
@@ -1484,7 +1859,7 @@ column = pos[1:]   # "13"
 first3 = pos[:3]   # "E13"
 ```
 
-Use 'in' to check membership:
+Use `in` to check membership:
 
 ```
 if "A1" in scanned_list:
@@ -1494,7 +1869,7 @@ if sector not in visited:
   print("new sector")
 ```
 
-'in' works with lists, dicts (checks keys), and strings (checks substring).
+`in` works with lists, dictionaries (checks keys), and strings (checks substring).
 
 ### String methods
 
@@ -1502,8 +1877,8 @@ if sector not in visited:
 - `.strip()` / `.lstrip()` / `.rstrip()`, remove whitespace
 - `.split(sep)`, split into list
 - `.join(list)`, join list into string: `", ".join(["a", "b"])` → `"a, b"`
-- `.find(sub)`, index of substring, -1 if not found
-- `.index(sub)`, like find but raises error if not found
+- `.find(sub)`, index of substring, `-1` if not found
+- `.index(sub)`, like `.find()` but raises error if not found
 - `.replace(old, new)`, replace all occurrences
 - `.startswith(s)` / `.endswith(s)`, check prefix/suffix
 - `.count(sub)`, count occurrences
@@ -1550,7 +1925,7 @@ if m is not None:
   print(m.span())   # (0, 3)
 ```
 
-`Match.group(0)` is the whole match. Capturing groups start at `1`. `Match.groups()` returns all captured groups as a tuple.
+`Match.group(0)` is the whole match. Capturing groups start at `1`. `Match.groups()` returns all captured groups as a `tuple`.
 
 ### Lists and replacements
 
@@ -1562,7 +1937,7 @@ print(re.split("[,;]\s*", "iron, ice; quartz"))
 print(re.sub("ore_(\d+)", "ore-\\1", "ore_42"))
 ```
 
-`re.findall()` returns strings when the pattern has no groups, one captured value when it has one group, or tuples when it has multiple groups. `re.sub()` replacement text supports numeric backreferences such as `\\1` and `\\g<1>`.
+`re.findall()` returns strings when the pattern has no groups, one captured value when it has one group, or `tuple` values when it has multiple groups. `re.sub()` replacement text supports numeric backreferences such as `\\1` and `\\g<1>`.
 
 ### Flags
 
@@ -1739,7 +2114,7 @@ These functions are always available.
 - `type(value)`, returns value-based categories such as `int` for whole numbers, `float` for fractional numbers, `str`, and `bool`. Numeric categories use the current value, so `type(4.0)` is `int`.
 - `isinstance(value, type)`, check type/category: `isinstance(name, str)`, `isinstance(n, int)`, `isinstance(n, int | float)`, `isinstance(x, (int, str))`, or broad `isinstance(n, "number")`
 - `callable(value)`, `True` if value is a function, method, class, or object with a callable `__call__`
-- `len(value)`, length of string, list, tuple, dict, or set
+- `len(value)`, length of string, `list`, `tuple`, `dict`, or `set`
 - `bool(value)`, convert to `True`/`False`
 
 ### Conversion
@@ -1755,9 +2130,9 @@ These functions are always available.
 
 - `abs(n)`, `round(n, digits?)`, `pow(base, exp)`
 - `isclose(a, b, rel_tol=0.000000001, abs_tol=0.0)`, compare floating-point results with an accepted difference
-- `min(values...)` / `max(values...)`, args, a list, or a tuple
+- `min(values...)` / `max(values...)`, args, a `list`, or a `tuple`
 - `sum(sequence, start=0)` / `prod(sequence, start=1)`, add or multiply numeric items
-- `random()` / `rand()`, random float from 0 up to but not including 1
+- `random()` / `rand()`, random `float` from 0 up to but not including 1
 - `randint(min, max)`, random integer with inclusive bounds
 - `import random`, module form with `random.random()`, `random.rand()`, and `random.randint(min, max)`
 - `floor(n)`, `ceil(n)`, `trunc(n)`, `sign(n)`, `divmod(a, b)`
@@ -1779,7 +2154,7 @@ These functions are always available.
 - `batched(sequence, size)`, group elements into tuples of up to the requested size; the last tuple can be shorter
 - `starmap(fn, sequence)`, call `fn` with tuple/list items unpacked as arguments
 - `flatten(sequence)`, flatten one nested level
-- `count_by(sequence, key_fn?)`, count values or computed keys into a dict
+- `count_by(sequence, key_fn?)`, count values or computed keys into a `dict`
 - `iter(sequence)` / `next(iterator)`, manual iteration
 - `chain(seq1, seq2, ...)`, concatenate sequences
 - `accumulate(sequence)`, running totals
@@ -1813,7 +2188,7 @@ These functions are always available.
 
 ### Other
 
-- `hash(value)`, hash a string, number, bool, `None`, tuple-of-hashables, or class instance (identity by default, `__hash__` when defined)
+- `hash(value)`, hash a string, number, `bool`, `None`, tuple-of-hashables, or class instance (identity by default, `__hash__` when defined)
 
 *Guide / Programming*
 
@@ -1857,7 +2232,7 @@ if target is not None:
   print("target", target)
 ```
 
-Catch the narrowest error that makes sense. `except Exception as error:` catches ordinary game-script exceptions derived from `Exception`, which is useful at a boundary but can hide mistakes if used everywhere. It does not catch control-flow exceptions derived directly from `BaseException`, such as `GeneratorExit`. A handler can name one supported exception, a dotted alias such as `errors.ValueError`, or a tuple such as `except (KeyError, TypeError):`. Computed handler expressions are not part of the game-script surface. Handler names resolve when an error is caught, so aliases and shadowing behave normally. An `as error` target exists only inside that handler and is cleared on every exit; copy any detail you need later into another variable.
+Catch the narrowest error that makes sense. `except Exception as error:` catches ordinary game-script exceptions derived from `Exception`, which is useful at a boundary but can hide mistakes if used everywhere. It does not catch control-flow exceptions derived directly from `BaseException`, such as `GeneratorExit`. A handler can name one supported exception, a dotted alias such as `errors.ValueError`, or a `tuple` such as `except (KeyError, TypeError):`. Computed expressions in an `except` clause, the part that selects the exception, are not part of the game-script surface. Handler names resolve when an error is caught, so aliases and shadowing behave normally. An `as error` target exists only inside that handler and is cleared on every exit; copy any detail you need later into another variable.
 
 ### Cleanup and re-raising
 
@@ -1869,7 +2244,7 @@ A `try` block may have `else`, which runs only when the `try` body finishes with
 
 Common choices are `ValueError` for a value with the right type but wrong contents, `TypeError` for the wrong kind of value, `KeyError` for a missing dictionary key, `IndexError` for a bad list index, `AttributeError` for a missing field or method, and `RuntimeError` for a failed assumption while running.
 
-Other supported names include `NameError`, `UnboundLocalError`, `ImportError`, `ModuleNotFoundError`, `ZeroDivisionError`, `StopIteration`, `GeneratorExit`, `AssertionError`, `NotImplementedError`, `RecursionError`, `IndentationError`, `OverflowError`, and `SyntaxError`. A completed generator raises `StopIteration`; its `.value` is the generator's `return` value. `GeneratorExit` is used by `generator.close()` and normally belongs inside generator cleanup.
+Other supported names include `NameError`, `UnboundLocalError`, `ImportError`, `ModuleNotFoundError`, `ZeroDivisionError`, `StopIteration`, `GeneratorExit`, `AssertionError`, `NotImplementedError`, `RecursionError`, `IndentationError`, `OverflowError`, and `SyntaxError`. A completed generator raises `StopIteration`, whose `.value` is the generator's `return` value. `GeneratorExit` is used by `generator.close()` and normally belongs inside generator cleanup.
 
 ### Your own exception classes
 
@@ -1912,7 +2287,7 @@ jitter = rng.random()
 print("roll", roll, "jitter", jitter)
 ```
 
-`random.random()` returns a float from **0** up to but not including **1**. `random.rand()` is the same helper with a shorter name. `random.randint(min, max)` returns a whole number between `min` and `max`, including both ends.
+`random.random()` returns a `float` from **0** up to but not including **1**. `random.rand()` is the same helper with a shorter name. `random.randint(min, max)` returns a whole number between `min` and `max`, including both ends.
 
 You can also call the same helpers globally:
 
@@ -1921,7 +2296,7 @@ roll = randint(1, 6)
 jitter = rand()
 ```
 
-If you import the module as plain `import random`, the name `random` refers to the module in that script. That is fine; call `random.random()` for the float helper.
+If you import the module as plain `import random`, the name `random` refers to the module in that script. That is fine; call `random.random()` for the `float` helper.
 
 ### Random valid coordinates
 
@@ -1960,7 +2335,7 @@ print(whole, hours, minutes)
 
 ### Collection helpers
 
-These help with lists, tuples, strings, dicts, and sets:
+These help with lists, tuples, strings, dictionaries, and sets:
 
 - `len(value)`, length
 - `range(...)`, integer sequences for loops
@@ -1971,9 +2346,9 @@ These help with lists, tuples, strings, dicts, and sets:
 - `map(fn, sequence)` / `filter(fn, sequence)` / `reduce(fn, sequence, initializer?)`, transform, select, or fold values
 - `pairwise(sequence)`, neighboring pairs, useful for route segments
 - `batched(sequence, size)`, chunks for page-sized work or repeated commands
-- `starmap(fn, sequence)`, unpack tuple/list rows into a function call
+- `starmap(fn, sequence)`, unpack `tuple` or `list` rows into a function call
 - `flatten(sequence)`, one-level flattening for nested route or cargo lists
-- `count_by(sequence, key_fn?)`, counts into a dict, optionally by a computed key
+- `count_by(sequence, key_fn?)`, counts into a `dict`, optionally by a computed key
 - `all(sequence)` / `any(sequence)`, boolean checks
 
 Example:
@@ -2157,17 +2532,17 @@ c.inc()
 print(c.n)       # 11
 ```
 
-### self, __init__, and attributes
+### `self`, `__init__`, and attributes
 
-`__init__(self, ...)` runs once when you write `Counter(10)`, it sets up the new instance. Every method takes `self` (the instance) as its first parameter, and `self.x = ...` creates an instance attribute. A value assigned in the class body (`limit = 5`) is a **class attribute**, shared by all instances and readable as `Counter.limit` or `c.limit`.
+`__init__(self, ...)` runs once when you write `Counter(10)`, it sets up the new instance. Regular instance methods receive the instance as their first parameter, conventionally named `self`, and `self.x = ...` creates an instance attribute. A value assigned in the class body (`limit = 5`) is a **class attribute**, shared by all instances and readable as `Counter.limit` or `c.limit`.
 
-### self inside a machine script
+### `self` inside a machine script
 
-In a machine's own script the top-level `self` is the machine (`self.mine()`). Inside a class method, `self` is the **object**, they never collide, because a method's `self` is simply its first parameter.
+In a machine's own script the top-level `self` is the machine (`self.mine()`). Inside an instance method, `self` is the **object**, they never collide, because a method's `self` is simply its first parameter.
 
 > If a method needs to drive the machine, pass it in: `Planner(self)` at the top level (where `self` is the machine), store it (`self.bot = bot`), then call `self.bot.mine()` inside the method.
 
-### Inheritance and super()
+### Inheritance and `super()`
 
 `class Dog(Animal):` inherits `Animal`'s methods and attributes. Override any of them, and reach the base version with `super()`:
 
@@ -2212,7 +2587,7 @@ class Vec:
 
 > Operator overloads must be **pure**, they cannot `sleep()` or change game state. Regular methods, `__init__`, and `__call__` can.
 
-### @property and method decorators
+### `@property` and method decorators
 
 `@property` turns a method into an attribute read **without parens**; add `@name.setter` to allow assignment:
 
@@ -2257,15 +2632,15 @@ a.tags.append("cold")
 print(b < a, a)
 ```
 
-`default_factory` creates an independent mutable value for every instance. Mutable or otherwise unhashable direct defaults such as lists, dictionaries, and sets are rejected; use `default_factory` for them. `dataclass` supports `init`, `repr`, `eq`, `order`, and `kw_only`. `field` supports `default`, `default_factory`, `init`, `repr`, `compare`, and `kw_only`. Inherited annotated fields and explicit field overrides participate in the generated constructor.
+`default_factory` creates an independent mutable value for every instance. Mutable or otherwise unhashable direct defaults such as lists, dictionaries, and sets are rejected; use `default_factory` for them. `dataclass` supports `init`, `repr`, `eq`, `order`, `kw_only`, and `match_args`. When `match_args=True` (the default), it generates `__match_args__` from fields with `init=True` and `kw_only=False`, unless the class already defines it. `field` supports `default`, `default_factory`, `init`, `repr`, `compare`, and `kw_only`. Inherited annotated fields and explicit field overrides participate in the generated constructor.
 
-A dataclass remains an ordinary user-class instance. It does not become a dict and cannot cross JSON-shaped game boundaries such as the Signal Bus or notebook APIs. Use `TypedDict` for mapping-shaped payloads and cached rows; use a dataclass for methods, validation, generated construction, value equality, or ordering.
+A dataclass remains an ordinary user-class instance. It does not become a `dict` and cannot cross JSON-shaped game boundaries such as the Signal Bus or notebook APIs. Use `TypedDict` for mapping-shaped payloads and cached rows; use a dataclass for methods, validation, generated construction, value equality, or ordering.
 
-Convert a dataclass instance with `dataclasses.asdict()` before sending or storing it as a record. `asdict()` produces a dict and `astuple()` produces a tuple; both recursively convert nested dataclass instances inside lists, tuples, and dictionaries. Those containers are rebuilt; sets receive a shallow copy. Other values stay the same objects rather than being deep-copied. `fields()` accepts a dataclass class or instance and returns its `Field` records in declaration order; `MISSING` marks an absent default or default factory. `is_dataclass()` recognizes dataclass classes and instances. `replace()` creates a new instance with the specified field changes through its constructor, including `__post_init__`.
+Convert a dataclass instance with `dataclasses.asdict()` before sending or storing it as a record. `asdict()` produces a `dict` and `astuple()` produces a `tuple`; both recursively convert nested dataclass instances inside lists, tuples, and dictionaries. Those containers are rebuilt; sets receive a shallow copy. Other values stay the same objects rather than being deep-copied. `fields()` accepts a dataclass class or instance and returns its `Field` records in declaration order; `MISSING` marks an absent default or default factory. `is_dataclass()` recognizes dataclass classes and instances. `replace()` creates a new instance with the specified field changes through its constructor, including `__post_init__`.
 
-The compatibility spellings `frozen=False`, `unsafe_hash=False`, `slots=False`, and `weakref_slot=False` may be passed, but their `True` behavior is not supported. `match_args`, `ClassVar`, `InitVar`, `KW_ONLY`, `FrozenInstanceError`, `make_dataclass`, constructing a `Field` directly, and public `__dataclass_fields__` introspection are not supported. Annotation types otherwise stay erased and are not enforced. Canonical `ClassVar` and `InitVar` annotations are recognized only so the decorator can reject those unsupported field forms clearly; all other fields come from executed annotated names.
+The compatibility spellings `frozen=False`, `unsafe_hash=False`, `slots=False`, and `weakref_slot=False` may be passed, but their `True` behavior is not supported. `ClassVar`, `InitVar`, `KW_ONLY`, `FrozenInstanceError`, `make_dataclass`, constructing a `Field` directly, and public `__dataclass_fields__` introspection are not supported. Annotation types otherwise stay erased and are not enforced. Canonical `ClassVar` and `InitVar` annotations are recognized only so the decorator can reject those unsupported field forms clearly; all other fields come from executed annotated names.
 
-### Controlling construction with __new__
+### Controlling construction with `__new__`
 
 Building an instance has two steps. `__new__` decides **which object exists**, then `__init__` fills it in. Most classes only need `__init__`; reach for `__new__` when `Cls(...)` should hand back an object it already has.
 
@@ -2286,7 +2661,7 @@ print(Settings() is Settings())  # True, always the same object
 
 > `__new__` must answer immediately: it cannot `sleep()` or take world actions. Allocation only picks the object; put the work in `__init__`, which can still do both.
 
-### Answering unknown attributes with __getattr__
+### Answering unknown attributes with `__getattr__`
 
 `__getattr__(self, name)` runs only when a name was **not** found the normal way, so it never slows down or shadows a real attribute:
 
@@ -2305,7 +2680,7 @@ print(r.pressure)   # 91
 
 Raising `AttributeError` is how you say a name really is missing, and it is what `hasattr()` and `getattr(obj, name, default)` look for. Like operator dunders, `__getattr__` must be pure.
 
-### Registering subclasses with __init_subclass__
+### Registering subclasses with `__init_subclass__`
 
 `__init_subclass__` runs on a **base** each time a subclass is defined, which is the plain way to keep a registry:
 
@@ -2325,9 +2700,9 @@ It receives the new class as `cls` and never fires for the class that defines it
 ### When to use a class
 
 - **Class**, custom initialization, inheritance, or operator overloading.
-- **dataclass**, named fields plus generated construction, display, equality, or ordering.
+- **`dataclass`**, named fields plus generated construction, display, equality, or ordering.
 - **`TypedDict`**, a mapping-shaped record or JSON payload (the editor autocompletes its keys).
-- **dict**, dynamic, data-driven keys.
+- **`dict`**, dynamic, data-driven keys.
 
 ### What's not supported
 
@@ -2338,7 +2713,7 @@ Reasonably-full Python classes, with these deliberate exclusions. Defining any o
 - `__del__`. Scripts have no reference counting and their memory is released all at once when the script stops, so a finalizer could never run at a meaningful moment. Release things in a method you call yourself.
 - `__setattr__`, `__delattr__`, `__getattribute__`. Attribute assignment always stores directly; use a `@property` setter to run code when a value changes, and `__getattr__` for names the class does not already have.
 - `for` advances `__iter__` / `__next__` and generators lazily, so `break` works with an endless iterator. Operations that need the entire result, such as `list(...)`, remain bounded by the collection limit.
-- A class that defines `__eq__` without defining `__hash__` is unhashable, matching Python. Define an integer-returning `__hash__` to use equality-aware instances as dict/set keys. Classes that define neither use identity hashing and also work as keys.
+- A class that defines `__eq__` without defining `__hash__` is unhashable, matching Python. Define an integer-returning `__hash__` to use equality-aware instances as `dict` or `set` keys. Classes that define neither use identity hashing and also work as keys.
 
 *Guide / Editor & Tools*
 
@@ -2357,7 +2732,7 @@ Each machine with a script slot has a code editor window. Open it by clicking **
 
 - `▶` **Run** (`Shift+Enter`), execute the active variant
 - `⏸` **Pause** (`F6`), pause or resume a running script
-- `■` **Stop** (`Shift+F5`), stop the script completely and reset script-owned controls. Rover, Pioneer, and Drone movement cancels immediately.
+- `■` **Stop** (`Shift+F5`), stop the script completely and reset the machine settings the script controls. Rover, Pioneer, and Drone movement cancels immediately.
 - `∹` **Trace**, highlight where the script is parked each tick. A green bar marks the "resting" line, where execution was when the most recent tick ended. Honest about suspension points (for scripts with `sleep()` or `scan()`) and where the step limit tripped (for tight loops).
 - `⊕` **Debug**, enable breakpoints, stepping, and the variable watch panel. See the Debug guide for the full flow. Off by default.
 - `🔍` **Find**, search and replace within the script (`Ctrl+F`).
@@ -2374,7 +2749,7 @@ Each machine with a script slot has a code editor window. Open it by clicking **
 The editor can jump straight to matching DOCS entries while you write:
 
 - **Hover over any method or function name**, a tooltip shows the signature, a one-line description, and the return type. Works on `self.X`, `self.X.Y`, top-level API calls (`get_component`, `sleep`, `print`), builtins (`len`, `range`, etc.), component methods accessed via `get_component(id).method`, and user-defined functions with docstrings.
-- **`Cmd+click` (macOS) / `Ctrl+click` (Windows/Linux) on any method, function, component id, or variable**, opens DOCS and jumps directly to that entry, with the specific method highlighted for a second or two so you can see exactly where you landed. Works like "Go to Definition" in a professional IDE, but the target is the DOCS page since the game APIs don't have a source file.
+- **Cmd+click (macOS) / Ctrl+click (Windows/Linux) on any method, function, component id, or variable**, opens DOCS and jumps directly to that entry, with the specific method highlighted for a second or two so you can see exactly where you landed. Works like "Go to Definition" in a professional IDE, but the target is the DOCS page since the game APIs don't have a source file.
 - **Autocomplete as you type** (`Ctrl+Space` to force it), suggestions are type-aware. Move through the list with `↓` and `↑`, `Enter` inserts the highlighted one, and Tab takes the first match. Those three keys are yours to change in **Settings → Keybinds**, under Editor. After `self.` you'll see only the methods and sub-objects available on your machine. After `self.battery.` you'll see only the Battery sub-object's API. String arguments offer known-valid values (component ids, bin names, mineral ids) where available.
 - **Parameter hints inside `(...)`**, as you type `self.drill.mine(`, a hint shows each parameter's name, type, and description.
 - **`F2` to rename** a symbol (variable, user function, parameter). Renames every whole-word occurrence in the current script, skipping strings and comments. Reserved names (keywords, `self`, builtins) can't be renamed.
@@ -2387,7 +2762,7 @@ The editor checks your code as you type and underlines what would fail or looks 
 
 ### Commands tab
 
-While a script runs, its **Commands** tab lets you send named commands with JSON arguments into the script's command mailbox, your script reads them with `self.next_command()` and decides how to react. Frequent commands can be saved as presets. See the **Script Commands** page for the full pattern.
+While a script runs, its **Commands** tab lets you send named commands with key/value arguments into the script's command mailbox, your script reads them with `self.next_command()` and decides how to react. Frequent commands can be saved as presets. See the **Script Commands** page for the full pattern.
 
 ### Variants
 
@@ -2411,7 +2786,7 @@ The console window shows output from all unmuted scripts. Use **CLEAR** to empty
 
 ### Overview
 
-Vim mode gives the in-game code editor vim keybindings. Turn it on in Settings → Editor → Keybindings → Vim. It is opt-in and affects ONLY the code editor, game menus, the map, and dashboard controls keep their normal keys.
+Vim mode gives the in-game code editor vim keybindings. Turn it on in Settings → Editor → Keybindings → Vim. It is opt-in and affects ONLY the code editor; game menus, the map, and dashboard controls keep their normal keys.
 
 ### What works
 
@@ -2464,7 +2839,7 @@ Four methods are available on `self` in every machine script:
 - `self.command_count()` reports how many commands are waiting.
 - `self.clear_commands()` drops everything and returns a `CountResult`; `.count` is exactly how many commands were removed.
 
-A consumed command is a `ScriptCommand` in `CommandResult.command`, with `.name` (a string; your script decides what each name means) and `.args` (a dict; use `.args.get(key, default)` for optional arguments).
+A consumed command is a `ScriptCommand` in `CommandResult.command`, with `.name` (the command id as a string, not the button's Name label; your script decides what each id means) and `.args` (a `dict`; use `.args.get(key, default)` for optional arguments).
 
 ```
 while True:
@@ -2534,7 +2909,7 @@ Undeploying or deconstructing a machine, or deleting a Control Room card, stops 
 
 Unassigned scripts cannot run. Use their actions menu to **Copy to machine** (**Copy to panel** for a card's script), **Copy to Playground**, or **Delete**. You can select several unassigned scripts for deletion. Deletion removes their private data but keeps shared machine variants.
 
-**Copy to machine** uses a compatible machine slot and keeps its existing ID. It stops the target and preserves the previous code in Variants before replacing Main. Compatibility requires a recorded former machine type and slot; older unassigned scripts without that information can still be reviewed and copied to Playground. **Copy to panel** works the same way on any card you choose, since every card's script uses the same `panel` drawing API.
+**Copy to machine** copies into a compatible machine slot, whose script keeps the slot's existing ID. It stops the target and preserves the previous code in Variants before replacing Main. Compatibility requires a recorded former machine type and slot; older unassigned scripts without that information can still be reviewed and copied to Playground. **Copy to panel** works the same way on any card you choose, since every card's script uses the same `panel` drawing API.
 
 **Copy to Playground** creates a new named document without replacing Scratch or running the code. The original script stays available with all its metadata. Copied code is unchanged, including machine IDs and `self` references.
 
@@ -2544,7 +2919,7 @@ Machine IDs are never recycled by deleting an unassigned script.
 
 ## Debug Mode
 
-Debug mode adds breakpoints, uncaught-exception pauses, three-mode stepping, conditional breakpoints, logpoints, and a live variable watch panel to any script. It's off by default, toggle the `⊕ Debug` button in the editor's title bar to turn it on.
+Debug mode adds breakpoints, uncaught-exception pauses, three-mode stepping, conditional breakpoints, logpoints, and a live variable watch panel to any script. It's off by default, toggle the **⊕ Debug** button in the editor's title bar to turn it on.
 
 ### What Debug mode gives you
 
@@ -2565,7 +2940,7 @@ Breakpoints persist when you toggle Debug off and on, and across game sessions. 
 Click the `⋯` button next to a breakpoint in the Watch panel to edit it.
 
 - **Condition**, a read-only Python expression. If set, the breakpoint halts **only when the condition is truthy**. Use variables, attributes, indexes, and arithmetic; function and method calls are blocked so debug expressions can never change the game. Example: `heat > 80`.
-- **Log message**, a template with read-only `{expr}` placeholders. If set, the breakpoint **prints the message to the console and keeps running** instead of pausing. Like sprinkling `print()` without editing the script. `scan hit: {site.id}` prints the current site id on every hit.
+- **Log message**, a template with read-only `{expr}` placeholders. If set, the breakpoint **prints the message to the console and keeps running** instead of pausing. Like sprinkling `print()` without editing the script. `scan hit: {site.id}` prints the current site id each time execution reaches that line.
 
 You can combine them, a condition + log message will log only when the condition matches.
 
@@ -2596,7 +2971,7 @@ Breakpoints and exception pauses pause **only the debugged script**. Everything 
 - The clock keeps ticking
 - Other scripts on other machines keep running
 - Atmosphere, power, and all systems tick normally
-- The machine controlled by the paused script keeps its last-commanded state while paused. If the script errors, stops, or completes, script-owned controls reset; Rover, Pioneer, and Drone movement cancels.
+- The machine controlled by the paused script keeps its last-commanded state while paused. If the script errors, stops, or completes, the machine settings the script controls reset; Rover, Pioneer, and Drone movement cancels.
 
 This means time spent stepping through code advances the game world. If you're debugging a solar tracker and take two minutes to inspect variables, the sun has moved in that time. For scripts with strict timing, factor this in.
 
@@ -2675,9 +3050,9 @@ A radio group, a combo box and a list each take their choices as one list and st
 
 **Laying things out:** a widget is placed by the point you pass, but not every widget uses it the same way. Boxes, bars, pills and controls start at their top-left corner; `draw_text` and `label` are centered on `y`; `counter` stands on `y` as its baseline; circles, dots and gauges are centered on the point. `last_bounds()` gives you the box the last widget took up, top-left whatever it was placed by, so you can put the next thing after it, and `measure_text()` gives you the size of text before you draw it.
 
-Every widget that takes a `color` parameter accepts theme tokens: `"accent"`, `"success"`, `"warning"`, `"error"`, `"text-bright"`, `"text-secondary"`, `"text-muted"`, `"text-value"`. It also accepts any CSS color: hex (`"#ff8800"`), `"rgb(255, 136, 0)"`, `"hsl(30, 100%, 50%)"`, or a name like `"orange"`. Theme tokens follow the player's theme; CSS colors stay exactly as written. Cards can also paint with **surface tokens**, bg-base, bg-surface, bg-panel, border, border-dim. Wrap a `card(x, y, w, h, title)` for the bordered+titled frame, fill zones with `fill_rect(x, y, w, h, "bg-surface")`, and a manage-style row is `status_dot` (green) + `draw_text` (name) + `button` (play/manage). Theme tokens resolve from the active theme whenever the script redraws the card.
+Every widget that takes a `color` parameter accepts theme tokens: `"accent"`, `"success"`, `"warning"`, `"error"`, `"text-bright"`, `"text-secondary"`, `"text-muted"`, `"text-value"`. It also accepts any CSS color: hex (`"#ff8800"`), `"rgb(255, 136, 0)"`, `"hsl(30, 100%, 50%)"`, or a name like `"orange"`. Theme tokens follow the player's theme; CSS colors stay exactly as written. Cards can also paint with **surface tokens**, `"bg-base"`, `"bg-surface"`, `"bg-panel"`, `"border"`, `"border-dim"`. `progress_bar` and `vertical_bar` also take three **gradient presets**, the meters on machine cards: `"good-high"` (red to green), `"good-low"` (green to red) and `"neutral"` (accent to green). Wrap a `card(x, y, w, h, title)` for the bordered+titled frame, fill zones with `fill_rect(x, y, w, h, "bg-surface")`, and a manage-style row is `status_dot` (green) + `draw_text` (name) + `button` (play/manage). Theme tokens resolve from the active theme whenever the script redraws the card.
 
-See the **Panel** entry in the API reference (left sidebar) for the full method list with live previews of each widget.
+See the `Panel` entry in the API reference (left sidebar) for the full method list with live previews of each widget.
 
 ### A complete working example
 
@@ -2704,7 +3079,7 @@ No `sleep()` needed, the interpreter paces the loop automatically. The panel rep
 
 ### Watch for...
 
-> Cards can command only through shared authorities. A card has no `self` over a machine, so a machine's own actions (`set_throttle`, `set_recipe`, `move_to`, `mine`) don't work from a card. It can still call shared authorities such as `power_control` (breakers), `shop` (buy/sell), `comms` (Signal Bus), `inventory`, `atmosphere`, and `computer` (deploy, undeploy, decommission, rename). Treat cards as trusted automation because they can change base state.
+> Cards can command only through shared authorities. A card has no `self` over a machine, so a machine's own actions (`set_throttle`, `set_recipe`, `move_to`, `mine`) don't work from a card. It can still call shared authorities such as `power_control` (breakers), `shop` (`buy()` and `sell()`), `comms` (Signal Bus), `inventory`, `atmosphere`, and `computer` (`deploy()`, `upgrade()`, `undeploy()`, `decommission()`, `rename()`). Treat cards as trusted automation because they can change base state.
 
 > The canvas does not auto-clear. Always call `panel.clear()` at the top of every loop iteration, or old paint will pile up under new paint and the panel will look smeared.
 
@@ -2745,7 +3120,7 @@ Each machine or panel script uses the same filename shown in the in-game editor,
 ### Every file in the folder
 
 - `<name>.py`: one file per machine, panel or contract script; `lib/<name>.py`: Library scripts.
-- `user_stubs.py`: yours, never overwritten. Type aliases, TypedDicts and re-exported Library types declared here are read by the in-game editor and the extension.
+- `user_stubs.py`: yours, never overwritten. Type aliases, `TypedDict` types and re-exported Library types declared here are read by the in-game editor and the extension.
 - `logs/`: mirrored console output, `all.log` plus one file per script, rotated by size.
 - `codeterraform-workspace.json`: the read-only analysis snapshot the language server reads. `codeterraform-scripts.json`: the sync manifest. Do not edit either.
 - `CODE-TERRAFORM-IDE.txt`: the setup guide, with the exact language-server path on your machine and editor configurations.
@@ -2764,7 +3139,7 @@ Install the extension once. It is a thin client: the game installs the language 
 
 Game files automatically use the **Code Terraform** language mode. Completion, diagnostics, hover, signature help and Go to Definition use the same analysis as the in-game editor, including each script's own `self` or `panel`. Other Python projects keep their Python tooling.
 
-Save edits to sync them into the game. The VS Code Command Palette includes **Create Library in Game**, **Import File as Game Library**, **Rename Library and Update Imports**, **Apply Library in Game**, **Apply All Libraries in Game**, **Run Script in Game** and **Stop Script in Game** under Code Terraform. Apply deploys saved Library edits and restarts the scripts that import them, the same as Apply in the game; it never runs on save. Unknown files offer an Import action. Save files and resolve in-game source conflicts first. Rename updates game imports and saved variants through the normal game command. Attach and delete scripts in the game. No command runs host Python. Its status item reports context availability; click it to restart the service.
+Save edits to sync them into the game. The VS Code Command Palette includes `Create Library in Game`, `Import File as Game Library`, `Rename Library and Update Imports`, `Apply Library in Game`, `Apply All Libraries in Game`, `Run Script in Game` and `Stop Script in Game` under Code Terraform. Apply deploys saved Library edits and restarts the scripts that import them, the same as Apply in the game; it never runs on save. Unknown files offer an Import action. Save files and resolve in-game source conflicts first. Rename updates game imports and saved variants through the normal game command. Attach and delete scripts in the game. No command runs host Python. Its status item reports context availability; click it to restart the service.
 
 `codeterraform-workspace.json` contains a read-only analysis snapshot. Keep this save open to refresh owners, names and research. Offline analysis uses the most recent snapshot. If the folder was written by a different game build than the server in use, open the save in the game once to refresh both. Do not edit the generated context or the sync manifest.
 
@@ -2772,7 +3147,7 @@ Save edits to sync them into the game. The VS Code Command Palette includes **Cr
 
 Keep this save open and the game unpaused. In VS Code, open a machine, panel, or contract script, set a breakpoint, and press F5. An idle script starts; a running script attaches without restarting. Breakpoints, conditions, logpoints, call stacks, locals, watches, hover inspection, and Step Over/Into/Out use the game's interpreter. Library breakpoints are reached through a script that imports that Library. Each session controls one script.
 
-Shift+F5 or closing the debug session disconnects and leaves the script running. Use **Stop Script in Game** to stop it. Watches and the Debug Console accept read-only expressions; they cannot execute world actions or assign variables. Save your files first. To run changed main-script code, use **Run Script in Game** before attaching again. Apply edited Libraries, from the editor or in the game, and resolve any source conflicts. If you enabled **Pause When Inactive**, turn it off when you want execution to continue while the game is minimized.
+Shift+F5 or closing the debug session disconnects and leaves the script running. Use `Stop Script in Game` to stop it. Watches and the Debug Console accept read-only expressions; they cannot execute world actions or assign variables. Save your files first. To run changed main-script code, use `Run Script in Game` before attaching again. Apply edited Libraries, from the editor or in the game, and resolve any source conflicts. If you enabled **Pause When Inactive**, turn it off when you want execution to continue while the game is minimized.
 
 Other editors with a Debug Adapter Protocol client can launch `node /path/to/debug-adapter.cjs`. That file lives beside the installed `server.cjs`. Use a `launch` request to attach and run an idle script, or `attach` to inspect an existing runtime. Set `workspace` to this save's scripts directory and `script` to the script's file path. The adapter uses standard input/output. It needs Node.js 20 or later outside VS Code.
 
@@ -2851,11 +3226,11 @@ Generic editors can still use the generated `.pyi` files for partial API help; t
 
 `pyrightconfig.codeterraform.json` is the generated fallback configuration. New `pyrightconfig.json` files extend it so you can add your own overrides. Byte-identical old generated defaults migrate automatically. Customized configurations are preserved; to adopt updated defaults, add `"extends": "./pyrightconfig.codeterraform.json"` to your config and retain the overrides you need. PyCharm does not read Pyright configuration; mark `lib/` as a Sources Root for its own Library import resolution.
 
-`user_stubs.py` is player-owned and is never overwritten. Put type declarations there, not executable helpers: aliases such as `MineralId = Literal["iron_ore", "copper_ore"]`, TypedDicts and re-exported Library types. The in-game editor and the extension both read them, so a function typed with one of them completes and lints like any other, while the game treats every import from the file as a no-op. Settings > Editor > External Editor has **Freeze Stubs** and **Regenerate Stubs** controls. Freezing fallback stubs does not freeze the game-aware language service.
+`user_stubs.py` is player-owned and is never overwritten. Put type declarations there, not executable helpers: aliases such as `MineralId = Literal["iron_ore", "copper_ore"]`, `TypedDict` types and re-exported Library types. The in-game editor and the extension both read them, so a function typed with one of them completes and lints like any other, while the game treats every import from the file as a no-op. Settings > Editor > External Editor has **Freeze Stubs** and **Regenerate Stubs** controls. Freezing fallback stubs does not freeze the game-aware language service.
 
 ### Console output in your editor
 
-The game mirrors visible console output into `<save_id>_scripts/logs/` from the first time you open the scripts folder or the extension package (Settings → Editor → External Editor keeps the toggle). `all.log` holds the combined console stream; script-specific files such as `rover_1.log` hold only that script's output. In VS Code the extension follows `all.log` live in its Output panel: choose **Code Terraform: Open Game Output**, or pick the Code Terraform channel in the Output view. Traceback locations in the channel and in the log files link to the script lines. Other editors can follow `logs/all.log` with their own tail. Logs append while the game runs and rotate by size, so noisy print loops do not grow forever. Use Clear Logs in settings when you want a fresh transcript.
+The game mirrors visible console output into `<save_id>_scripts/logs/` from the first time you open the scripts folder or the extension package (Settings → Editor → External Editor keeps the toggle). `all.log` holds the combined console stream; script-specific files such as `rover_1.log` hold only that script's output. In VS Code the extension follows `all.log` live in its Output panel: choose `Code Terraform: Open Game Output`, or pick the Code Terraform channel in the Output view. Traceback locations in the channel and in the log files link to the script lines. Other editors can follow `logs/all.log` with their own tail. Logs append while the game runs and rotate by size, so noisy print loops do not grow forever. Use Clear Logs in settings when you want a fresh transcript.
 
 ### When edits collide
 
@@ -2890,14 +3265,14 @@ Earth posts contracts, engineering tasks they need done on the planet. You write
 Each contract has:
 
 - A briefing explaining what Earth needs
-- Input data in self.contract
+- Input data in `self.contract`
 - A reward in credits
 
 To complete a contract:
 
 1. Go to the Contracts page and open one with View Contract
 2. Read the briefing in the Info tab
-3. Print self.contract to see available input fields
+3. Print `self.contract` to see available input fields
 4. Transmit the answer via the transmitter:
 
 ```
@@ -2924,7 +3299,7 @@ shop.buy("solar_generator")
 
 *Guide / Automation Systems*
 
-## Vehicle Proximity & Service
+## Vehicle Proximity & Service Areas
 
 Ground vehicles use a forgiving service-area model. You do not need to land on one exact coordinate, but physical work requires the vehicle to be parked.
 
@@ -2954,13 +3329,13 @@ while self.nav.get_distance_to(x, y) > 2:
 self.nav.brake()
 ```
 
-After `brake()`, cargo transfer, charging, and hardware service can use the matching service area. A timed cargo handoff keeps the vehicle parked until its handling cycle ends; movement commands return `busy` during that cycle.
+After `brake()`, cargo transfer, charging, and mounting or installing hardware can use the matching service area. A cargo handoff takes one handling cycle and keeps the vehicle parked until it ends; movement commands return `busy` during that cycle.
 
 `fleet.vehicles()` reports current activity separately from docking. `.status` can be `"moving"`, `"charging"`, `"drilling"`, or another activity. `.is_docked` means the ground vehicle was parked at an outpost when that snapshot was created; `.docked_at` gives that outpost id.
 
 ### Charging Stations
 
-A parked vehicle is docked at one Vehicle Charging Station at a time. Every station inside an outpost covers the whole outpost, so when an outpost has several, the vehicle's own script picks one with `self.dock("charging_station_2")`. Without a choice, it uses the eligible station with the shortest distance to its station position or its outpost's center, with equal-distance ties broken alphabetically by station id. The choice lasts until the vehicle drives away. `self.current_station()` and the fleet ref's `.current_station` report the station.
+A parked vehicle is docked at one Vehicle Charging Station at a time. Every station inside an outpost covers the whole outpost, so when an outpost has several, the vehicle's own script picks one with `self.dock("charging_station_2")`. Without a choice, it uses the eligible station closest to the vehicle, measured to the station or its outpost's center, whichever is closer, with equal-distance ties broken alphabetically by station id. The choice lasts until the vehicle drives away. `self.current_station()` and the fleet ref's `.current_station` report the station.
 
 Drones use explicit station docking. A drone at a field Mining Drill must have completed its route before it can load ore.
 
@@ -2984,7 +3359,7 @@ Upcoming orders have `.status == "upcoming"` and empty `.shipped` counts. Their 
 
 The Weekly Orders tab is a dedicated full-width board with **five** progressive offers. It waits until you have uncovered an eligible mining or production chain, so `orders.list_weekly_orders()` can initially be empty. Once available, higher production tiers appear as your save uncovers their chains, and unavailable tiers fall back to earlier materials. An offer is an opportunity, not a guaranteed weekly completion: a known chain may still require machinery or infrastructure you have not built yet. The board starts on the day that an eligible chain appears and refreshes as a whole when its **seventh later day begins**. For example, a board created on Day 40 refreshes when Day 47 begins.
 
-Weekly orders are credits-only. Their combined base payout stays at or below **20,000 credits**, or **40,000 credits** once **Bulk Orders** research doubles the board, Contractor Reputation does not multiply it, and fulfilled weekly rows remain visible until refresh. They do not enter the permanent campaign ledger. Read the board with `orders.list_weekly_orders()`; weekly objects have `.kind == "weekly"`, an `.expires_day`, and no contractor.
+Weekly orders are credits-only. Their combined base payout stays at or below **20,000 credits**, or **40,000 credits** once **Bulk Orders** research makes every weekly order ask for twice the goods and pay twice the credits, Contractor Reputation does not multiply it, and fulfilled weekly rows remain visible until refresh. They do not enter the permanent campaign ledger. Read the board with `orders.list_weekly_orders()`; weekly objects have `.kind == "weekly"`, an `.expires_day`, and no contractor.
 
 At refresh, every unfinished weekly order and all shipped progress expire permanently. Supply Docks assigned to the old board are unassigned and disabled. Cargo that was loaded but had not shipped remains inside its dock. The game posts a warning toast only when at least one unit actually shipped toward an unfinished weekly order; assigning or loading a dock without shipping stays silent. The toast remains available in **Computer > Notifications**, and scheduled refreshes do not create navigation badges.
 
@@ -3254,7 +3629,7 @@ cleared = comms.clear("jobs.mine")
 print(cleared.status, cleared.count, cleared.message)
 ```
 
-`clear()` returns a `CountResult`; `.count` is the number of queued/latest entries removed, and `"invalid_channel"` is distinct from a valid `"no_op"`. Unlike the Computer's queue-only deletion, script `clear()` removes both the queue and current broadcast. Use it only when your script intentionally owns that channel.
+`clear()` returns a `CountResult`; `.count` is the number of entries removed: queued messages plus the current value `latest()` reads, and `"invalid_channel"` is distinct from a valid `"no_op"`. Unlike the Computer's queue-only deletion, script `clear()` removes both the queue and current broadcast. Use it only when your script intentionally owns that channel.
 
 ### Payload rules
 
@@ -3445,15 +3820,15 @@ Drones are aerial logistics and field-work units. Every drone can use `self.go_t
 
 ### Blueprint unlocks and deployment
 
-**Basic Drone Operations** opens the system. Hardware recipes come through Earth Orders. Fabricate a Drone Depot Kit and deploy it into an outpost. Keep each fabricated chassis in Inventory, select its item card, and use **Deploy** to commission it into a free Depot bay. Once the drone is docked, mount its thruster, energy storage, and role modules through that drone's service controls. Commissioning and empty-rig module installation are service orders; do not freight the chassis or modules into the Depot stockpile.
+**Basic Drone Operations** opens the system. Hardware recipes come through Earth Orders. Fabricate a Drone Depot Kit and deploy it into an outpost. Keep each fabricated chassis in Inventory, select its item card, and use **Deploy** to commission it into a free Depot bay. Once the drone is docked, mount its thruster, energy storage, and role modules through that drone's service controls. Commissioning a chassis and mounting its modules are service orders; do not freight the chassis or modules into the Depot stockpile.
 
-Drone Depots commission chassis and handle local cargo. Drone Service Stations charge electric drones, refuel heli drones from `oil_in`, decontaminate working docked drones by **10 exposure per hour**, and rescue stalled or scrambled drones.
+Drone Depots commission chassis and handle local cargo. A larger Depot handles cargo faster: a Medium Depot moves items **2×** and a Large Depot **4×** as fast as a base Depot. Drone Service Stations charge electric drones, refuel heli drones from `oil_in`, decontaminate working docked drones by **10 exposure per hour**, and rescue stalled or scrambled drones.
 
 ### Field work
 
 Ground Rover/Pioneer Sonar discovers mineral sites, vents, wells, and exotic deposits. Portable Bio Scanners and Extractors handle permanent biological coordinates. Weather aftermath collection uses the same coordinate flight and `collect()` interface; the Weather DOCS define the information available to your programs.
 
-`collect()` finds only a live aftermath at the drone's exact coordinate. Wrong, nearby, expired, and exhausted targets return `nothing_here` without a direction clue. Storm Glass is ordinary cargo. Raw Uranium is hot cargo: one call takes at most **5**, adds **40 exposure** without Shield Plating or **0** with it, and remains in cargo if that batch scrambles the drone at 100. Plating also halves Cargo Pod capacity and raises fuel burn **1.5×**.
+`collect()` finds only a live aftermath at the drone's exact coordinate. Wrong, nearby, expired, and exhausted targets return `nothing_here` without a direction clue. Storm Glass is ordinary cargo. Raw Uranium is radioactive cargo: one call takes at most **5**, adds **40 exposure** without Shield Plating or **0** with it, and remains in cargo if that batch scrambles the drone at 100. Plating also halves Cargo Pod capacity and raises fuel burn **1.5×**.
 
 ### Reading the Fleet
 
@@ -3473,6 +3848,8 @@ Use stable ids when passing a drone to station and recovery APIs. Use `self.carg
 - Orders, the source of drone blueprint rewards
 - Flow Networks and Refinement, oil supply for heli drones
 
+See `mining_guide` for collecting a field drill's output, `remote_logistics` for delivery planning and `nuclear_power` for handling radioactive cargo.
+
 *Guide / Production & Logistics*
 
 ## Batteries & Charging
@@ -3483,7 +3860,7 @@ Vehicles run on batteries. A parked vehicle costs nothing, battery only drains d
 
 - **Moving**, the main cost. The Rover gets much worse at high speeds; the Pioneer is more efficient, but top speed still costs extra watt-hours per meter.
 - **Drilling**, draws **10-30 W** while the drill is running, depending on the drill variant (basic / Industrial / Heavy). Watts are the rate and watt-hours are the amount used: **10 W** for one hour uses **10 Wh**, and for **15** minutes uses **2.5 Wh**. See **What mining costs** below.
-- **Sonar**, a small flat cost (**0.5-2 Wh**, by sonar tier) per scan or survey.
+- **Sonar**, a small flat cost (**0.5-3 Wh**, by sonar tier) per scan or paid survey. See sonar guide for the comparison.
 - **Stationary**, free. No drain.
 
 ### What mining costs
@@ -3532,9 +3909,55 @@ Check `level` before driving far.
 
 ### Charging & Rescue
 
-Park within **~2 m** of a Vehicle Charging Station, anywhere inside its service area, to charge directly. The station queues docked vehicles by target level: `self.charge(vehicle_id, 0.8)` charges that vehicle until it reaches **80%**. `dispatch_rescue(vehicle, target_level)` can also send a slow field-service drone to any rover or Pioneer in the field. Your script decides the threshold and target: `0.2` for a safety bump, `0.8` before a long return trip, or `1.0` for full remote charging. `cancel_rescue()` recalls that station's active rescue drone; any charge already delivered stays on the vehicle, and the vehicle is released while the drone flies home.
+Park anywhere inside a Vehicle Charging Station's service area to charge directly; a station inside an outpost serves the whole outpost footprint plus a margin of **~2 m**. The station charges docked vehicles in the order they were queued, each to its own target level: `self.charge(vehicle_id, 0.8)` charges that vehicle until it reaches **80%**. `dispatch_rescue(vehicle, target_level)` can also send a slow field-service drone to any rover or Pioneer in the field. Your script decides the threshold and target: `0.2` for a safety bump, `0.8` before a long return trip, or `1.0` for full remote charging. `cancel_rescue()` recalls that station's active rescue drone; any charge already delivered stays on the vehicle, and the vehicle is released while the drone flies home.
 
 A dead battery **pauses** the current route while the script is still running; it does not cancel the script's intent. If the vehicle is recharged before the script stops, it resumes course. The vehicle stops and clears its route when you press Stop, the script reaches its end, or an uncaught error occurs. A vehicle being rescue-charged stays parked until the drone finishes, detaches, or is recalled by `cancel_rescue()`.
+
+### Charge the vehicle, or swap its batteries?
+
+A **Vehicle Charging Station** charges a parked Rover or Pioneer directly and can send its service drone to a stranded vehicle. A **Battery Charger** charges loose Portable Batteries for a Pioneer to collect during a stop. The Rover's fixed battery cannot be swapped.
+
+Swapping is useful on a regular delivery route: the Pioneer takes ready batteries and leaves its drained ones behind, while the charger works during the next trip. You need a spare set of the same battery types installed in that Pioneer.
+
+### Set up a Battery Charger
+
+Research Battery Charger, buy one and deploy it at home or a founded outpost. Supply it from the local grid, then load loose **Portable Batteries (50 Wh)** or **Heavy Portable Batteries (100 Wh)** through its input. Use Inventory at home or a local Warehouse at a remote outpost. Automated item transfers need Auto Feeders.
+
+| Charger | Shared battery slots | Charging bays | Total charging power |
+|---|---|---|---|
+| Mk I | 4 | 1 | 30 W |
+| Mk II | 8 | 2 | 60 W |
+
+Slots hold all batteries, whether waiting, charging or ready. Bays determine how many charge at once. At Mk II, one active cell can use the full **60 W**; two share **30 W** each before any outpost overcrowding penalty. The charger draws no power while idle.
+
+Charging is script-controlled. This loop belongs on the **Battery Charger** and queues newly arrived cells, including batteries left by a returning Pioneer:
+
+```
+while True:
+  for cell in self.slots():
+    if cell.item_id and cell.level < 1.0 and cell.target is None:
+      result = self.charge(cell.index)
+      if result.status != "queued":
+        print(result.message)
+  sleep(1)
+```
+
+A charging job continues after its script stops and pauses through a power outage. When it reaches its target, the cell is released for collection. An unfinished job reserves its cell: wait for it or call `self.stop(slot_index)` to release it with its current charge. The incoming battery does not inherit the outgoing battery's job, which is why a repeating queue script is useful.
+
+### Exchange from the Pioneer
+
+Drive to the charger's service area and brake. Call the exchange from the **Pioneer's** script, using your charger's actual id or display name:
+
+```
+result = self.swap_batteries("battery_charger_1", None, 0.9)
+print(result.status, result.message)
+```
+
+Here `None` selects all installed batteries and `0.9` requires each replacement to be at least **90%** charged. Omit those optional arguments to request fully charged replacements for all installed batteries. Call when the Pioneer needs replenishing; the minimum is your chosen acceptance threshold.
+
+Every selected battery needs an unqueued replacement of the **same type**. If one is missing or below the requested charge, the whole exchange is refused and nothing changes. Drained batteries take the vacated charger slots, so a full charger can still exchange a complete matching set. The transfer takes handling time; let it finish before driving away.
+
+Ready, unqueued batteries remain usable during a grid outage, although the charger cannot replenish them until power returns. If a swap fails, check parking, matching types, charge levels, reserved charging jobs and whether either endpoint is still handling another transfer.
 
 ### Tips
 
@@ -3576,6 +3999,8 @@ if input_link.status == "ok" and output_link.status == "ok" and recipe.status ==
 
 `self.input.flush()` returns `TransferResult`; `.moved` is the number of units permanently discarded. On processing machines it also cancels current progress. Call it intentionally.
 
+See `mining_guide` for bringing ore in from the field and `remote_logistics` for supplying a factory away from home.
+
 *Guide / Production & Logistics*
 
 ## Input & Output
@@ -3593,11 +4018,11 @@ self.input.take("iron_ore", 10)
 self.output.send("iron_ingot", self.output.count())
 ```
 
-Connections persist. Transfers require **Auto Feeders**, take time proportional to units moved, and are transactional: rejected or blocked transfers leave the exact source items unchanged. **Fast Feeders** unlocks at **400,000 Terraform Points** and halves the duration of newly started timed item transfers throughout the logistics system. Transfers already in progress keep the duration they started with.
+Connections persist. Transfers require **Auto Feeders**, take time proportional to units moved, and are transactional: rejected or blocked transfers leave the exact source items unchanged. **Fast Feeders** unlocks at **400,000 Terraform Points** and halves the duration of newly started timed item transfers throughout the logistics system. Transfers already in progress keep the duration they started with. A Drone Depot handles its own transfers faster by size: a Medium Depot at **2×** and a Large Depot at **4×** a base Depot's pace. **High-Capacity Depot Handling** at **580,000 Terraform Points** doubles every Depot, stacking with Fast Feeders.
 
 A Plant Terraformer's receiving feeder handles **16 items per handling step** at Mk I and **80** at Mk II. The same capacity applies whether its input pulls from a source or another machine or store sends to it. Both physical endpoints remain occupied for the resulting transfer duration.
 
-Field Mining Drills and Water Pumps use a pickup-only `PickupOutputSlot` instead. It exposes `count()`, `capacity()`, and `stacks()` but no connection or send methods. A physically present carrier initiates the transfer through its own cargo API.
+Field Mining Drills and Water Pumps use a pickup-only `PickupOutputSlot` instead. It exposes `count()`, `capacity()`, and `stacks()` but no connection or `send()` methods. A physically present carrier initiates the transfer through its own cargo API.
 
 ### Property-bearing items
 
@@ -3610,13 +4035,13 @@ for stack in self.output.stacks():
   print(stack.id, stack.count, stack.properties)
 ```
 
-Use the optional property dict on `take` or `send` to select stacks containing that subset:
+Use the optional property `dict` on `take` or `send` to select stacks containing that subset:
 
 ```
 self.output.send(fragment_id, 1, {"forged": True})
 ```
 
-The fourth argument controls matching. `"exact"` selects one full property identity, including `None` for ordinary propertyless items. `"subset"` selects dict subsets, and `"any"` ignores properties. When omitted, a dict uses subset matching and `None` uses any-variant matching.
+The fourth argument controls matching. `"exact"` selects one full property identity, including `None` for ordinary propertyless items. `"subset"` selects `dict` subsets, and `"any"` ignores properties. When omitted, a `dict` uses subset matching and `None` uses any-variant matching.
 
 ```
 self.output.send(fragment_id, 1, stack.properties, "exact")
@@ -3717,11 +4142,11 @@ Install or uninstall at base or any outpost.
 
 ## Portable Storage Bin
 
-A **Portable Storage Bin** is a single-material container that installs into a Cargo Rack's internal slot. On its own, a portable bin stores nothing. Installed, it adds its rated capacity to the vehicle's cargo and accepts one material or item id at a time.
+A **Portable Storage Bin** is a single-material container that installs into a Cargo Rack's internal slot. On its own, a portable bin stores nothing. Installed, it raises the vehicle's cargo capacity by its rated capacity and accepts one material or item id at a time.
 
 Use item id `"portable_bin"` for the standard bin and `"heavy_portable_bin"` for the heavy bin when calling `self.install(...)`.
 
-The first unit loaded into the bin latches that id; subsequent units must match. When `send()` empties the bin to zero, it unassigns and is ready for any material or item on the next trip.
+The first unit loaded into the bin sets which material or item id it holds; subsequent units must match. When `send()` empties the bin to zero, it unassigns and is ready for any material or item on the next trip.
 
 ### Variants
 
@@ -3758,7 +4183,7 @@ A harvest removes only what the drone can carry. Remaining stock stays at the si
 
 A Drone Depot stockpile belongs to one outpost. Dock there to unload, then route the sample into an **Essence Liquifier at that same outpost**. The specimen must be native to the outpost's biome. The Liquifier produces only that biome's essence.
 
-Nothing is shared between outposts. Move life forms with drones, and move essence through a physical liquid network of ports, pipes, and tanks. A **Biomass Mixer** consumes the required biome essences and produces biomass tons. Later phases require more distinct essences, so progression expands the local station and Liquifier chain into more biomes and brings those liquid lines together at a Mixer.
+Nothing is shared between outposts. Move life forms with drones, and move essence through a physical liquid network of ports, pipes, and tanks. A **Biomass Mixer** consumes the required biome essences and produces biomass tons. Later phases require a larger number of different essences, so progression expands the local station and Liquifier chain into more biomes and brings those liquid lines together at a Mixer.
 
 > The extractor chamber makes a basic harvester functional. Cargo Pods reduce trips but do not replace the local outpost chain.
 
@@ -3815,11 +4240,11 @@ Provider, Fertilizer, and Yield Amplifier bonuses add above the ×1 baseline. Fo
 
 ### 6. Harvest and replant
 
-A ready crop stays in its cell until explicitly harvested. The mobile Harvester works for **0.5 hours**. Each Crop Automator job works for **0.1 hours** at 100% outpost efficiency. Submitting a job returns immediately; one physical executor then processes up to 50 jobs total, counting its active and pending jobs, in strict FIFO order (first in, first out, so the oldest job runs first). It never runs two jobs at once or bypasses a blocked queue head on its own, and it pauses about **1 second** between jobs while its arm resets. A script can inspect the active and pending work, then use `move_job(job_id, position)` to implement another scheduling policy. Jobs whose targets no longer match fail immediately when they reach the executor and do not spend work time. The mobile Harvester transfers as much as Base Inventory can accept and leaves any remainder banked on the crop. A Crop Automator moves whatever fits in its local output, discards the remainder, and clears the cell. A completely full output blocks the job without changing the crop. Several automators can still work their separate service areas in parallel.
+A ready crop stays in its cell until explicitly harvested. The mobile Harvester works for **0.5 hours**. Each Crop Automator job works for **0.1 hours** at 100% outpost efficiency. Submitting a job returns immediately; one physical executor then holds at most 50 jobs at a time, active and pending together, and processes them in strict FIFO order (first in, first out, so the oldest job runs first). It never runs two jobs at once or bypasses a blocked queue head on its own, and it pauses about **1 second** between jobs while its arm resets. A script can inspect the active and pending work, then use `move_job(job_id, position)` to implement another scheduling policy. Jobs whose targets no longer match fail immediately when they reach the executor and do not spend work time. The mobile Harvester transfers as much as Base Inventory can accept and leaves any remainder banked on the crop. A Crop Automator moves whatever fits in its local output, discards the remainder, and clears the cell. A completely full output blocks the job without changing the crop. Several automators can still work their separate service areas in parallel.
 
 ### 7. Run the Plant Terraformer fleet
 
-At **2,000 t Biomass**, fabricate and deploy one or more **Plant Terraformers** at operational outposts. Connect each Terraformer's standard `input` to a local Crop Automator output, store, or home Inventory, then use `take(...)` or send from the source. Connect Water through `water_in`, then call `self.set_enabled(True)`. Item transfers use ordinary feeder cooldowns; the Terraformer handles **16 items per step** at Mk I and **80** at Mk II. Each machine commits the largest proportional loaded batch, performs **3 hours** of work, and delivers km². Mk I stops at **2,250,000 km²**; Mk II handles the final two bands.
+At **2,000 t Biomass**, fabricate and deploy one or more **Plant Terraformers** at operational outposts. Connect each Terraformer's standard `input` to a local Crop Automator output, Storage Bin or Warehouse, or home Inventory, then use `take(...)` or `send(...)` from the source. Connect Water through `water_in`, then call `self.set_enabled(True)`. Item transfers use ordinary feeder cooldowns; the Terraformer handles **16 items per step** at Mk I and **80** at Mk II. Each machine commits the largest proportional loaded batch, performs **3 hours** of work, and delivers km². Mk I stops at **2,250,000 km²**; Mk II handles the final two bands.
 
 > The complete flow is: discover seeds, load and plant, maintain conditions, diversify, harvest and clear, replant, then transfer Forage into the Terraformer.
 
@@ -3831,11 +4256,11 @@ The **Plant Terraformer** is the only machine that raises permanent Plants km².
 
 ### Input and cycles
 
-After Auto Feeders research, connect `self.input` to home Inventory, a local Storage Bin or Warehouse, or a local machine output such as a Crop Automator. Use `self.input.take(item_id, count)`, or send from the source's output. This is the same timed item-transfer model used by other machines: both endpoints stay occupied for the transfer duration. The input has one source connection at a time, so scripts may reconnect it when changing sources.
+After Auto Feeders research, connect `self.input` to home Inventory, a local Storage Bin or Warehouse, or a local machine output such as a Crop Automator. Use `self.input.take(item_id, count)`, or `send(...)` from the source's output. This is the same timed item-transfer model used by other machines: both endpoints stay occupied for the transfer duration. The input has one source connection at a time, so scripts may reconnect it when changing sources.
 
 The Terraformer's destination feeder handles **16 items per handling step** at Mk I and **80** at Mk II, regardless of whether the source pushes or the Terraformer pulls. **Fast Feeders** unlocks at **400,000 Terraform Points** and halves the duration of all newly started timed item transfers. A full Forage load therefore takes about **18.8 seconds** at Mk I and **20.6 seconds** at Mk II before that research, or **9.4** and **10.3 seconds** afterward, when the source is free. Direct Crop Automator to Terraformer transport avoids the extra Warehouse leg; Warehouses remain useful player-controlled staging.
 
-The existing holders fit one full Forage batch, the Salt that batch needs, and up to **10 each** of Fertilizer Mk I, Mk II, Mk III, and Growth Accelerant. There is no separate intake buffer. When a cycle can start, the machine commits the largest whole Forage batch supported by every loaded material. For example, 10 Forage with Water for 8 loads a batch of 8. If any required material cannot support one Forage, the machine waits.
+The Terraformer's own onboard holders fit one full Forage batch, the Salt that batch needs, and up to **10 each** of Fertilizer Mk I, Mk II, Mk III, and Growth Accelerant. There is no separate intake buffer. When a cycle can start, the machine commits the largest whole Forage batch supported by every loaded material. For example, 10 Forage with Water for 8 loads a batch of 8. If any required material cannot support one Forage, the machine waits.
 
 All selected items and matching Water are consumed exactly once when the cycle starts. The batch then performs **3 hours** of work at 100% outpost efficiency and delivers its km² in one step. Power loss or `set_enabled(False)` pauses the batch in place. When a cycle finishes, the next affordable loaded batch starts immediately.
 
@@ -3868,7 +4293,7 @@ while True:
   sleep(1)
 ```
 
-Salt is consumed as whole items, **1 per 500 Forage rounded up per batch**. A full Mk I cycle consumes **3 Salt**; a full Mk II cycle consumes **14 Salt**. Unused treatment value does not carry over.
+Salt is consumed as whole items, **1 per 500 Forage rounded up per batch**. A full Mk I cycle consumes **3 Salt**; a full Mk II cycle consumes **14 Salt**. Unused coverage of a rounded-up Salt item does not carry over; unused Fertilizer potency does.
 
 `batch_requirements()` reports Fertilizer as `fertilizer_potency` and Growth Accelerant as an item count. Use `fertilizer_potency(item_id)` to inspect a Fertilizer tier. Item transfers are local to the Terraformer's outpost. Water uses the dedicated `water_in` relationship and, for remote sources, a compatible completed Liquid Pipe route.
 
@@ -3884,11 +4309,11 @@ Salt is consumed as whole items, **1 per 500 Forage rounded up per batch**. A fu
 2. Select it with `self.set_revival_target(creature_id)`. This exposes that creature's two-node tree before revival.
 3. Stage the exact species feed and rarity-scaled Biology reagents shown by the Habitat or Journal. Creature bonuses never change this one-time reagent recipe.
 4. Call `self.revive()`, keep every active need healthy through rearing, then regulate later gas and liquid ranges as the colony advances.
-5. Each completed breeding cycle normally adds **1 individual**. Brood bonuses build toward guaranteed extra offspring across breeding cycles. Other nodes can accelerate a part of the population curve, reward uninterrupted support, reduce feed demand, widen fluid bands, retain a base fluid, or improve the founding population.
+5. Each completed breeding cycle normally adds **1 individual**. Brood bonuses build toward guaranteed extra offspring across breeding cycles. Other nodes can accelerate a part of the population curve, reward uninterrupted support, reduce feed demand, widen fluid bands, keep the colony on its base fluid instead of a rarer later one, or improve the founding population.
 6. Positive population change automatically produces shared **Insight**. Static population and elapsed time produce none. Use `unlock_bonus(node_id)` for the real spending decision; there is no purchase control outside code.
 7. At **600,000 Wildlife**, fabricate Habitat Mk II packs. Mk I stops at **175,000**, the top of Thriving. Mk II raises the ceiling to **350,000**, allowing the colony to enter and complete Abundant without changing any breeding statistic.
 
-One Habitat houses one species, with no Wildlife-specific limit on how many Habitats an outpost may hold. Habitats follow the ordinary outpost overcrowding rules, so concentrating them is allowed while distributing them can improve throughput. The species owns its colony progress; the enclosure is replaceable. Undeploying an established colony's Habitat preserves population, life stage, brood progress, Insight history, and bonuses, while pausing growth; its population and species breadth keep counting. Call `self.rehouse(creature_id)` from an empty Habitat whose current capacity fits the whole colony, or use the same call to transfer it directly from another Habitat. Fifteen full Mk II species reach **5,250,000** Wildlife while fourteen reach **4,900,000**. All 16 full Mk II species generate **112 Insight** against **80 Insight** needed for every node, leaving 32 spare. Feed, gas, and liquid are consumed only for individuals actually produced; a capped colony idles.
+One Habitat houses one species, with no Wildlife-specific limit on how many Habitats an outpost may hold. Habitats follow the ordinary outpost overcrowding rules, so concentrating them is allowed while distributing them can improve throughput. The species owns its colony progress; the enclosure is replaceable. Undeploying an established colony's Habitat preserves population, life stage, brood progress, Insight history, and bonuses, while pausing growth; its population and species breadth keep counting. Call `self.rehouse(creature_id)` from an empty Habitat whose current capacity fits the whole colony, or use the same call to transfer it directly from another Habitat. Fifteen full Mk II species reach **5,250,000** Wildlife while fourteen reach **4,900,000**. All 16 full Mk II species generate **112 Insight** against the **80 Insight** that all nodes cost together, leaving 32 spare. Feed, gas, and liquid are consumed only for individuals actually produced; a capped colony idles.
 
 *Guide / World & Infrastructure*
 
@@ -3901,8 +4326,8 @@ The harder a colony climbs, the rarer the gas and liquid it demands. Exotic flui
 Four gases and three liquids appear in Habitat requirements:
 
 - **Common (tap and use directly):** `swamp_gas`, `ammonia` (gases); `brine` (liquid).
-- **Uncommon (raw → Refiner + tar):** `sulfur_gas` (gas); `cryofluid` (liquid).
-- **Rare (raw → Refiner + heavy tar):** `chlorine` (gas); `quicksilver` (liquid).
+- **Uncommon (raw → Refiner + 2 Tar per batch):** `sulfur_gas` (gas); `cryofluid` (liquid).
+- **Rare (raw → Refiner + 5 Tar per batch):** `chlorine` (gas); `quicksilver` (liquid).
 
 Uncommon and rare exotics have a **raw** deposit form (`raw_sulfur_gas`, `raw_cryofluid`, `raw_chlorine`, `raw_quicksilver`) and a **refined** Habitat-ready form. Most colonies never need the rare pair `chlorine` + `quicksilver`, so demand for those deposits stays low.
 
@@ -3910,7 +4335,7 @@ Uncommon and rare exotics have a **raw** deposit form (`raw_sulfur_gas`, `raw_cr
 
 Exotic deposits follow the same model as thermal vents:
 
-- discover and **survey by sonar** (basic = active?, wide = rate, deep = cycle timing),
+- discover and **survey by sonar** (`"basic"` = active?, `"wide"` = rate, `"deep"` = cycle timing),
 - collect with a **cap** (gas vents) or **tap** (liquid springs),
 - pipe the output into gas or liquid storage.
 
@@ -3918,17 +4343,17 @@ Deposits alternate active and dormant phases. Stockpile during the active phase,
 
 ### 2. Refine (uncommon / rare only)
 
-Raw feedstock is not ready for Habitats. The **Refiner** converts `raw feedstock + tar → refined exotic` via a recipe (unlocked through Biolab orders). Pick the exotic with `self.set_recipe(...)`; wire raw feedstock into `gas_in` / `liquid_in`, tar into `self.input`, and the refined product out of `gas_out` / `liquid_out`.
+Raw feedstock is not ready for Habitats. The **Refiner** converts raw feedstock + tar → refined exotic via a recipe (unlocked through Biolab orders). Pick the exotic with `self.set_recipe(...)`; wire raw feedstock into `gas_in` / `liquid_in`, tar into `self.input`, and the refined product out of `gas_out` / `liquid_out`.
 
 ### Tar, the refining reagent
 
 Refining eats **tar** alongside the raw feedstock. Tar is an oil-refining byproduct that otherwise mostly goes to the Waste Processor. Tar cost scales with rarity:
 
 - **Common**, no tar (tapped direct, no Refiner).
-- **Uncommon**, moderate tar.
-- **Rare (Chlorine / Quicksilver)**, heavy tar.
+- **Uncommon**, 2 Tar per batch.
+- **Rare (Chlorine / Quicksilver)**, 5 Tar per batch.
 
-Tar is a running cost on the liquid pipe network carrying oil, not a hard gate. If you run short, expand oil production or slow the Habitat intake until the Refiner catches up.
+Tar, an item made as a byproduct of oil recipes, is a running cost, not a hard gate. If you run short, expand oil production or slow the Habitat intake until the Refiner catches up.
 
 ### 3. Meter
 
@@ -3936,7 +4361,7 @@ The refined gas/liquid flows into a Gas/Liquid Tank. Your Habitat script meters 
 
 ### When each step matters
 
-A freshly-founded colony needs only **feed**. Mid-stage colonies add a **basic gas/liquid**. Thriving colonies can demand **rare refined exotics**, which pushes you into farther prospecting and heavier refining. Research **Exotic Husbandry** unlocks survey/cap/tap + Refiner for uncommon exotics. **Deep Exotics** unlocks at **500,000 Wildlife** and opens the rarest extraction and refining. An early legendary colony may pause at its rare-fluid transition until the broader menagerie reaches that total; this is recoverable and costs no population. Read the Habitat's exact next-stage methods and grow other species while preparing the rare supply.
+A freshly-founded colony needs only **feed**. Mid-stage colonies add a **basic gas/liquid**. Thriving colonies can demand **rare refined exotics**, which pushes you into farther prospecting and heavier refining. Research **Exotic Fluids** unlocks survey/cap/tap + Refiner for uncommon exotics. **Rare Exotics** unlocks at **500,000 Wildlife** and opens the rarest extraction and refining. An early legendary colony may pause at its rare-fluid transition until the broader menagerie reaches that total; this is recoverable and costs no population. Read the Habitat's exact next-stage methods and grow other species while preparing the rare supply.
 
 *Guide / World & Infrastructure*
 
@@ -3946,7 +4371,7 @@ Husbandry means keeping every active life-support input ready. The worst active 
 
 ### Revival setup check
 
-Call `set_revival_target(creature_id)` first and branch on its `ActionResult`. It checks the creature, catalog, and one-colony-per-species rule, then saves the target without spending materials. Stage at least **2** correct feed units and every rarity-scaled Biology reagent in the dedicated `reagents` input. Then call parameterless `revive()` and branch on `.status` (`"ok"`, `"occupied"`, `"no_target"`, `"species_exists"`, `"not_cataloged"`, `"wrong_feed"`, `"insufficient_feed"`, or `"insufficient_reagents"`). Any rejected result spends nothing and keeps the target selected. Once revival starts, every active input must stay healthy for **12 world hours** of rearing.
+Call `set_revival_target(creature_id)` first and branch on its `ActionResult`. It checks the creature, catalog, and one-colony-per-species rule, then saves the target without spending materials. Stage at least **2** correct feed units in `input` and every rarity-scaled Biology reagent in the separate `reagents` input. Then call parameterless `revive()` and branch on `.status` (`"ok"`, `"occupied"`, `"no_target"`, `"species_exists"`, `"not_cataloged"`, `"wrong_feed"`, `"insufficient_feed"`, or `"insufficient_reagents"`). Any rejected result spends nothing and keeps the target selected. Once revival starts, every active input must stay healthy for **12 world hours** of rearing.
 
 ### Relocate an established colony
 
@@ -3954,7 +4379,7 @@ The colony belongs to its species, not its enclosure. Undeploying an established
 
 ### Feed is automatic
 
-`feed_ok()` is true when the input bin holds the creature's exact feed. Revival spends one feed and leaves one for rearing. Established colonies consume feed only when individuals are actually born; a full colony idles without consuming it. `feed_level()` reports usable feed after partial consumption, so scripts can restock from local storage without guessing.
+`feed_ok()` is `True` when the input bin holds the creature's exact feed. Revival spends one feed and leaves one for rearing. Established colonies consume feed only when individuals are actually born; a full colony idles without consuming it. `feed_level()` reports usable feed after partial consumption, so scripts can restock from local storage without guessing.
 
 ### Gas and liquid are two-sided bands
 
@@ -4016,7 +4441,7 @@ Every established colony learns from successful generations. Positive population
 
 ### Two permanent nodes per creature
 
-Each creature has exactly two authored nodes. Its early **Adaptation** affects that species only and gives strong recurring relief tailored to its life support or breeding pace. Its later **Breakthrough** affects every current and future species. The complete set is deliberately bounded: it improves a well-supported late colony by a few times its untreated output, not by an order of magnitude. Bonuses include speed boosts for different parts of the growth curve, brood bonuses that guarantee extra offspring over time, a reward for one full day of uninterrupted support, feed efficiency, wider fluid bands, a larger founding population, and a higher late-stage rate limit. Rearing always takes 12 world hours. Scripts inspect `.scope` and `.source_species` through `self.get_bonus_tree()` and purchase with `self.unlock_bonus(node_id)`; there is no purchase control outside code.
+Each creature has exactly two predefined nodes. Its early **Adaptation** affects that species only and gives strong recurring relief tailored to its life support or breeding pace. Its later **Breakthrough** affects every current and future species. The complete set is deliberately bounded: it improves a well-supported late colony by a few times its untreated output, not by an order of magnitude. Bonuses include speed boosts for different parts of the growth curve, brood bonuses that guarantee extra offspring over time, a reward for one full day of uninterrupted support, feed efficiency, wider fluid bands, a larger founding population, and a higher late-stage rate limit. Rearing always takes 12 world hours. Scripts inspect `.scope` and `.source_species` through `self.get_bonus_tree()` and purchase with `self.unlock_bonus(node_id)`; there is no purchase control outside code.
 
 ### Costs and gates
 
@@ -4034,7 +4459,7 @@ Wildlife has three linked progress scales: each colony's life stage, shared Insi
 
 ### Colony stages
 
-| Current stage | Shared population range | Habitat access |
+| Current stage | Colony population range | Habitat access |
 |---|---:|---|
 | Founded | 4-249 | Mk I and Mk II |
 | First Breeding | 250-2,499 | Mk I and Mk II |
@@ -4042,7 +4467,7 @@ Wildlife has three linked progress scales: each colony's life stage, shared Insi
 | Thriving | 25,000-175,000 | Mk I and Mk II |
 | Abundant | 175,001-350,000 | Mk II only |
 
-Both Habitat tiers display this same five-stage ladder. Mk I reaches its **175,000** capacity at the end of Thriving. Mk II unlocks at **600,000 Wildlife** after Deep Exotics and raises capacity to **350,000**, allowing the colony to cross into Abundant. The upgrade changes capacity only. Mature draw is **40-64 W** at Mk I and **144-168 W** at Mk II.
+Both Habitat tiers display this same five-stage ladder. Mk I reaches its **175,000** capacity at the end of Thriving. Mk II unlocks at **600,000 Wildlife** after Rare Exotics and raises capacity to **350,000**, allowing the colony to cross into Abundant. The upgrade changes capacity only. Mature draw is **40-64 W** at Mk I and **144-168 W** at Mk II.
 
 ### Breeding
 
@@ -4050,7 +4475,7 @@ Each creature completes breeding cycles. Population supplies natural momentum: a
 
 ### Adaptations and Insight
 
-Every species has two independent permanent nodes. Its **1 Insight Adaptation** affects that species only. Its **4 Insight Breakthrough** affects every species and also requires its source colony to reach **10,000 population**. Neither node requires research, Compound, planet-wide Wildlife, or the other node. Insight accrues from population delta along diminishing milestones: **1.00** by 10, **1.50** by 100, **2.25** by 1,000, **3.00** by 10,000, **4.00** by 50,000, **5.50** by 175,000, and **7.00** by 350,000.
+Every species has two independent permanent nodes. Its **1 Insight Adaptation** affects that species only. Its **4 Insight Breakthrough** affects every species and also requires its source colony to reach **10,000 population**. Neither node requires research, Bio Enrichment Compound, planet-wide Wildlife, or the other node. Insight accrues from population growth with diminishing returns per individual; the totals by milestone are: **1.00** by 10, **1.50** by 100, **2.25** by 1,000, **3.00** by 10,000, **4.00** by 50,000, **5.50** by 175,000, and **7.00** by 350,000.
 
 Only established colonies count toward the planet-wide phases. Failed rearing never touches the sensor, and established population never decreases.
 
@@ -4075,7 +4500,7 @@ Every feed builds on **Forage**: physical yield collected when a ready crop is h
 How far a creature climbs is set by its **rarity** (read from the Biology Lab catalog):
 
 - **Common**, mostly feed-based; one common gas; no liquid.
-- **Uncommon**, one common gas; a liquid opens at Thriving.
+- **Uncommon**, one common gas; a liquid requirement starts at Thriving.
 - **Rare**, its gas escalates to a refined gas and its liquid tightens.
 - **Legendary**, reaches the rarest exotics at the tightest bands.
 
@@ -4110,7 +4535,7 @@ Dust movement records are divided among all five biome channels, so a complete d
 
 Records with the same `event_id` belong to one event. Each record declares its `number`, expected `total`, encoded `data`, and `checksum`. The data format is `event_id|number|total|dx|dy`. A valid checksum equals the full sum of the ASCII code of every character in `data`, with no modulo reduction.
 
-A complete valid numbered set describes movement from `(0, 0)`. Apply its `dx` and `dy` records in number order; the endpoint is the exact aftermath coordinate. DOCS entries for **SignalTransmission** define every field. Player code decides how to retain records, share them between stations, and track incomplete events.
+A complete set, with every number from 1 to `total` present as a checksum-valid record, describes movement from `(0, 0)`. Apply its `dx` and `dy` records in number order; the endpoint is the exact aftermath coordinate. DOCS entries for `SignalTransmission` define every field. Player code decides how to retain records, share them between stations, and track incomplete events.
 
 ### Collect the aftermath
 
@@ -4120,7 +4545,7 @@ After the storm ends, send a drone with cargo space to the recovered coordinate 
 
 - **Incoming** automatically summarizes storms expected to enter powered-station coverage. It does not require `observe()` and never reveals an aftermath.
 - `observe()` measures local active storms and forecasts. `last_report()` reads that station's latest report.
-- `signal_receiver` supplies the raw records used for aftermath recovery.
+- `signal_receiver` supplies the raw records used to recover an aftermath's coordinate.
 - `signal_board` is an optional per-station display. It presents only records and labelled values published by player code; it does not validate, merge, store, or decode them.
 - `strikes()` provides bounded local lightning history. Lightning Rod capture works independently of Weather Station scripts.
 
@@ -4138,7 +4563,7 @@ Gas and liquid use the same transport model. Gas Pipes carry registered gases; L
 2. **Which machines intend to exchange which exact substance?** `FluidPort.connect(...)` relationships answer this.
 3. **How much can move now?** Supply, demand, power, throttle, buffer headroom, and shared throughput answer this.
 
-A useful shorthand is: compatible connection + reachable topology + live supply + live demand = flow. The connection and topology establish identity. Live conditions only change the current `t/h` rate, so zero flow does not make a pipe neutral.
+A useful shorthand is: compatible connection + reachable topology + live supply + live demand = flow. The connection and topology establish identity. Live conditions only change the current t/h rate, so zero flow does not make a pipe neutral.
 
 ### What `connect()` means
 
@@ -4166,35 +4591,35 @@ There is no `connect_pipe`, `disconnect_pipe`, or `connected_pipe` API. Pipe ids
 
 Machines in the same completed outpost transfer directly after a compatible `connect()` call. They do not need a local pipe piece, but they still need the machine connection.
 
-Machines at different locations need at least one completed conflict-free physical component of the correct medium reaching both location anchors. A map machine such as a Pump or Thermal Cap uses its own visible utility footprint. An internal machine uses its completed outpost footprint as its anchor.
+Machines at different locations need at least one completed conflict-free pipe network of the correct medium reaching both location anchors. A map machine such as a Pump or Thermal Cap uses its own visible utility footprint. An internal machine uses its completed outpost footprint as its anchor.
 
 A remote `connect()` call may produce `.status == "ok"` before the pipe exists. That records durable intent. Flow begins when suitable topology is complete. Cutting the pipe makes the route unreachable but does not erase the connection; restoring topology resumes it.
 
 ### Footprints expose availability, not storage
 
-A pipe touching an outpost service footprint exposes that component to compatible connections owned by machines there. Personnel distribution does not change utility reachability. The outpost stores nothing, mixes nothing, and selects no source or tank automatically. Every local machine still needs an explicit `connect()` relationship.
+A pipe touching an outpost service footprint exposes that pipe network to compatible connections owned by machines there. Personnel distribution does not change utility reachability. The outpost stores nothing, mixes nothing, and selects no source or tank automatically. Every local machine still needs an explicit `connect()` relationship.
 
-Separate physical components touching the same outpost service footprint remain separate; footprint contact is an availability relation and never a fluid junction. This lets water, oil, and volcanic essence reach one outpost through independent liquid components without becoming one pool. A map readout listing several liquids means those identified components reach the footprint; it does not mean the liquids are mixed.
+Separate pipe networks touching the same outpost service footprint remain separate; footprint contact is an availability relation and never a fluid junction. This lets water, oil, and volcanic essence reach one outpost through independent liquid pipe networks without becoming one pool. A map readout listing several liquids means those identified pipe networks reach the footprint; it does not mean the liquids are mixed.
 
-One remote relationship uses at most one physical component. An existing valid non-conflicting assignment is retained. A new relationship uses a component already carrying that exact fluid, or one neutral component. If exactly one component serves simultaneous different-fluid relationships, both connector claims conflict there. Independent components never combine capacity automatically.
+One remote relationship uses at most one pipe network. An existing valid non-conflicting assignment is retained. A new relationship uses a pipe network already carrying that exact fluid, or one neutral pipe network. If exactly one pipe network serves simultaneous different-fluid relationships, both connector claims conflict there. Independent pipe networks never combine capacity automatically.
 
 ### How a pipe gets exact contents
 
-Pipe hardware establishes only `gas` or `liquid`. A completed physical component gets an exact substance only from complete compatible provider-consumer relationships assigned to that component.
+Pipe hardware establishes only `gas` or `liquid`. A completed pipe network gets an exact substance only from complete compatible provider-consumer relationships assigned to that pipe network.
 
 - No connection: neutral.
 - Provider present but unconnected: neutral.
 - Consumer present but unconnected: neutral.
 - One complete water connection: contents are `water`.
 - Several water connections: compatible, they share supply and throughput.
-- Water and oil relationships simultaneously have only one eligible component: both claims conflict and all flow on that component stops.
-- Separately designated Water and Oil components are physically joined: conflict, all flow on the joined component stops.
+- Water and oil relationships simultaneously have only one eligible pipe network: both claims conflict and all flow on that pipe network stops.
+- Separately designated Water and Oil pipe networks are physically joined: conflict, all flow on the joined pipe network stops.
 - A water connection with throttle at zero, no power, no supply, or a full sink: contents remain `water`, live flow is zero.
-- Remove the final complete connection: the component becomes neutral again.
+- Remove the final complete connection: the pipe network becomes neutral again.
 
-The same rule applies to gases. A dormant Steam source still designates its component while its connection exists. If a new Ammonia relationship has only that Steam component, the overlapping connector claims conflict. If separately designated Steam and Ammonia components are physically joined, the joined component also conflicts even while both sources are idle.
+The same rule applies to gases. A dormant Steam source still designates its pipe network while its connection exists. If a new Ammonia relationship has only that Steam pipe network, the overlapping connector claims conflict. If separately designated Steam and Ammonia pipe networks are physically joined, the joined pipe network also conflicts even while both sources are idle.
 
-If several components reach the same two anchors, each relationship selects only one. A second exact fluid can designate another neutral component without affecting the first. If exactly one component is eligible for both exact fluids, their simultaneous connector claims conflict on it. Independently assigned fluids also conflict if their pipe geometries are later physically joined.
+If several pipe networks reach the same two anchors, each relationship selects only one. A second exact fluid can designate another neutral pipe network without affecting the first. If exactly one pipe network is eligible for both exact fluids, their simultaneous connector claims conflict on it. Independently assigned fluids also conflict if their pipe geometries are later physically joined.
 
 ### Physical joins
 
@@ -4249,13 +4674,13 @@ All three relationships participate. Available supply, destination headroom, and
 
 ### Pipe throughput ceiling
 
-Individual pipe pieces have no throughput capacity of their own. A physical component starts with **2,000 t/h** of shared throughput for each matched source-side and sink-side attachment link. The common layout with one source link and one sink link therefore starts at **2,000 t/h**. **High-Pressure Fluid Transport** research retrofits every completed and future Gas Pipe and Liquid Pipe attachment link to **6,000 t/h**. Pipe length and extra pieces within the same route do not reduce or increase that limit.
+Individual pipe pieces have no throughput capacity of their own. A pipe network starts with **2,000 t/h** of shared throughput for each matched source-side and sink-side attachment link. The common layout with one source link and one sink link therefore starts at **2,000 t/h**. **High-Pressure Fluid Transport** research retrofits every completed and future Gas Pipe and Liquid Pipe attachment link to **6,000 t/h**. Pipe length and extra pieces within the same route do not reduce or increase that limit.
 
-Every compatible relationship assigned to the component shares this budget. Multiple attachment links on both sides can raise aggregate capacity, but extra length or interior branches alone add nothing. One logical connection never pools independent components. Machine production, throttle, supply, consumer demand, and buffer headroom may set a lower live rate; stored bursts or several producers can still reach the ceiling.
+Every compatible relationship assigned to the pipe network shares this budget. Multiple attachment links on both sides can raise aggregate capacity, but extra length or interior branches alone add nothing. One logical connection never pools independent pipe networks. Machine production, throttle, supply, consumer demand, and buffer headroom may set a lower live rate; stored bursts or several producers can still reach the ceiling.
 
 ### Reading the APIs
 
-`FluidPort.level()` is tons buffered at that port. Some pass-through outputs, including Pumps, store nothing and therefore read **0**. `capacity()` is the port's buffer limit. `flow_rate()` is the current live rate in `t/h`; **0** can mean idle, starved, full, unreachable, conflicted, or merely waiting across the simulation timing boundary.
+`FluidPort.level()` is tons buffered at that port. Some pass-through outputs, including Pumps, store nothing and therefore read **0**. `capacity()` is the port's buffer limit. `flow_rate()` is the current live rate in t/h; **0** can mean idle, without supply, full, unreachable, conflicted, or merely waiting across the simulation timing boundary.
 
 ```
 print(self.water_in.connected_to())
@@ -4273,7 +4698,7 @@ for pipe in list_pipes():
     print("conflicts", pipe.conflicting_contents())
 ```
 
-`type()` reports `"gas"` or `"liquid"`. `contents()` reports the exact established substance, or `None` while neutral or conflicted. Because both cases return `None`, check `state()` and `conflicting_contents()` too. `connections()` lists the complete logical routes using the component; the representative pipe id in each diagnostic row is not a connection handle.
+`type()` reports `"gas"` or `"liquid"`. `contents()` reports the exact established substance, or `None` while neutral or conflicted. Because both cases return `None`, check `state()` and `conflicting_contents()` too. `connections()` lists the complete logical routes using the pipe network; the representative pipe id in each diagnostic row is not a connection handle.
 
 ### Troubleshooting zero flow
 
@@ -4282,7 +4707,7 @@ Check these in order:
 1. Does the expected port's `connected_to()` show its own declaration?
 2. Did the `connect()` result have `.status == "ok"` instead of `"not_found"` or `"incompatible"`?
 3. For remote machines, is every intended pipe or bridge piece complete?
-4. Does a component of the correct medium reach both anchors?
+4. Does a pipe network of the correct medium reach both anchors?
 5. Does `Pipe.state()` report `"conflict"`?
 6. Is the source powered, supplied, active, and throttled above zero?
 7. Does the destination have headroom or current demand?
@@ -4335,19 +4760,19 @@ Unbuilt pieces are ghosts and transport nothing.
 
 **Touching geometry connects.** Same-medium segments connect wherever their tile-aligned paths touch. Ordinary T and cross shapes are real junctions.
 
-**Service-footprint contacts stay independent.** Two fluid components do not merge merely because both touch the same outpost. The outpost footprint exposes each component independently to connected local machines. This allows water, oil, and other routes to touch one outpost without becoming one physical network.
+**Service-footprint contacts stay independent.** Two fluid pipe networks do not merge merely because both touch the same outpost. The outpost footprint exposes each pipe network independently to connected local machines. This allows water, oil, and other routes to touch one outpost without becoming one physical network.
 
-**Connections define contents.** Provider presence alone and consumer presence alone are neutral. Each complete compatible remote `connect()` relationship selects at most one physical component reaching both locations and establishes its exact fluid there, including while idle, full, powered off, or throttled to zero.
+**Connections define contents.** Provider presence alone and consumer presence alone are neutral. Each complete compatible remote `connect()` relationship selects at most one pipe network reaching both locations and establishes its exact fluid there, including while idle, full, powered off, or throttled to zero.
 
-**Conflicts halt flow.** If exactly one component serves simultaneous water and oil relationships, both connector claims conflict and that component stops. Separately designated components produce the same conflict if their physical geometry is joined. The same applies to different gases. Same-fluid connections may share one component and its capacity.
+**Conflicts halt flow.** If exactly one pipe network serves simultaneous water and oil relationships, both connector claims conflict and that pipe network stops. Separately designated pipe networks produce the same conflict if their physical geometry is joined. The same applies to different gases. Same-fluid connections may share one pipe network and its capacity.
 
-**Machines do not connect to pipe ids.** Scripts connect providers and consumers. Local machines transfer directly; each remote relationship retains one valid non-conflicting completed physical component reaching both locations, or selects a same-fluid component, or failing that a neutral one. Independent components never pool capacity automatically.
+**Machines do not connect to pipe ids.** Scripts connect providers and consumers. Local machines transfer directly; each remote relationship keeps its current valid, non-conflicting completed pipe network reaching both locations; failing that, it selects one already carrying the same fluid, and failing that, a neutral one. Independent pipe networks never pool capacity automatically.
 
-**Bridges cross without joining.** Gas, liquid, and power bridges are 3-tile overpasses. Their own axis connects; a perpendicular line beneath the middle tile remains a different network.
+**Bridges pass over lines without joining them.** Gas, liquid, and power bridges are 3-tile overpasses. Their own axis connects; a perpendicular line beneath the middle tile remains a different network.
 
 ### Throughput
 
-**Throughput belongs to the component, not its segments.** Individual pipe segments have no capacity stat. The common layout with one source link and one sink link starts at **2,000 t/h**, shared by every compatible relationship assigned to that component. **High-Pressure Fluid Transport** research retrofits every completed and future Gas Pipe and Liquid Pipe attachment link to **6,000 t/h**. Pipe length and extra pieces within the same route do not reduce or increase the limit. Multiple attachment links on both sides can raise aggregate capacity, while machine rates, throttle, supply, demand, and headroom may impose a lower live rate.
+**Throughput belongs to the pipe network, not its segments.** Individual pipe segments have no capacity stat. The common layout with one source link and one sink link starts at **2,000 t/h**, shared by every compatible relationship assigned to that pipe network. **High-Pressure Fluid Transport** research retrofits every completed and future Gas Pipe and Liquid Pipe attachment link to **6,000 t/h**. Pipe length and extra pieces within the same route do not reduce or increase the limit. Multiple attachment links on both sides can raise aggregate capacity, while machine rates, throttle, supply, demand, and headroom may impose a lower live rate.
 
 ### Inspecting pipes
 
@@ -4384,13 +4809,13 @@ Completed power lines divide the planet into connected subnets. Every generator,
 
 **Touching lines connect.** Power-line pieces join wherever their tile-aligned geometry touches. T-junctions and ordinary crossings form one subnet.
 
-**Outposts expose power service footprints.** Every completed power component touching an outpost footprint joins that structure bus and therefore the same subnet. Every valid completed machine belonging to that outpost uses the same subnet automatically. Personnel distribution does not affect utility connectivity.
+**Outposts expose power service footprints.** Every completed power piece touching an outpost's power service footprint joins that structure bus and therefore the same subnet. Every valid completed machine belonging to that outpost uses the same subnet automatically. Personnel distribution does not affect utility connectivity.
 
-**Power Bridges cross without joining.** A Power Bridge connects along its own axis. A perpendicular ground-level power line passing under the middle tile remains a separate subnet.
+**Power Bridges pass over lines without joining them.** A Power Bridge connects along its own axis. A perpendicular ground-level power line passing under the middle tile remains a separate subnet.
 
 **Lines have no direction, loss, or per-line watt limit.** Generation, storage, and demand are pooled across the connected subnet. Direction emerges from which machines generate and consume power.
 
-**Incomplete work carries no power.** Blueprint ghosts and partially built pieces are visible planning state only. Machines with a missing or stale outpost location are invalid and receive no fallback power.
+**Incomplete work carries no power.** Blueprint ghosts and partially built pieces are visible planning state only. Machines with a missing or stale outpost location are invalid and receive no power at all; they are never moved to another subnet.
 
 ### Allocation and storage
 
@@ -4404,7 +4829,7 @@ Plan power lines and Power Bridges in Plan Mode or by using `construction_bluepr
 
 ### Diagnosing a subnet
 
-Use the Planet Map to follow highlighted connected pieces and the Power dashboard to compare generation, demand, and battery storage. Lightning Rod cards and their category total show the separate deep reserve. If a remote outpost is dark, verify that every intended wire piece and bridge is complete, that ground geometry touches both service footprints, and that the subnet has enough current generation or stored energy for its complete live load.
+Use the Planet Map to follow highlighted connected pieces and the Power dashboard to compare generation, demand, and battery storage. Lightning Rod cards and their category total show the separate deep reserve. If a remote outpost is dark, verify that every intended wire piece and bridge is complete, that the ground-level wire pieces touch both service footprints, and that the subnet has enough current generation or stored energy for its complete live load.
 
 ### Cross-references
 
@@ -4422,7 +4847,7 @@ A **thermal vent** is a fracture in the planet's crust where internal heat leaks
 
 ### Discovery
 
-`self.sonar.scan()` returns `SonarScanResult`. When `.status == "ok"`, iterate `.sites` and select contacts whose `kind() == "thermal"`; `.message` explains any rejected scan. Survey the selected contact with `self.sonar.survey(site)` and read the `SurveyResult.site` payload only after its status is `"ok"`. Basic Sonar reveals phase, Wide adds steam rates, and Deep adds cycle timing.
+`self.sonar.scan()` returns `SonarScanResult`. When `.status == "ok"`, iterate `.sites` and select contacts whose `kind() == "thermal"`; `.message` explains any rejected scan. Survey the selected contact with `self.sonar.survey(site)` and read the `SurveyResult.site` payload only after its status is `"ok"`. Basic Sonar reveals phase, Extended adds steam rates, and Deep adds cycle timing.
 
 ### Harvesting steam
 
@@ -4430,7 +4855,7 @@ Plan a Thermal Cap on the vent, carry its kit in the Pioneer, and execute the qu
 
 ### Routing after capture
 
-Nothing leaves until the cap script calls `self.steam_out.connect(...)` with a compatible consumer's stable machine id or display name and opens it with `self.set_throttle(value)`, where `value` is **0-1**. A local target transfers directly. A remote target uses completed gas topology between the cap and target locations automatically; scripts never select an individual pipe. The complete connection establishes steam identity even before flow starts and keeps it while idle, full, off, or throttled to zero.
+Establish the connection either by calling `self.steam_out.connect(...)` in the cap script with a compatible consumer's stable machine id or display name, or by connecting a compatible consumer's steam input to the cap's stable machine id or display name. Nothing leaves until the cap script opens its throttle with `self.set_throttle(value)`, where `value` is **0-1**. Every target needs a compatible completed gas-pipe route from the cap to the target or its outpost, even when it is nearby. The game selects the route automatically; scripts never select an individual pipe. The complete connection establishes steam identity even before flow starts and keeps it while idle, full, off, or throttled to zero.
 
 Under-release and the chamber climbs. At **100%** it overpressurizes and blows off the whole chamber, then refills from empty. Read `pressure()`, `is_overpressured()`, and `is_stalled()` to control release, add storage, or restore physical reachability.
 
@@ -4446,7 +4871,7 @@ Under-release and the chamber climbs. At **100%** it overpressurizes and blows o
 
 ### Overview
 
-Tier 3 introduces **input-gated** upgrades. A supplied Mk III Oxygen or Pressure Generator runs at **200x** Mk I output, while a supplied Mk III Heat Generator runs at **208x**. Starved machines fall back to their Mk II base output, **5x** for Oxygen and Pressure or **4.7x** for Heat.
+Tier 3 introduces **input-gated** upgrades. A supplied Mk III Oxygen or Pressure Generator runs at **200x** Mk I output, while a supplied Mk III Heat Generator runs at **208x**. Starved machines fall back to their Mk II base output: **5x** for Oxygen, **25x** for Pressure, or **4.7x** for Heat.
 
 The gate is enforced per tick: every frame the machine checks its input buffer. If the required fluid is unavailable, `is_degraded()` reads `True` and `effective_tier()` falls back to the previous tier for that tick. The installed tier reported by `tier()` itself never changes.
 
@@ -4472,7 +4897,7 @@ print(oxy.water_in.level(), "/", oxy.water_in.capacity())
 - `machine.effective_tier()` returns one less than `machine.tier()`, the tier actually in effect right now.
 - `machine.tier()` itself never changes, the pack is permanent; degradation is runtime.
 
-When the input buffer refills, all of the above flip back on the next tick.
+When the input buffer again holds one tick's required consumption, all of the above flip back on the next tick.
 
 ### Contention
 
@@ -4522,7 +4947,7 @@ One vent may supply several connected sinks when its average output and stored r
 
 ### Graceful fallback
 
-Degradation is a normal running state. The machine doesn't stop; output continues at the previous tier until the input buffer refills. Scripts can observe `is_degraded()`, inspect the input port, and correct the supply chain.
+Degradation is a normal running state. The machine doesn't stop; output continues at the previous tier until the input buffer again holds one tick's required consumption. Scripts can observe `is_degraded()`, inspect the input port, and correct the supply chain.
 
 ### Cross-references
 
@@ -4569,9 +4994,9 @@ Everything on this planet is a component: sensors, generators, scanners, vehicle
 
 There are two ways to access them:
 
-**self**, your own machine. Every script has a `self` variable that refers to the machine it runs on. You can read state and control it.
+`self`, your own machine. Every script has a `self` variable that refers to the machine it runs on. You can read state and control it.
 
-**get_component(id)**, a shared component or another machine by its concrete instance id. Read shared state from anywhere:
+`get_component(id)`, a shared component or another machine by its concrete instance id. Read shared state from anywhere:
 
 ```
 clock = get_component("clock")
@@ -4609,7 +5034,7 @@ t.transmit("weather", 42)
 
 ### Storage bins by name
 
-Storage bins are special, you label them with the material they hold ("Iron Ore Bin", "Copper Ingot Bin"), so querying by that label reads naturally:
+Storage bins are special, you label them with the material they hold (`"Iron Ore Bin"`, `"Copper Ingot Bin"`), so querying by that label reads naturally:
 
 ```
 ore_bin = get_component_by_name("Iron Ore Bin")
@@ -4662,13 +5087,48 @@ Passing the planet id scopes the query, future planets will work the same way.
 
 You can read shared components from any script, check the clock, inspect inventory, or monitor a generator by its instance id.
 
-But hardware actions belong to the machine's own script via `self`. Methods marked **self only** in DOCS won't work through `get_component()`, you'll get an error explaining why.
+But hardware actions belong to the machine's own script via `self`. Methods marked **self only** in DOCS won't work on another machine through `get_component()`, you'll get an error explaining why.
 
 Every component has `.id` (programmatic identifier) and `.name` (display name). Check the Components section below for all available components and their methods.
 
 *Commands*
 
 ## System
+
+##### `set_status(message: str, level: str = "info") → None`
+
+Show a status message for the current script run. Accepts non-empty plain text up to 240 characters and a level of `info`, `warn`, or `error`. Replaces the previous message immediately without waiting, logging, changing machine behaviour, or raising a game warning. Paused, completed, and failed scripts show their last report as inactive. Stop, restart, and save loading clear it. Invalid text or levels raise `ValueError`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+```python
+set_status("Waiting for iron ore", "warn")
+```
+
+##### `clear_status() → None`
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `get_status_report(script_id: str | None = None) → ScriptStatusReport | None`
+
+Read a snapshot of a script's latest status report. Omitting `script_id` reads the current script. Returns `None` when the script has no report, has stopped, or does not exist. Reports from paused, completed, or failed runs have `active` set to `False`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `script_id` | `str \| None` | Stable script id, or `None` for the current script. |
+
+- **Returns** `ScriptStatusReport | None`
 
 ##### `get_game_version() → str`
 
@@ -4833,7 +5293,7 @@ Output low-priority telemetry to the persistent console. Same argument behavior 
 
 ##### `notify(text: str, /, level: str = "info", duration_seconds?: float, dismissible: bool = True) → None`
 
-Show a toast to the player and add it to the **Computer → Notifications** archive. Use sparingly: for events that genuinely need the operator's attention (battery critical, contract solved, drone stranded); prefer `print()` for ongoing telemetry. `level` is `"info"` (default), `"warn"`, or `"error"` and drives the toast's color + the history entry's color dot. `duration_seconds` sets how long the toast stays before auto-dismissing: clamped to **0.5-30s**; omitted uses the default (**5s** info/warn, **6s** error). Pass **0** as the duration to make the toast **sticky**: it never auto-dismisses and stays until the player clicks it. Use this for fatal errors that must be acknowledged. `dismissible` defaults to `True`; pass `False` as the fourth argument for a forced-read toast with no early close. A sticky toast is always dismissible, so it can never pin the screen. Identical consecutive notifications from the same script collapse inside a 1-second window, and a sticky already on screen is never duplicated, so a tight loop can't spam the screen.
+Show a toast to the player and add it to the **Computer → Notifications** archive. Use sparingly: for events that genuinely need the operator's attention (battery critical, contract solved, drone stranded); prefer `print()` for ongoing telemetry. `level` is `"info"` (default), `"warn"`, or `"error"` and drives the toast's color + the history entry's color dot. `duration_seconds` sets how long the toast stays before auto-dismissing: clamped to **0.5-30s**; omitted uses the default (**5s** `info`/`warn`, **6s** `error`). Pass **0** as the duration to make the toast **sticky**: it never auto-dismisses and stays until the player clicks it. Use this for fatal errors that must be acknowledged. `dismissible` defaults to `True`; pass `False` as the fourth argument for a forced-read toast with no early close. A sticky toast is always dismissible, so it can never pin the screen. Identical consecutive notifications from the same script collapse inside a 1-second window, and a sticky already on screen is never duplicated, so a tight loop can't spam the screen.
 
 *Parameters*
 
@@ -4872,13 +5332,13 @@ Wait before continuing. **The argument is in real seconds**, not world-clock hou
 
 ##### `len(value: Sized, /) → int`
 
-Length of a list, tuple, string, dict, or set.
+Length of a `list`, `tuple`, string, `dict`, or `set`.
 
 *Parameters*
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `value` | `Sized` | String, list, tuple, dict, set, range, or object to measure |
+| `value` | `Sized` | String, `list`, `tuple`, `dict`, `set`, `range`, or object to measure |
 
 - **Returns** `int`
 
@@ -4890,7 +5350,7 @@ Materialize the bounded integer range from `start` to `stop` (exclusive), steppi
 
 ##### `slice(stop: int | None, /) / slice(start: int | None, stop: int | None, step: int | None = None, /) → slice`
 
-Build a reusable slice object for list, tuple, and string subscripts. `slice(None, None, -1)` is the reusable form of `[::-1]`; `seq[s]` follows the same bounds and step rules as `seq[start:stop:step]`.
+Build a reusable slice object for `list`, `tuple`, and string subscripts. `slice(None, None, -1)` is the reusable form of `[::-1]`; `seq[s]` follows the same bounds and step rules as `seq[start:stop:step]`.
 
 - **Returns** `slice`
 
@@ -4938,7 +5398,7 @@ Construct a new identity-only base object. It takes no arguments and has no writ
 
 ##### `TypedDict(name: str, fields: dict[str, object], /) → type`
 
-Declare a fixed-key dict shape for the editor. Use the functional form (`State = TypedDict("State", {"mode": str})`) and annotate records with that name (`state: State = {...}`). Runtime treats this as an inert type marker; the editor uses it for key autocomplete, field type flow, and typo lint. The field dictionary is ordinary code, so a game type used as a field type needs its import first (`from __builtins__ import Site`, then `"site": Site`) or the name in quotes (`"site": "Site"`); both give the same editor type flow.
+Declare a fixed-key `dict` shape for the editor. Use the functional form (`State = TypedDict("State", {"mode": str})`) and annotate records with that name (`state: State = {...}`). Runtime treats this as an inert type marker; the editor uses it for key autocomplete, field type flow, and typo lint. The field dictionary is ordinary code, so a game type used as a field type needs its import first (`from __builtins__ import Site`, then `"site": Site`) or the name in quotes (`"site": "Site"`); both give the same editor type flow.
 
 *Parameters*
 
@@ -5079,7 +5539,7 @@ Lists the method and attribute names available on `value`, sorted: runtime intro
 
 ##### `hash(value: object, /) → int`
 
-Hash any hashable value to an integer: strings, numbers, booleans, `None`, tuples of hashable values, functions, classes, and hashable user instances. Instances are identity-hashable by default; defining `__eq__` without `__hash__` makes them unhashable, and a custom `__hash__` controls `hash(obj)`, dict keys, and set membership.
+Hash any hashable value to an integer: strings, numbers, booleans, `None`, tuples of hashable values, functions, classes, and hashable user instances. Instances are identity-hashable by default; defining `__eq__` without `__hash__` makes them unhashable, and a custom `__hash__` controls `hash(obj)`, `dict` keys, and `set` membership.
 
 *Parameters*
 
@@ -5110,7 +5570,7 @@ Return a proxy that searches the receiver's MRO after a chosen class. Inside a m
 
 ##### `property(fget: Callable | None = None, fset: Callable | None = None, fdel: Callable | None = None, doc: str | None = None) → property`
 
-Build a property descriptor. Use `@property` for the common getter form, or call `property(fget, fset, fdel, doc)` directly; every argument is optional and may also be named. Instance reads call `fget`, writes call `fset`, and deletion calls `fdel`; an already-bound hook stays bound and receives the property instance as an additional argument. `.getter(fn)`, `.setter(fn)`, and `.deleter(fn)` return cloned descriptors. An omitted/`None` `doc` follows `fget.__doc__` through normal attribute lookup; an explicit non-`None` doc is preserved by clones.
+Build a property descriptor. Use `@property` for the common getter form, or call `property(fget, fset, fdel, doc)` directly; every argument is optional and may also be named. Instance reads call `fget`, writes call `fset`, and deletion calls `fdel`; an already-bound hook stays bound and receives the object being read, written, or deleted as an additional argument. `.getter(fn)`, `.setter(fn)`, and `.deleter(fn)` return cloned descriptors. An omitted/`None` `doc` follows `fget.__doc__` through normal attribute lookup; an explicit non-`None` `doc` is preserved by clones.
 
 *Parameters*
 
@@ -5200,7 +5660,7 @@ Convert to integer. With no args returns `0`. Numbers truncate toward zero. Stri
 
 ##### `float(value: str | float = 0.0, /) → float`
 
-Convert to float. With no arguments, returns `0.0`. String conversion consumes the whole trimmed value and accepts Python decimal/exponent syntax, underscore separators, Unicode decimal digits, and case-insensitive `inf` / `nan`. Trailing garbage raises; booleans coerce to `0.0` / `1.0`.
+Convert to `float`. With no arguments, returns `0.0`. String conversion consumes the whole trimmed value and accepts Python decimal/exponent syntax, underscore separators, Unicode decimal digits, and case-insensitive `inf` / `nan`. Trailing garbage raises; booleans coerce to `0.0` / `1.0`.
 
 *Parameters*
 
@@ -5212,7 +5672,7 @@ Convert to float. With no arguments, returns `0.0`. String conversion consumes t
 
 ##### `chr(code: int, /) → str`
 
-Character from Unicode code point (e.g. chr(65) → 'A').
+Character from Unicode code point (e.g. `chr(65)` → `'A'`).
 
 *Parameters*
 
@@ -5224,7 +5684,7 @@ Character from Unicode code point (e.g. chr(65) → 'A').
 
 ##### `ord(char: str, /) → int`
 
-Unicode code point from character (e.g. ord('A') → 65).
+Unicode code point from character (e.g. `ord('A')` → 65).
 
 *Parameters*
 
@@ -5236,7 +5696,7 @@ Unicode code point from character (e.g. ord('A') → 65).
 
 ##### `bool(value?: object, /) → bool`
 
-Convert to boolean (True/False). With no args returns False.
+Convert to boolean (`True`/`False`). With no args returns `False`.
 
 *Parameters*
 
@@ -5260,13 +5720,13 @@ Convert any iterable to a list, or create an empty list with `list()`. Methods: 
 
 ##### `dict(**kwargs: V) / dict(source: dict[K, V] | Iterable[tuple[K, V]], /, **kwargs: V) → dict[K, V]`
 
-Build a dictionary. Empty form `dict()`. From pairs: `dict([("a", 1), ("b", 2)])`. Shallow-copy another dict: `dict(d)`. Keyword form: `dict(name="Mars", temp=-63)`. Keys may be any hashable value, including tuples of hashables and properly hashable user instances. Methods: `.keys()`, `.values()`, `.items()`, `.has(k)`, `.get(k, default?)`, `.pop(k, default?)`, `.popitem()`, `.setdefault(k, default?)`, `.update(other)`, `.copy()`, `.clear()`, `.length` (property). Operators: `a | b` returns a merged copy with right-hand values winning; `a |= b` updates `a` in place. Subscript with `d[k]`; missing key raises. Use `.get(k)` or `.has(k)` for safe lookup.
+Build a dictionary. Empty form `dict()`. From pairs: `dict([("a", 1), ("b", 2)])`. Shallow-copy another `dict`: `dict(d)`. Keyword form: `dict(name="Mars", temp=-63)`. Keys may be any hashable value, including tuples of hashables and properly hashable user instances. Methods: `.keys()`, `.values()`, `.items()`, `.has(k)`, `.get(k, default?)`, `.pop(k, default?)`, `.popitem()`, `.setdefault(k, default?)`, `.update(other)`, `.copy()`, `.clear()`, `.length` (property). Operators: `a | b` returns a merged copy with right-hand values winning; `a |= b` updates `a` in place. Subscript with `d[k]`; missing key raises. Use `.get(k)` or `.has(k)` for safe lookup.
 
 - **Returns** `dict[K, V]`
 
 ##### `set(iterable?: Iterable[T], /) → set[T]`
 
-Build a set of unique members from any iterable, or `set()` for empty. Members may be any hashable values, including tuples of hashables and properly hashable user instances. Use `{1, 2, 3}` for a literal: empty `{}` is a dict, not a set, so empty set is always `set()`. Methods: `.add(x)`, `.remove(x)`, `.discard(x)`, `.pop()`, `.clear()`, `.copy()`, `.union(s)`, `.intersection(s)`, `.difference(s)`, `.symmetric_difference(s)`, `.update(s)`, `.issubset(s)`, `.issuperset(s)`, `.isdisjoint(s)`. Operators: `in`, `|` (union), `&` (intersection), `-` (difference), `^` (symmetric difference), `<` `<=` `>=` `>` (subset/superset), `==`.
+Build a set of unique members from any iterable, or `set()` for empty. Members may be any hashable values, including tuples of hashables and properly hashable user instances. Use `{1, 2, 3}` for a literal: empty `{}` is a `dict`, not a `set`, so empty set is always `set()`. Methods: `.add(x)`, `.remove(x)`, `.discard(x)`, `.pop()`, `.clear()`, `.copy()`, `.union(s)`, `.intersection(s)`, `.difference(s)`, `.symmetric_difference(s)`, `.update(s)`, `.issubset(s)`, `.issuperset(s)`, `.isdisjoint(s)`. Operators: `in`, `|` (union), `&` (intersection), `-` (difference), `^` (symmetric difference), `<` `<=` `>=` `>` (subset/superset), `==`.
 
 *Parameters*
 
@@ -5326,7 +5786,7 @@ Render an integer as an octal string with `0o` prefix. `oct(8)` → `'0o10'`. Fl
 
 ##### `repr(value: object, /) → str`
 
-Developer-readable string for a value, with quotes around strings and nested-repr for containers. `repr([1, "a"])` → `"[1, 'a']"` (note the quotes around `'a'`). Use when you want to see the value's structure, not its display form. Also reached via f-string `!r` conversion: `f"{name!r}"`.
+Developer-readable string for a value, with quotes around strings and nested `repr()` for containers. `repr([1, "a"])` → `"[1, 'a']"` (note the quotes around `'a'`). Use when you want to see the value's structure, not its display form. Also reached via f-string `!r` conversion: `f"{name!r}"`.
 
 *Parameters*
 
@@ -5425,7 +5885,7 @@ Round with ties to even. Without `ndigits` (or with `None`), returns the nearest
 | Name | Type | Description |
 | --- | --- | --- |
 | `number` | `float` | Value to round |
-| `ndigits` | `int \| None` | Decimal digits or None |
+| `ndigits` | `int \| None` | Decimal digits or `None` |
 
 - **Returns** `float`
 
@@ -5726,13 +6186,13 @@ Positive infinity, larger than every finite number. Use `-inf` for negative infi
 
 ##### `pi: float`
 
-Mathematical constant `π ≈ 3.14159`.
+Mathematical constant π ≈ 3.14159.
 
 - **Returns** `float`
 
 ##### `tau: float`
 
-Mathematical constant `τ = 2π`.
+Mathematical constant τ = 2π.
 
 - **Returns** `float`
 
@@ -5740,7 +6200,7 @@ Mathematical constant `τ = 2π`.
 
 ##### `all(iterable: Iterable, /) → bool`
 
-True if every item in the iterable is truthy. Stops at the first falsy item, so generators are consumed only as far as needed.
+`True` if every item in the iterable is truthy. Stops at the first falsy item, so generators are consumed only as far as needed.
 
 *Parameters*
 
@@ -5752,7 +6212,7 @@ True if every item in the iterable is truthy. Stops at the first falsy item, so 
 
 ##### `any(iterable: Iterable, /) → bool`
 
-True if any item in the iterable is truthy. Stops at the first truthy item, so generators are consumed only as far as needed.
+`True` if any item in the iterable is truthy. Stops at the first truthy item, so generators are consumed only as far as needed.
 
 *Parameters*
 
@@ -5804,7 +6264,7 @@ Return neighboring pairs from an iterable. `pairwise([1,2,3])` → `[(1,2), (2,3
 
 ##### `batched(iterable: Iterable[T], size: int, /) → list[tuple[T, ...]]`
 
-Split an iterable into tuple batches of `size`. The final batch may be shorter. `batched([1,2,3,4,5], 2)` → `[(1,2), (3,4), (5,)]`.
+Split an iterable into batches of `size`, each one a tuple. The final batch may be shorter. `batched([1,2,3,4,5], 2)` → `[(1,2), (3,4), (5,)]`.
 
 *Parameters*
 
@@ -5842,7 +6302,7 @@ Flatten one level of nested iterables into a list. `flatten([[1,2], (3,4)])` →
 
 ##### `count_by(iterable: Iterable[T], key_fn?: Callable, /) → dict[object, int]`
 
-Count items into a dict. Without `key_fn` (or with `None`), counts each item. With a pure `key_fn`, counts the computed key; callbacks cannot suspend the script or mutate game state: `count_by(items, lambda x: x.kind)`. An empty input never inspects or calls the key function.
+Count items into a `dict`. Without `key_fn` (or with `None`), counts each item. With a pure `key_fn`, counts the computed key; callbacks cannot suspend the script or mutate game state: `count_by(items, lambda x: x.kind)`. An empty input never inspects or calls the key function.
 
 *Parameters*
 
@@ -5933,7 +6393,7 @@ Apply pure `fn` to corresponding items of each iterable. Callbacks cannot suspen
 
 ##### `filter(fn: Callable | None, iterable: Iterable[T], /) → list[T]`
 
-Keep items for which pure `fn(item)` is truthy; callbacks cannot suspend the script or mutate game state. `filter(None, iter)` keeps every truthy item without a callback. An empty input never inspects or calls `fn`. Given a generator, it returns a lazy iterator instead of a list.
+Keep items for which pure `fn(item)` is truthy; callbacks cannot suspend the script or mutate game state. `filter(None, iter)` keeps every truthy item without a callback. An empty non-generator input never inspects or calls `fn`. Given a generator, it checks that `fn` is callable or `None` immediately and returns a lazy iterator instead of a list.
 
 *Parameters*
 
@@ -6874,19 +7334,19 @@ The types parameters and results are written in. Most are ordinary Python types 
 
 ##### `JsonValue = str | int | float | bool | None | list[JsonValue] | dict[str, JsonValue]`
 
-Any value the Signal Bus, the Data Archive and `json` can carry: text, a number, `True` or `False`, `None`, or a list or dict of those, with string keys.
+Any value the Signal Bus, the Data Archive and `json` can carry: text, a number, `True` or `False`, `None`, or a list or `dict` of those, with string keys.
 
 ##### `ItemProperties = dict[str, JsonValue]`
 
-The properties of one item, as `ItemStack.properties` returns them: a dict from property name to a `JsonValue`.
+The properties of one item, as `ItemStack.properties` returns them: a `dict` from property name to a `JsonValue`.
 
 ##### `IdRecord`
 
-A dict or an object with a string `id`, such as a `Site`, a record saved with `vars()`, or an instance of your own class. Only `id` is read; other fields are ignored.
+A `dict` or an object with a string `id`, such as a `Site`, a record saved with `vars()`, or an instance of your own class. Only `id` is read; other fields are ignored.
 
 ##### `TransmissionRecord`
 
-A `SignalTransmission`, or a dict or object with the same fields: string `event_id`, `channel` and `data`, and whole-number `number` and `total`.
+A `SignalTransmission`, or a `dict` or object with the same fields: string `event_id`, `channel` and `data`, and whole-number `number` and `total`.
 
 ##### `SiteRef = str | Site | IdRecord`
 
@@ -6906,7 +7366,7 @@ Something you can call: a function, a lambda, a method, or a class.
 
 ##### `Iterable`
 
-Anything a `for` loop can walk: a list, tuple, set, dict, string, range, or generator. `Iterable[str]` means one whose items are strings.
+Anything a `for` loop can walk: a `list`, `tuple`, `set`, `dict`, string, `range`, or generator. `Iterable[str]` means one whose items are strings.
 
 ##### `Iterator`
 
@@ -6914,17 +7374,17 @@ An iterable that hands out one item per `next()` call, such as the result of `it
 
 ##### `Sized`
 
-Anything `len()` accepts: a string, list, tuple, dict, set, range, or a class with `__len__`.
+Anything `len()` accepts: a string, `list`, `tuple`, `dict`, `set`, `range`, or a class with `__len__`.
 
 ##### `T`
 
-The item type of the container on this page: in `list[T]`, `T` is whatever the list holds. `K` and `V` are a dict's key and value types. Hover shows the real type when the editor knows it.
+The item type of the container on this page: in `list[T]`, `T` is whatever the list holds. `K` and `V` are a `dict`'s key and value types. Hover shows the real type when the editor knows it.
 
 *Built-in Modules*
 
 ## random
 
-Built-in random-number helpers. Each successful run gets a new automatic sequence; use random.seed(value) when you want a reproducible sequence. Works without Shared Library research.
+Built-in random-number helpers. Each successful run gets a new automatic sequence; use `random.seed(value)` when you want a reproducible sequence. Works without Shared Library research.
 
 ##### `random.random() → float`
 
@@ -6959,7 +7419,7 @@ Initialize random-number generation. Omit `a` or pass `None` to select another a
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `a` | `int \| float \| str \| bool \| None` | Optional number, boolean, string, or None seed |
+| `a` | `int \| float \| str \| bool \| None` | Optional number, boolean, string, or `None` seed |
 
 - **Returns** `None`
 
@@ -7369,7 +7829,7 @@ Clear the cache of compiled patterns. Patterns are compiled and cached automatic
 
 ## dataclasses
 
-Built-in record-class helpers. Works without Shared Library research. Generates concise user-class value objects; use TypedDict for JSON-shaped records.
+Built-in record-class helpers. Works without Shared Library research. Generates concise user-class value objects; use `TypedDict` for JSON-shaped records.
 
 ##### `dataclasses.MISSING: object`
 
@@ -7379,46 +7839,46 @@ Sentinel telling a field with no default apart from one that defaults to `None`.
 
 ##### `dataclasses.dataclass(cls?: type | None, /, *, init: bool = True, repr: bool = True, eq: bool = True, order: bool = False, kw_only: bool = False, match_args: bool = True, unsafe_hash: bool = False, frozen: bool = False, slots: bool = False, weakref_slot: bool = False) → type`
 
-Decorate a class to generate declaration-ordered construction, representation, value equality, and optional ordering. Supports both `@dataclass` and `@dataclass(...)`, inherited fields, `__post_init__`, and explicit-method preservation. Generated behavior is controlled by `init`, `repr`, `eq`, `order`, and `kw_only`. Compatibility flags `unsafe_hash`, `frozen`, `slots`, and `weakref_slot` may be passed only as `False`; their `True` behavior and every unlisted standard-library option are rejected rather than ignored. Dataclass instances remain ordinary user objects and cannot cross JSON-shaped game API boundaries.
+Decorate a class to generate declaration-ordered construction, representation, value equality, and optional ordering. Supports both `@dataclass` and `@dataclass(...)`, inherited fields, `__post_init__`, and explicit-method preservation. Generated behavior is controlled by `init`, `repr`, `eq`, `order`, `kw_only`, and `match_args`. The `match_args` option controls whether `__match_args__` is generated. Compatibility flags `unsafe_hash`, `frozen`, `slots`, and `weakref_slot` may be passed only as `False`; their `True` behavior and every unlisted standard-library option are rejected rather than ignored. Dataclass instances remain ordinary user objects and cannot cross JSON-shaped game API boundaries.
 
 *Parameters*
 
 | Name | Type | Description |
 | --- | --- | --- |
 | `cls` | `type \| None` | Optional class for functional or bare-decorator use |
-| `init` | `bool` | Generate __init__ (default True) |
-| `repr` | `bool` | Generate __repr__ (default True) |
-| `eq` | `bool` | Generate exact-class __eq__ (default True) |
-| `order` | `bool` | Generate ordering methods (default False) |
-| `kw_only` | `bool` | Make generated constructor fields keyword-only (default False) |
-| `match_args` | `bool` | Set `__match_args__` to the fields `__init__` takes positionally, so `case Point(x, y):` matches them in order (default True) |
-| `unsafe_hash` | `bool` | Compatibility flag; only False is supported |
-| `frozen` | `bool` | Compatibility flag; only False is supported |
-| `slots` | `bool` | Compatibility flag; only False is supported |
-| `weakref_slot` | `bool` | Compatibility flag; only False is supported |
+| `init` | `bool` | Generate `__init__` (default `True`) |
+| `repr` | `bool` | Generate `__repr__` (default `True`) |
+| `eq` | `bool` | Generate exact-class `__eq__` (default `True`) |
+| `order` | `bool` | Generate ordering methods (default `False`) |
+| `kw_only` | `bool` | Make the generated `__init__` take every field as a keyword-only argument (default `False`) |
+| `match_args` | `bool` | Set `__match_args__` to the fields `__init__` takes positionally, so `case Point(x, y):` matches them in order (default `True`) |
+| `unsafe_hash` | `bool` | Compatibility flag; only `False` is supported |
+| `frozen` | `bool` | Compatibility flag; only `False` is supported |
+| `slots` | `bool` | Compatibility flag; only `False` is supported |
+| `weakref_slot` | `bool` | Compatibility flag; only `False` is supported |
 
 - **Returns** `type`
 
 ##### `dataclasses.field(*, default?: object, default_factory?: Callable, init: bool = True, repr: bool = True, compare: bool = True, kw_only?: bool) → object`
 
-Configure one annotated dataclass field. Use `default` for an immutable or hashable shared value, or `default_factory` for a zero-argument factory that creates an independent value per instance; supplying both is an error. Mutable or otherwise unhashable direct defaults are rejected and must use `default_factory`. `init` controls constructor inclusion, `repr` controls generated display, `compare` controls equality and ordering, and `kw_only` controls that field's constructor position. Field metadata/introspection, `hash`, and every unlisted standard-library option are not supported.
+Configure one annotated dataclass field. Use `default` for a shared value, or `default_factory` for a zero-argument factory that creates an independent value per instance; supplying both is an error. Instances of `list`, `dict`, `set`, or a class with `__hash__ = None` are rejected as direct defaults. Mutable hashable objects are accepted and shared; use `default_factory` for independent mutable values. `init`, `repr`, `compare`, and `kw_only` control construction, display, equality/ordering, and keyword-only arguments. `metadata`, `hash`, and unlisted options are unsupported.
 
 *Parameters*
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `default` | `object` | Optional immutable or hashable shared value; mutable or unhashable values must use default_factory |
+| `default` | `object` | Optional shared value. Instances of `list`, `dict`, `set`, or a class with `__hash__ = None` are rejected; use `default_factory` for independent mutable values. |
 | `default_factory` | `Callable` | Optional zero-argument factory |
-| `init` | `bool` | Include this field in the generated constructor (default True) |
-| `repr` | `bool` | Include this field in generated representation (default True) |
-| `compare` | `bool` | Include this field in generated equality and ordering (default True) |
+| `init` | `bool` | Include this field in the generated constructor (default `True`) |
+| `repr` | `bool` | Include this field in generated representation (default `True`) |
+| `compare` | `bool` | Include this field in generated equality and ordering (default `True`) |
 | `kw_only` | `bool` | Make this constructor field keyword-only |
 
 - **Returns** `object`
 
 ##### `dataclasses.asdict(obj: object, /) → dict[str, JsonValue]`
 
-Return a record-class instance as a dict, recursively converting nested record classes, lists, tuples and dicts. Sets are copied as sets with their members unchanged. Dict keys are converted too, so a record class used as a key raises `TypeError` when its converted dict cannot be used as a key. The result can be passed to `json.dumps()`, `comms.send()` or the Data Archive only when its values and keys meet that destination's rules. Lists, tuples and dicts are rebuilt; other leaf values are reused rather than deep-copied.
+Return a record-class instance as a `dict`, recursively converting nested record classes and `list`, `tuple` and `dict` values. A `set` is copied as a `set` with its members unchanged. `dict` keys are converted too, so a record class used as a key raises `TypeError` when its converted `dict` cannot be used as a key. The result can be passed to `json.dumps()`, `comms.send()` or the Data Archive only when its values and keys meet that destination's rules. `list`, `tuple` and `dict` values are rebuilt; other leaf values are reused rather than deep-copied.
 
 *Parameters*
 
@@ -7430,7 +7890,7 @@ Return a record-class instance as a dict, recursively converting nested record c
 
 ##### `dataclasses.astuple(obj: object, /) → tuple`
 
-Return a record-class instance as a tuple of its field values, recursing the same way `asdict()` does. Useful as a sort key or a dict key when every field is hashable.
+Return a record-class instance as a `tuple` of its field values, recursing the same way `asdict()` does. Useful as a sort key or a `dict` key when every field is hashable.
 
 *Parameters*
 
@@ -7467,7 +7927,7 @@ Return a new instance with the named fields changed and every other field copied
 
 ##### `dataclasses.is_dataclass(obj: object, /) → bool`
 
-True when the value is a record class or an instance of one.
+`True` when the value is a record class or an instance of one.
 
 *Parameters*
 
@@ -7481,7 +7941,7 @@ True when the value is a record class or an instance of one.
 
 ## enum
 
-Built-in enumerations: named constants, flags, and int or str members. Works without Shared Library research.
+Built-in enumerations: named constants, flags, and `int` or `str` members. Works without Shared Library research.
 
 ##### `class Enum`
 
@@ -7509,7 +7969,7 @@ A flag enumeration whose members are ints, so a combination is also a plain numb
 
 ##### `class EnumType(type)`
 
-The type of every enumeration class, for `isinstance(cls, EnumType)`. Enumeration classes are built with a class statement or the functional form `Enum("Name", names)`, never by calling `EnumType` directly.
+The type of every enumeration class, for `isinstance(cls, EnumType)`. Enumeration classes are built with a `class` statement or the functional form `Enum("Name", names)`, never by calling `EnumType` directly.
 
 ##### `EnumMeta = EnumType`
 
@@ -7517,7 +7977,7 @@ Another name for `EnumType`.
 
 ##### `class FlagBoundary(StrEnum)`
 
-How a flag enumeration treats bits it does not name, given as `boundary=` in the class statement: `STRICT` raises, `CONFORM` drops them, `EJECT` returns a plain int, and `KEEP` keeps them. `Flag` defaults to `STRICT` and `IntFlag` to `KEEP`.
+How a flag enumeration treats bits it does not name, given as `boundary=` in the `class` statement: `STRICT` raises, `CONFORM` drops them, `EJECT` returns a plain `int`, and `KEEP` keeps them. `Flag` defaults to `STRICT` and `IntFlag` to `KEEP`.
 
 ##### `class EnumCheck(StrEnum)`
 
@@ -7537,7 +7997,7 @@ Flag boundary: bits the class does not name are dropped.
 
 ##### `enum.EJECT: str`
 
-Flag boundary: a value with bits the class does not name comes back as a plain int.
+Flag boundary: a value with bits the class does not name comes back as a plain `int`.
 
 - **Returns** `str`
 
@@ -7610,8 +8070,8 @@ A property for enumerations. On a member it reads like `property`; read through 
 | Name | Type | Description |
 | --- | --- | --- |
 | `fget` | `Callable \| None` | Function that returns the attribute's value for a member. |
-| `fset` | `Callable \| None` | Function that stores a new value, or None to make the attribute read-only. |
-| `fdel` | `Callable \| None` | Function that deletes the attribute, or None. |
+| `fset` | `Callable \| None` | Function that stores a new value, or `None` to make the attribute read-only. |
+| `fdel` | `Callable \| None` | Function that deletes the attribute, or `None`. |
 | `doc` | `str \| None` | Documentation text for the attribute. |
 
 - **Returns** `Callable`
@@ -7703,27 +8163,27 @@ The single-bit values set in a positive integer or flag member, lowest first, as
 
 ##### `enum.pickle_by_global_name(self: Enum, proto: int) → str`
 
-Returns the member's name. Provided so code written for CPython runs unchanged; the game has no pickle, so nothing calls it for you.
+Returns the member's name. Provided so code written for CPython runs unchanged; the game has no `pickle`, so nothing calls it for you.
 
 *Parameters*
 
 | Name | Type | Description |
 | --- | --- | --- |
 | `self` | `Enum` | An enumeration member. |
-| `proto` | `int` | The pickle protocol number, which the function ignores. |
+| `proto` | `int` | The `pickle` protocol number, which the function ignores. |
 
 - **Returns** `str`
 
 ##### `enum.pickle_by_enum_name(self: Enum, proto: int) → tuple`
 
-Returns `(getattr, (cls, name))` for the member. Provided so code written for CPython runs unchanged; the game has no pickle, so nothing calls it for you.
+Returns `(getattr, (cls, name))` for the member. Provided so code written for CPython runs unchanged; the game has no `pickle`, so nothing calls it for you.
 
 *Parameters*
 
 | Name | Type | Description |
 | --- | --- | --- |
 | `self` | `Enum` | An enumeration member. |
-| `proto` | `int` | The pickle protocol number, which the function ignores. |
+| `proto` | `int` | The `pickle` protocol number, which the function ignores. |
 
 - **Returns** `tuple`
 
@@ -7735,7 +8195,7 @@ Built-in JSON text helpers. Turns supported values into text and back. Supported
 
 ##### `json.dumps(obj: JsonValue, /, *, indent: int | str | None = None, sort_keys: bool = False, ensure_ascii: bool = True, separators: tuple[str, str] | None = None, allow_nan: bool = True, skipkeys: bool = False) → str`
 
-Return `obj` as JSON text. Accepts `None`, booleans, numbers, strings, lists, tuples and dicts whose keys are strings, numbers, booleans or `None`. Those non-string keys are converted to text. The Signal Bus and Data Archive instead require string dictionary keys and apply their own payload limits. A set, a class instance or a function raises `TypeError`; convert it first, for example with `dataclasses.asdict()`. A container that contains itself raises `ValueError`, and one nested deeper than **256** levels raises `RecursionError`, which is the same depth `loads()` reads back.
+Return `obj` as JSON text. Accepts `None`, booleans, numbers, strings, `list` and `tuple` values, and `dict` values whose keys are strings, numbers, booleans or `None`. Those non-string keys are converted to text. The Signal Bus and Data Archive instead require string dictionary keys and apply their own payload limits. A `set`, a class instance or a function raises `TypeError`; convert it first, for example with `dataclasses.asdict()`. A container that contains itself raises `ValueError`, and one nested deeper than **256** levels raises `RecursionError`, which is the same depth `loads()` reads back.
 
 *Parameters*
 
@@ -7743,17 +8203,17 @@ Return `obj` as JSON text. Accepts `None`, booleans, numbers, strings, lists, tu
 | --- | --- | --- |
 | `obj` | `JsonValue` | Value to write as JSON text |
 | `indent` | `int \| str \| None` | `None` for one compact line, a number of spaces, or the literal text to indent each level with |
-| `sort_keys` | `bool` | Write object keys in sorted order, so two equal dicts built in a different order produce identical text. Use this whenever the text is a cache key. The keys themselves are sorted, so numeric keys order numerically (**1, 2, 10**) and a dict mixing key types Python cannot compare raises `TypeError` |
+| `sort_keys` | `bool` | Write object keys in sorted order, so two equal `dict` values built in a different order produce identical text. Use this whenever the text is a cache key. The keys themselves are sorted, so numeric keys order numerically (**1, 2, 10**) and a `dict` mixing key types Python cannot compare raises `TypeError` |
 | `ensure_ascii` | `bool` | Escape every non-ASCII character as `\uXXXX`. Pass `False` to write the characters directly |
-| `separators` | `tuple[str, str] \| None` | A two-item `(item, key)` tuple of strings replacing the defaults `(", ", ": ")` |
+| `separators` | `tuple[str, str] \| None` | A two-item tuple of strings, the item separator and then the key separator, replacing the defaults `(", ", ": ")` |
 | `allow_nan` | `bool` | Write `nan` and infinities as `NaN`, `Infinity` and `-Infinity`. Pass `False` to raise `ValueError` instead. Note that those three spellings are not standard JSON, and a value that round-trips here can still be refused by `comms.send()` and the Data Archive |
-| `skipkeys` | `bool` | Silently drop dict entries whose key has no JSON spelling instead of raising `TypeError` |
+| `skipkeys` | `bool` | Silently drop `dict` entries whose key has no JSON spelling instead of raising `TypeError` |
 
 - **Returns** `str`
 
 ##### `json.loads(s: str, /) → JsonValue`
 
-Read JSON text and return the value: `None`, a boolean, a number, a string, a list, or a dict with string keys. Malformed text raises `ValueError` naming the line, column and character position. Note that a whole number always comes back as an int, because in this language a whole float IS an int.
+Read JSON text and return the value: `None`, a boolean, a number, a string, a list, or a `dict` with string keys. Malformed text raises `ValueError` naming the line, column and character position. Note that a whole number always comes back as an `int`, because in this language a whole `float` IS an `int`.
 
 *Parameters*
 
@@ -7777,7 +8237,7 @@ Add `item` to `heap`, keeping the smallest item at `heap[0]`. The heap is an ord
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `heap` | `list[T]` | List arranged as a heap by the other heapq functions |
+| `heap` | `list[T]` | List arranged as a heap by the other `heapq` functions |
 | `item` | `object` | Value to add |
 
 - **Returns** `None`
@@ -7790,7 +8250,7 @@ Remove and return the smallest item, keeping the heap arranged. Raises `IndexErr
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `heap` | `list[T]` | List arranged as a heap by the other heapq functions |
+| `heap` | `list[T]` | List arranged as a heap by the other `heapq` functions |
 
 - **Returns** `T`
 
@@ -7802,7 +8262,7 @@ Add `item` and return the smallest item, in one pass. Faster than a push followe
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `heap` | `list[T]` | List arranged as a heap by the other heapq functions |
+| `heap` | `list[T]` | List arranged as a heap by the other `heapq` functions |
 | `item` | `object` | Value to add |
 
 - **Returns** `T`
@@ -7815,7 +8275,7 @@ Return the smallest item and add `item`, in one pass. The heap keeps its size. R
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `heap` | `list[T]` | List arranged as a heap by the other heapq functions |
+| `heap` | `list[T]` | List arranged as a heap by the other `heapq` functions |
 | `item` | `object` | Value to add |
 
 - **Returns** `T`
@@ -7886,13 +8346,13 @@ Python's math functions and constants under `math.`, such as `math.sqrt`, `math.
 
 ##### `math.pi: float`
 
-Mathematical constant `π ≈ 3.14159`.
+Mathematical constant π ≈ 3.14159.
 
 - **Returns** `float`
 
 ##### `math.tau: float`
 
-Mathematical constant `τ = 2π`.
+Mathematical constant τ = 2π.
 
 - **Returns** `float`
 
@@ -8522,16 +8982,16 @@ Repeat the items of `iterable` forever, in order: `cycle(["north", "east", "sout
 
 - **Returns** `Iterator[T]`
 
-##### `itertools.repeat(object: T, times: int | None = None) → Iterator[T]`
+##### `itertools.repeat(object: T, times?: int) → Iterator[T]`
 
-Give the same value `times` times, or forever when `times` is `None`: `repeat(0, 5)` yields five zeros.
+Give the same value `times` times, or forever when `times` is omitted: `repeat(0, 5)` yields five zeros. An explicit `None` is invalid.
 
 *Parameters*
 
 | Name | Type | Description |
 | --- | --- | --- |
 | `object` | `T` | Value to give |
-| `times` | `int \| None` | How many times, or `None` for forever |
+| `times` | `int` | Integer repetition count; omit for forever. An explicit `None` is invalid. |
 
 - **Returns** `Iterator[T]`
 
@@ -9250,7 +9710,7 @@ Position of the first item of `a` that equals `b`. Raises `ValueError` when none
 
 ##### `operator.attrgetter(attr: str, /, *attrs: str) → Callable`
 
-A function that reads the named attribute, for `key=`: `sorted(points, key=attrgetter("x"))`. Several names give a tuple.
+A function that reads the named attribute, for `key=`: `sorted(points, key=attrgetter("x"))`. Several names give a `tuple`.
 
 *Parameters*
 
@@ -9263,7 +9723,7 @@ A function that reads the named attribute, for `key=`: `sorted(points, key=attrg
 
 ##### `operator.itemgetter(item: object, /, *items: object) → Callable`
 
-A function that reads the given index or key, for `key=`: `sorted(pairs, key=itemgetter(1))` sorts by each pair's second item. Several keys give a tuple.
+A function that reads the given index or key, for `key=`: `sorted(pairs, key=itemgetter(1))` sorts by each pair's second item. Several keys give a `tuple`.
 
 *Parameters*
 
@@ -9383,7 +9843,7 @@ Python's container types under `collections.`: `defaultdict`, `Counter`, `Ordere
 
 ##### `collections.Counter(iterable: object = None, /, **kwargs: int) → Counter`
 
-A dict that counts things: `Counter("banana")` counts each letter, and a missing key reads as `0`. `most_common(n)` lists the biggest counts.
+A `dict` that counts things: `Counter("banana")` counts each letter, and a missing key reads as `0`. `most_common(n)` lists the biggest counts.
 
 *Parameters*
 
@@ -9396,7 +9856,7 @@ A dict that counts things: `Counter("banana")` counts each letter, and a missing
 
 ##### `collections.defaultdict(default_factory: Callable | None = None, /, *args: object, **kwargs: object) → defaultdict`
 
-A dict that makes a value for a missing key: with `defaultdict(list)` every new key starts as `[]`, so `groups[key].append(x)` just works.
+A `dict` that makes a value for a missing key: with `defaultdict(list)` every new key starts as `[]`, so `groups[key].append(x)` just works.
 
 *Parameters*
 
@@ -9410,7 +9870,7 @@ A dict that makes a value for a missing key: with `defaultdict(list)` every new 
 
 ##### `collections.OrderedDict(iterable: object = (), /, **kwargs: object) → OrderedDict`
 
-A dict with order-aware extras: `move_to_end(key)` and `popitem(last=False)`, and `==` between two of them also compares their order.
+A `dict` with order-aware extras: `move_to_end(key)` and `popitem(last=False)`, and `==` between two of them also compares their order.
 
 *Parameters*
 
@@ -9430,13 +9890,13 @@ A list-like queue with fast adds and removes at both ends: `append`, `appendleft
 | Name | Type | Description |
 | --- | --- | --- |
 | `iterable` | `Iterable[T]` | Items to start with |
-| `maxlen` | `int \| None` | Size limit (default none) |
+| `maxlen` | `int \| None` | Size limit (default `None`) |
 
 - **Returns** `deque`
 
 ##### `collections.namedtuple(typename: str, field_names: str | Iterable[str], *, rename: bool = False, defaults: Iterable | None = None, module: str | None = None) → type`
 
-Make a tuple class with named fields: `Point = namedtuple("Point", "x y")`, then `Point(1, 2).x`. It still indexes and unpacks like a tuple.
+Make a `tuple` class with named fields: `Point = namedtuple("Point", "x y")`, then `Point(1, 2).x`. It still indexes and unpacks like a `tuple`.
 
 *Parameters*
 
@@ -9478,7 +9938,7 @@ print("Temp:", temp, "°C")
 
 ## Type Annotations
 
-Optional type hints on assignments and function signatures, in the standard Python (PEP 526) form. `thermometer: Thermometer = get_component("thermometer")` documents the variable's type inline; the editor uses the annotation for hover, autocomplete, and Cmd+click navigation. Function params accept the same form (`def f(x: int):`) along with a return annotation (`-> Site:`). Generic shapes work: `xs: list[Site] = []`, `m: dict[str, int] = {}`, `b: Optional[Battery] = None`. Annotations help the editor understand your code. Annotation types are not evaluated and do not check or convert values at runtime. The structural exception is `@dataclass`: annotated class-attribute names become fields used to generate its constructor and other methods.
+Optional type hints on assignments and function signatures, in the standard Python (PEP 526) form. `thermometer: Thermometer = get_component("thermometer")` documents the variable's type inline; the editor uses the annotation for hover, autocomplete, and Cmd+click navigation. Function params accept the same form (`def f(x: int):`) along with a return annotation (`-> Site:`). Generic shapes work: `xs: list[Site] = []`, `m: dict[str, int] = {}`, `b: Optional[Battery] = None`. The game's id types `ItemId`, `RecipeId`, `FluidId` and `MachineTypeId` stand for every id of that kind, so with `def restock(item: ItemId):` the editor suggests item ids in each call and flags one that does not exist. Annotations help the editor understand your code. Annotation types are not evaluated and do not check or convert values at runtime. The structural exception is `@dataclass`: annotated class-attribute names become fields used to generate its constructor and other methods.
 
 ```python
 thermometer: Thermometer = get_component("thermometer")
@@ -9492,7 +9952,7 @@ def pick(sites: list[Site]) -> Site:
 
 ## Ellipsis
 
-`...` is a value. It is written as three dots or by its name `Ellipsis`, and there is exactly one of it, so `x is Ellipsis` is how you test for it. It does two jobs. As a statement it stands in for a body you have not written yet: `def plan(): ...` runs and returns `None`, the same as `pass`. Inside a type annotation it means "any number of": `tuple[float, ...]` is a tuple of any length, and `Callable[..., Site]` is a function that takes any arguments and returns a `Site`. It is truthy, it prints as `Ellipsis`, and it works as a dict key or a set member. Annotations are erased when a script runs, so the annotation forms cost nothing at runtime; the editor reads them for hover and autocomplete.
+`...` is a value. It is written as three dots or by its name `Ellipsis`, and there is exactly one of it, so `x is Ellipsis` is how you test for it. It does two jobs. As a statement it stands in for a body you have not written yet: `def plan(): ...` runs and returns `None`, the same as `pass`. Inside a type annotation it means "any number of": `tuple[float, ...]` is a `tuple` of any length, and `Callable[..., Site]` is a function that takes any arguments and returns a `Site`. It is truthy, it prints as `Ellipsis`, and it works as a `dict` key or a `set` member. Annotations are erased when a script runs, so the annotation forms cost nothing at runtime; the editor reads them for hover and autocomplete.
 
 ```python
 def plan_route(sites):
@@ -9658,7 +10118,7 @@ print(planet["name"])
 
 *Language / Data Structures*
 
-## TypedDict (record shapes)
+## `TypedDict` (record shapes)
 
 Use `TypedDict("Name", {...})` for small record-shaped structures: controller state, route records, cached scan rows, or the simple data objects you might otherwise reach for a class/decorator to model. Annotate a variable with it (`state: Name`) and the editor autocompletes keys, flows each field's type through both `state["key"]` and `state.key`, and flags a typo'd key **before you run**. At runtime, `state.mode` and `state["mode"]` are equivalent for a dict containing the ordinary string key `"mode"`; built-in dict method names still resolve as methods. `TypedDict` adds a stable declared shape so the editor can autocomplete and type-check those fields even when the value flows through other code.
 
@@ -9679,7 +10139,7 @@ s["scans"] += 1
 
 ## JSON
 
-Import the built-in `json` module to turn a record into text and back. `json.dumps(value)` writes `None`, booleans, numbers, strings, lists, tuples, and dicts with scalar keys, converting non-string keys to text. The Signal Bus and the Data Archive accept a narrower shape (string dict keys, finite numbers, and their own size and nesting limits), so a value that serializes is not automatically one you can send or store. `json.dumps(value, sort_keys=True)` produces the same text for two equal dicts built in a different order, which is what makes it usable as a cache key. `json.loads(text)` reads it back and raises `ValueError` naming the line, column, and character when the text is malformed. A set, a class instance, or a function is refused; convert it to supported values first. `dataclasses.asdict()` converts a dataclass instance to a dict. Note that a whole number always comes back as an int, because in this language a whole float IS an int.
+Import the built-in `json` module to turn a record into text and back. `json.dumps(value)` writes `None`, booleans, numbers, strings, lists, tuples, and dictionaries with scalar keys, converting non-string keys to text. The Signal Bus and the Data Archive accept a narrower shape (string `dict` keys, finite numbers, and their own size and nesting limits), so a value that serializes is not automatically one you can send or store. `json.dumps(value, sort_keys=True)` produces the same text for two equal dictionaries built in a different order, which is what makes it usable as a cache key. `json.loads(text)` reads it back and raises `ValueError` naming the line, column, and character when the text is malformed. A set, a class instance, or a function is refused; convert it to supported values first. `dataclasses.asdict()` converts a dataclass instance to a `dict`. Note that a whole number always comes back as an `int`, because in this language a whole `float` IS an `int`.
 
 ```python
 import json
@@ -9723,7 +10183,7 @@ print(double(5))
 
 *Language / Functions*
 
-## Generators (yield)
+## Generators (`yield`)
 
 A `def` that contains `yield` is a generator: calling it returns a lazy iterator that produces one value each time it is asked, instead of building the whole list up front. Loop over it with `for x in gen():`, pull one value with `next(it)` (raises `StopIteration` when spent, or returns a default with `next(it, fallback)`), or materialize it with `list(gen())`. `yield from other()` re-emits every value from another iterable/generator and evaluates to that generator's `return` value. Advanced control: `gen.send(v)` resumes the paused `yield` with `v`, `gen.throw(error)` raises an exception at that `yield`, and `gen.close()` stops it (running any `finally`). A generator is one-shot: once exhausted it stays empty. Note: a bare generator expression `(x for x in xs)` is now lazy too, so wrap it in `list(...)` if you need a reusable list. Generators live only in the running script and cannot be sent over the Signal Bus or stored in the Data Archive: `list(...)` them first.
 
@@ -9747,7 +10207,7 @@ def full_route(near, far):
 
 ## Caching Results
 
-Decorate a function with `@lru_cache(maxsize=...)` or `@cache` from `functools` and it remembers what it returned for each set of arguments, so a repeat call skips the body. Each script gets a limited number of steps per tick, so this matters when a loop recomputes the same score or distance for the same inputs. Only cache **pure calculations**. Put it on a function that reads a machine and the first reading is frozen forever, which is a bug that looks like the machine stopped changing. Arguments must be hashable, exactly as dict keys are. The wrapped function gains `.cache_info()` and `.cache_clear()`. `maxsize` bounds how many results are kept, dropping the least recently used one first; `@cache` asks for no bound, which the game caps anyway so a script that runs all session cannot grow a cache forever.
+Decorate a function with `@lru_cache(maxsize=...)` or `@cache` from `functools` and it remembers what it returned for each set of arguments, so a repeat call skips the body. Each script gets a limited number of steps per tick, so this matters when a loop recomputes the same score or distance for the same inputs. Only cache **pure calculations**. Put it on a function that reads a machine and the first reading is frozen forever, which is a bug that looks like the machine stopped changing. Arguments must be hashable, exactly as `dict` keys are. The wrapped function gains `.cache_info()` and `.cache_clear()`. `maxsize` bounds how many results are kept, dropping the least recently used one first; `@cache` asks for no bound, which the game caps anyway so a script that runs all session cannot grow a cache forever.
 
 ```python
 from functools import lru_cache
@@ -9781,9 +10241,9 @@ print(c.n)
 
 *Language / Classes*
 
-## @dataclass
+## `@dataclass`
 
-Import `dataclass` and `field` from `dataclasses` to turn annotated class attributes into declaration-ordered constructor fields. `dataclass` supports `init`, `repr`, `eq`, `order`, `kw_only`, and `match_args`; `field` supports `default`, `default_factory`, `init`, `repr`, `compare`, and `kw_only`. Mutable or otherwise unhashable direct defaults are rejected; use `default_factory` to create a separate value for each instance. Generated behavior includes inherited fields, `__init__`, `__repr__`, `__match_args__`, exact-class equality, optional ordering, and `__post_init__`. The compatibility spellings `frozen=False`, `unsafe_hash=False`, `slots=False`, and `weakref_slot=False` are accepted, but their `True` behavior is not supported. `ClassVar` / `InitVar` field semantics are unsupported; canonical uses receive a clear error. `asdict`, `astuple`, `fields`, `replace`, `is_dataclass`, the `MISSING` sentinel, and the `Field` records `fields()` returns are all available; `asdict()` is the supported bridge from an instance to a JSON-shaped value. `KW_ONLY`, `FrozenInstanceError`, `make_dataclass`, and public `__dataclass_fields__` introspection are unavailable; annotation types stay erased. A dataclass is still an ordinary user-class instance: use it when a record needs methods, validation, value equality, or ordering. Use `TypedDict` when the value is fundamentally a mapping or must cross a JSON-shaped boundary such as the Signal Bus or notebook APIs.
+Import `dataclass` and `field` from `dataclasses` to turn annotated class attributes into declaration-ordered constructor fields. `dataclass` supports `init`, `repr`, `eq`, `order`, `kw_only`, and `match_args`; `field` supports `default`, `default_factory`, `init`, `repr`, `compare`, and `kw_only`. Mutable or otherwise unhashable direct defaults are rejected; use `default_factory` to create a separate value for each instance. Generated behavior includes inherited fields, `__init__`, `__repr__`, `__match_args__`, exact-class equality, optional ordering, and `__post_init__`. The compatibility spellings `frozen=False`, `unsafe_hash=False`, `slots=False`, and `weakref_slot=False` are accepted, but their `True` behavior is not supported. `ClassVar` / `InitVar` field semantics are unsupported; canonical uses receive a clear error. `asdict`, `astuple`, `fields`, `replace`, `is_dataclass`, the `MISSING` sentinel, and the `Field` records `fields()` returns are all available; `asdict()` is the supported bridge from an instance to a JSON-shaped value. `KW_ONLY`, `FrozenInstanceError`, `make_dataclass`, and public `__dataclass_fields__` introspection are unavailable; annotation types stay erased. A dataclass is still an ordinary user-class instance: use it when a record needs methods, validation, value equality, or ordering. Use `TypedDict` when the value is fundamentally a mapping or must cross a JSON-shaped boundary such as the Signal Bus or `notebook` APIs.
 
 ```python
 from dataclasses import dataclass, field
@@ -9828,7 +10288,7 @@ print(Need.WATER in needs)
 
 *Language / Classes*
 
-## Inheritance & super()
+## Inheritance & `super()`
 
 `class Dog(Animal):` inherits `Animal`'s methods and attributes. Override any of them, and call the base version with `super().method(...)`. Multiple inheritance resolves by Python's C3 MRO, so cooperative `super()` works across a diamond. `isinstance(x, Animal)` and `issubclass(Dog, Animal)` walk the chain.
 
@@ -9914,7 +10374,7 @@ print(step(5))
 
 *Language / Classes*
 
-## @property
+## `@property`
 
 `@property` turns a method into a computed attribute read **without parens** (`tank.level`, not `tank.level()`). Add `@name.setter` so `tank.level = 42` runs validation. Use it to expose derived or guarded state while keeping plain attribute syntax.
 
@@ -9932,6 +10392,32 @@ class Tank:
 t = Tank()
 t.level = 42
 print(t.level)
+```
+
+*Language / Classes*
+
+## Generic types
+
+Import `TypeVar` and `Generic` from `typing` to describe functions and classes that preserve a caller's value type. `T = TypeVar("T")` defines a type variable; use it in annotations such as `list[T]` or a class base such as `Generic[T]`. Specializing `Box[str]` lets the editor carry that type through its methods. These annotations guide editor assistance; they do not convert or validate stored values at runtime.
+
+```python
+from typing import Generic, TypeVar
+
+T = TypeVar("T")
+
+def first(values: list[T]) -> T:
+    return values[0]
+
+class Box(Generic[T]):
+    def __init__(self, value: T):
+        self.value = value
+
+    def get(self) -> T:
+        return self.value
+
+label = first(["ice", "iron"])
+box = Box[str](label)
+print(box.get().upper())
 ```
 
 *Components / Core Systems*
@@ -10079,7 +10565,7 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 ##### `.print(message: object, level: str = "info", channel: str = "", color: str = "", timestamp: bool = False) → ActionResult`
 
-Print a line with full control. `level` is `info` / `warn` / `error` / `debug` (which feed the WARNINGS / ERRORS filters), or any other non-empty string for a custom level shown as a colored badge. An empty level behaves like `info`. `channel` routes the line to a named tab (empty = the main stream). `color` is a theme token (`"warning"`, `"success"`, `"accent"`), which recolors with the theme, or any CSS color: hex (`"#aabbcc"`), `"rgb(255,100,0)"`, `"hsl(30,100%,50%)"`, or a name like `"orange"`. A true `timestamp` value prepends the game time-of-day. Example: `get_component("console").print("Overheat", "alert", "alarms", "warning", True)`.
+Print a line with full control. `level` is `info` / `warn` / `error` / `debug` (which feed the WARNINGS / ERRORS filters), or any other non-empty string for a custom level shown as a colored badge. An empty level behaves like `info`. `channel` routes the line to a named tab (empty = the main stream). `color` is a theme token (`"warning"`, `"success"`, `"accent"`), which recolors with the theme, or any CSS color: hex (`"#aabbcc"`), `"rgb(255,100,0)"`, `"hsl(30,100%,50%)"`, or a name like `"orange"`. A `timestamp` of `True` prepends the game time-of-day. Example: `get_component("console").print("Overheat", "alert", "alarms", "warning", True)`.
 
 *Parameters*
 
@@ -10103,7 +10589,7 @@ Print a line with full control. `level` is `info` / `warn` / `error` / `debug` (
 
 ##### `.info(message: object, channel: str = "", color: str = "", timestamp: bool = False) → ActionResult`
 
-Print an info line (the default level). Its optional channel, color, and timestamp parameters behave like those on `print`. Equivalent to `print(message)`.
+Print an info line (the default level). Its optional `channel`, `color`, and `timestamp` parameters behave like those on `print`. Equivalent to `print(message)`.
 
 *Parameters*
 
@@ -10126,7 +10612,7 @@ Print an info line (the default level). Its optional channel, color, and timesta
 
 ##### `.warn(message: object, channel: str = "", color: str = "", timestamp: bool = False) → ActionResult`
 
-Print a warning line, appears in the console's WARNINGS filter. Its optional channel, color, and timestamp parameters control routing and presentation. For an interruptive popup instead, use the global `notify(text, "warn")`.
+Print a warning line, appears in the console's WARNINGS filter. Its optional `channel`, `color`, and `timestamp` parameters control routing and presentation. For an interruptive popup instead, use the global `notify(text, "warn")`.
 
 *Parameters*
 
@@ -10149,7 +10635,7 @@ Print a warning line, appears in the console's WARNINGS filter. Its optional cha
 
 ##### `.error(message: object, channel: str = "", color: str = "", timestamp: bool = False) → ActionResult`
 
-Print an error line, appears in the console's ERRORS filter. Its optional channel, color, and timestamp parameters control routing and presentation. This is your own message at error severity, not an uncaught exception.
+Print an error line, appears in the console's ERRORS filter. Its optional `channel`, `color`, and `timestamp` parameters control routing and presentation. This is your own message at error severity, not an uncaught exception.
 
 *Parameters*
 
@@ -10172,7 +10658,7 @@ Print an error line, appears in the console's ERRORS filter. Its optional channe
 
 ##### `.debug(message: object, channel: str = "", color: str = "", timestamp: bool = False) → ActionResult`
 
-Print a low-priority debug line, hidden from the ALL view unless the player enables debug output. Its optional channel, color, and timestamp parameters control routing and presentation.
+Print a low-priority debug line, hidden from the ALL view unless the player enables debug output. Its optional `channel`, `color`, and `timestamp` parameters control routing and presentation.
 
 *Parameters*
 
@@ -10319,7 +10805,7 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 ##### `.get_name() → str`
 
-Display name of this planet, returns `"Nocturna"`. Safe to hardcode, but querying future-proofs scripts against rename or multi-planet expansion.
+Display name of this planet, `"Nocturna"` in English. It follows the game's language setting, so use it for output and never compare it with fixed text.
 
 - **Returns** `str`. The display name.
 
@@ -10389,7 +10875,7 @@ The finite Terraform Index in TP, in the **0-1,000,000** range. Temperature, oxy
 
 ##### `.points_of_interest() → list[PointOfInterest]`
 
-Lists every permanent "?" contact on the Planet Map so scripts can route to real sites. Each `PointOfInterest` has whole-number coordinates, a `scanned` flag, and a `kind` that stays `"unknown"` until a scanner reaches the contact. Filter for `not point.scanned`, travel to its coordinates, and scan with Rover or Pioneer sonar or a drone Bio Scanner. A contact the instrument you brought cannot identify stays unscanned even after a sweep that succeeded, and the sweep lists it in `scan.blocked` with the same coordinates and a reason: record those or your loop reselects the same contact. See `PointOfInterest`.
+Lists every permanent "?" contact on the Planet Map so scripts can route to real sites. Each `PointOfInterest` has whole-number coordinates, a `scanned` flag, and a `kind` that stays `"unknown"` until a scanner reaches the contact. Filter for `not point.scanned`, travel to its coordinates, and scan with Rover or Pioneer sonar or a drone Bio Scanner. A contact the instrument you brought cannot identify stays unscanned even after a sweep that succeeded, and the sweep lists it in `scan.blocked` with the same coordinates and a `reason`: record those or your loop reselects the same contact. See `PointOfInterest`.
 
 - **Returns** `list[PointOfInterest]`. Every physical map contact (the "?" markers). `.kind` reads `"unknown"` until you scan the contact.
 
@@ -10758,6 +11244,31 @@ Start the black-box calibration suite with the processed value: `result = self.c
 | `"no_source"` | rejection | No source is configured or available. |
 | `"already_testing"` | transient | The requested test is already running. |
 
+##### `.set_status(message: str, level: str = "info") → None`
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None`
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
 Read commands you send from the editor's **Commands** tab while this script runs. Identical on every scriptable machine, see the guide: Script Commands
@@ -10840,7 +11351,7 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 Current unstable repair reading as an integer. If the value is odd, add **1**; if it is even, use it unchanged. After repair, this method returns real atmospheric pressure in kPa.
 
-- **Returns** `int`. An unstable repair reading; kPa after repair.
+- **Returns** `int`. A scrambled reading until the sensor is repaired; kPa after repair.
 
 ##### `.stabilize(value: float) → ActionResult`
 
@@ -10864,6 +11375,31 @@ Start the black-box stabilization suite with the corrected even reading: `result
 | `"already_repaired"` | success | The target is already repaired. |
 | `"no_source"` | rejection | No source is configured or available. |
 | `"already_testing"` | transient | The requested test is already running. |
+
+##### `.set_status(message: str, level: str = "info") → None`
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None`
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -10910,6 +11446,31 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 Current surface temperature in **°C** as a number. Safe to call from any script; no repair step needed. This is the display °C, for the heat-units progression metric that research thresholds compare against, read `get_component("atmosphere").get_heat()`.
 
 - **Returns** `float`. In °C.
+
+##### `.set_status(message: str, level: str = "info") → None`
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None`
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -10993,7 +11554,7 @@ Lists every site classified by sonar on `planet_id`. Call `journal.discovered_si
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `planet_id` | `str` | Journal planet id; the current planet is usually "nocturna". |
+| `planet_id` | `str` | Journal planet id; the current planet is usually `"nocturna"`. |
 
 - **Returns** `list[Site]`. Classified sites for that planet; each concrete type follows `kind()`. Unsurveyed productive sites leave detailed fields as `None`; inert formations are resolved by scanning. Query again for current survey, cycle, and cap data.
 
@@ -11005,7 +11566,7 @@ Every fully-resolved site on `planet_id` as `list[Site]`, same shape as `discove
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `planet_id` | `str` | Journal planet id; the current planet is usually "nocturna". |
+| `planet_id` | `str` | Journal planet id; the current planet is usually `"nocturna"`. |
 
 - **Returns** `list[Site]`. Fully resolved sites, including inert formations resolved by a scan: `discovered_sites()` filtered to `surveyed == True`. Query again for current cycle and cap data.
 
@@ -11017,25 +11578,25 @@ Lists fragments analyzed at a Bio Lab on `planet_id`, newest first. Each `Catalo
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `planet_id` | `str` | Journal planet id; the current planet is usually "nocturna". |
+| `planet_id` | `str` | Journal planet id; the current planet is usually `"nocturna"`. |
 
 - **Returns** `list[CatalogedFragment]`. Every fragment you've analyzed at a Bio Lab on that planet. Sorted **most-recently-cataloged first**. `[]` for any planet other than the current one.
 
 ##### `.cataloged_creatures(planet_id: str) → list[CatalogedCreature]`
 
-Lists creatures whose five fragments have all been analyzed on `planet_id`, most recently completed first. Each `CatalogedCreature` provides the stable creature id, its five fragment ids, required feed item and Feed Maker recipe, minimum startup feed, and exact rarity-scaled revival reagents. Use `.creature_id` with `habitat.set_revival_target(...)`. Use `.feed_recipe_id` to find the matching unlocked `Recipe` in `feed_maker.list_recipes()`; recipe ingredients remain owned by that Recipe. Returns an empty list for a different planet.
+Lists creatures whose five fragments have all been analyzed on `planet_id`, most recently completed first. Each `CatalogedCreature` provides the stable creature id, its five fragment ids, required feed item and Feed Maker recipe, minimum startup feed, and exact rarity-scaled revival reagents. Use `.creature_id` with `habitat.set_revival_target(...)`. Use `.feed_recipe_id` to find the matching unlocked `Recipe` in `feed_maker.list_recipes()`; recipe ingredients remain owned by that `Recipe`. Returns an empty list for a different planet.
 
 *Parameters*
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `planet_id` | `str` | Journal planet id; the current planet is usually "nocturna". |
+| `planet_id` | `str` | Journal planet id; the current planet is usually `"nocturna"`. |
 
 - **Returns** `list[CatalogedCreature]`. Every creature whose five fragments have been analyzed on that planet, with the ids and exact startup supplies a generic Habitat revival script needs. Sorted **most-recently-completed first**. `[]` for any planet other than the current one.
 
 ##### `.coord_info(x: int, y: int) → LifeFormScanResult | None`
 
-Read the saved `LifeFormScanResult` for a discovered permanent biosite coordinate. Returns `None` for untouched biosites and scanned coordinates that are not sites. The query returns immediately.
+Read the saved `LifeFormScanResult` for a discovered permanent biosite coordinate. Returns `None` for biosites the Journal has no scan of, and for scanned coordinates that are not sites. The query returns immediately.
 
 *Parameters*
 
@@ -11239,7 +11800,7 @@ Delete a whole family of markers by id prefix, then place the current ones again
 
 | Status | Kind | Meaning |
 | --- | --- | --- |
-| `"ok"` | success | The command affected `.count` entries or units. |
+| `"ok"` | success | Command completed. Affected entries or units: `.count`. |
 | `"no_op"` | success | The command affected no entries or units. |
 | `"invalid_key"` | rejection | The supplied key is invalid. |
 
@@ -11298,13 +11859,38 @@ Scan one local sector with `self.scan("E14")`. The scan takes a few ticks and pa
 
 | Exception | Condition |
 | --- | --- |
-| `ValueError` | The sector argument is not a valid local grid sector id. |
+| `ValueError` | The `sector` argument is not a valid local grid sector id. |
 
 ##### `.get_scanned() → dict[str, ScanResult]`
 
-Every previously scanned sector as a fresh dict `{sector_id: ScanResult}`. Iterate with `.keys()` / `.values()` / `.items()`, or index by sector id: `self.get_scanned()["E14"]`. A sector only needs to be physically scanned once, and that history persists across script runs. Each `get_scanned()` call reflects the current contents of those sectors, including items collected or dropped since the last call. A dict or `ScanResult` already saved in your script does not update itself, so call `get_scanned()` again before choosing another target. Returns an empty dict if nothing has been scanned yet.
+Every previously scanned sector as a fresh `dict` `{sector_id: ScanResult}`. Iterate with `.keys()` / `.values()` / `.items()`, or index by sector id: `self.get_scanned()["E14"]`. A sector only needs to be physically scanned once, and that history persists across script runs. Each `get_scanned()` call reflects the current contents of those sectors, including items collected or dropped since the last call. A `dict` or `ScanResult` already saved in your script does not update itself, so call `get_scanned()` again before choosing another target. Returns an empty `dict` if nothing has been scanned yet.
 
 - **Returns** `dict[str, ScanResult]`. Keyed by sector id.
+
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -11365,6 +11951,225 @@ Total battery capacity in watt-hours (**Wh**). Queryable rather than hardcoded s
 
 *Components / Power*
 
+## Battery Charger
+
+Charges loose **Portable Batteries (50 Wh)** and **Heavy Portable Batteries (100 Wh)** from the local grid. Mk I has **4 shared slots**, **1 charging bay**, and a **30 W** budget. Place at Base or a founded outpost. Park a Pioneer in its service area for a timed battery exchange. Charging is script-controlled; idle draw is 0 W.
+
+| Field | Value |
+| --- | --- |
+| Type | Mining |
+| Tiers | Mk II |
+
+### How to obtain
+
+1. Requires the **Battery Charger** research (Oxygen 25).
+2. Buy from the Shop for 1,500 cr.
+
+**Access via:** `self / get_component(id)`
+
+**Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
+
+### Properties
+
+##### `.id: str`
+
+Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
+
+- **Returns** `str`
+
+##### `.name: str`
+
+Human-readable display name. Prefer `.id` for scripts that need to survive renames.
+
+- **Returns** `str`
+
+##### `.outpost: OutpostRef`
+
+The outpost where this building is deployed. The returned `OutpostRef` includes its stable id, display name, biome, position, capacity, and `buildings()` query. Read the property again when you need current values.
+
+- **Returns** `OutpostRef`. The outpost where this building is deployed.
+
+##### `.input: InputSlot`
+
+Standard local input port. Both ports share the physical socket store. Only portable vehicle batteries are accepted. `eject()` recovers unqueued cells; `flush()` discards unqueued cells permanently.
+
+- **Returns** `InputSlot`
+
+##### `.output: OutputSlot`
+
+Standard local output port. Only unqueued cells can be sent or pulled out. Item properties and stored charge are preserved.
+
+- **Returns** `OutputSlot`
+
+### Methods
+
+##### `.slots() → list[BatteryChargerSlot]`
+
+Read snapshots of every physical socket. Waiting, charging, and ready cells share the same capacity.
+
+- **Returns** `list[BatteryChargerSlot]`
+
+##### `.status(slot_index: int) → BatteryChargerSlot`
+
+Read one socket snapshot. Raises `ValueError` for an out-of-range index.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `slot_index` | `int` | Zero-based physical socket index, from 0 to the slot count minus one. |
+
+- **Returns** `BatteryChargerSlot`
+
+##### `.charge(slot_index: int, target_level: float = 1.0) → ActionResult` *(self only)*
+
+Queue this exact cell to a target charge fraction. Repeating the call updates its existing target without duplicating or reordering the job. Completed jobs release their socket automatically. Power loss pauses work. Removing or swapping the cell never transfers its job to its replacement.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `slot_index` | `int` | Zero-based physical socket index, from 0 to the slot count minus one. |
+| `target_level` | `float` | Required charge fraction greater than 0 and at most 1; defaults to 1.0. |
+
+- **Returns** `ActionResult`
+- **Result fields** `.status`, `.message`
+- **Success payload** None
+
+*Outcomes*
+
+| Status | Kind | Meaning |
+| --- | --- | --- |
+| `"queued"` | success | The battery has an unfinished charging job. |
+| `"target_reached"` | success | The cell already meets the requested target. |
+| `"empty"` | rejection | The socket contains no battery. |
+| `"under_construction"` | rejection | Construction is not complete. |
+
+##### `.stop(slot_index: int) → ActionResult` *(self only)*
+
+Cancel this socket's charging job and release the cell, preserving all stored charge.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `slot_index` | `int` | Zero-based physical socket index, from 0 to the slot count minus one. |
+
+- **Returns** `ActionResult`
+- **Result fields** `.status`, `.message`
+- **Success payload** None
+
+*Outcomes*
+
+| Status | Kind | Meaning |
+| --- | --- | --- |
+| `"ok"` | success | The operation completed. |
+| `"no_op"` | success | No changes were needed. |
+
+##### `.clear_queue() → CountResult` *(self only)*
+
+Cancel all charging jobs, retain all cells and their stored charge, and return the number canceled.
+
+- **Returns** `CountResult`
+- **Result fields** `.status`, `.message`
+- **Success payload** `.count`
+
+*Outcomes*
+
+| Status | Kind | Meaning |
+| --- | --- | --- |
+| `"ok"` | success | Command completed. Affected entries or units: `.count`. |
+| `"no_op"` | success | The command affected no entries or units. |
+
+##### `.get_queue() → list[int]`
+
+Read ordered unfinished socket indices, including active jobs.
+
+- **Returns** `list[int]`
+
+##### `.get_active() → list[int]`
+
+Read the socket indices receiving power now. Empty during an outage or battery handling.
+
+- **Returns** `list[int]`
+
+##### `.tier() → int`
+
+Read the installed tier (1 or 2).
+
+- **Returns** `int`
+
+##### `.get_slot_count() → int`
+
+Read the shared physical storage capacity: 4 at Mk I or 8 at Mk II.
+
+- **Returns** `int`
+
+##### `.get_bay_count() → int`
+
+Read simultaneous charging capacity: 1 at Mk I or 2 at Mk II.
+
+- **Returns** `int`
+
+##### `.get_bay_rate() → float`
+
+Read the nominal power per bay in watts. Idle bay power is pooled among active cells.
+
+- **Returns** `float`
+
+##### `.get_charge_rate(slot_index: int) → float`
+
+Read this socket's actual charging watts, including pooling and overcrowding. Zero when inactive.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `slot_index` | `int` | Zero-based physical socket index, from 0 to the slot count minus one. |
+
+- **Returns** `float`
+
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
+
+Read commands you send from the editor's **Commands** tab while this script runs. Identical on every scriptable machine, see the guide: Script Commands
+
+```python
+while True:
+    for cell in self.slots():
+        if cell.item_id and cell.level < 1.0 and cell.target is None:
+            result = self.charge(cell.index)
+            if result.status != "queued":
+                print(result.message)
+    sleep(1)
+```
+
+*Components / Power*
+
 ## Lightning Rod
 
 A **4,000 Wh** emergency reserve that catches lightning within **600 m** and discharges behind batteries. Condition falls **0.05 per day**, reducing capture to zero unless a running script repairs it with **1 Storm Glass**.
@@ -11373,12 +12178,12 @@ A **4,000 Wh** emergency reserve that catches lightning within **600 m** and dis
 | --- | --- |
 | Type | Power |
 | Energy | 4,000 Wh |
-| Input buffer | 5 units |
+| Input buffer | Units: 5 |
 
 ### How to obtain
 
 1. The recipe unlocks with the **Lightning Rods** research (Temperature 8,000).
-2. Fabricate a **Lightning Rod** on a **Fabricator**: 1× Machine Frame, 4× Battery Cell, and 2× Circuit Panel.
+2. Fabricate **Lightning Rod** on a **Fabricator**: 1× Machine Frame, 4× Battery Cell, and 2× Circuit Panel.
 3. Deploy it from your Inventory.
 
 **Access via:** `self / get_component(id)`
@@ -11450,8 +12255,33 @@ Restore this rod to full condition. If it is worn, one call consumes **1 Storm G
 | Status | Kind | Meaning |
 | --- | --- | --- |
 | `"ok"` | success | The operation completed successfully. |
-| `"no_op"` | rejection | The operation was already satisfied, so no state changed and nothing was consumed. |
+| `"no_op"` | success | The operation was already satisfied, so no state changed and nothing was consumed. |
 | `"no_material"` | rejection | The required quantity of material is not available in the machine's input. |
+
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -11461,7 +12291,7 @@ Read commands you send from the editor's **Commands** tab while this script runs
 
 ## Oil Generator
 
-Burns oil into strong buffered bridge power. Oil wells pulse between active and dormant phases, so bank their output in Liquid Tanks for continuous generation. Idle until a script runs it.
+Burns oil into strong power that bridges solar gaps. Oil wells pulse between active and dormant phases, so bank their output in Liquid Tanks for continuous generation. Idle until a script runs it.
 
 | Field | Value |
 | --- | --- |
@@ -11508,9 +12338,9 @@ Input flow port for oil. Wire with `self.oil_in.connect("Liquid Tank 1")` (recom
 
 ##### `.power_output() → float`
 
-Watts fed to the grid on the last power tick. **0** when throttled to 0 OR oil_in buffer is starved. The generator scales output proportionally to available oil, so a partially-starved generator produces partial power. Updates once per power tick, a fresh `set_throttle(...)` is reflected on the next tick.
+Watts fed to the grid on the last power tick. **0** when throttled to 0 or when the `oil_in` buffer is empty. The generator scales output proportionally to available oil, so a partially-starved generator produces partial power. Updates once per power tick, a fresh `set_throttle(...)` is reflected on the next tick.
 
-- **Returns** `float`. Watts currently fed to the grid. **0** when idle (throttle=0) or starved (no oil in buffer).
+- **Returns** `float`. Watts currently fed to the grid. **0** when idle (`throttle() == 0`) or starved (no oil in buffer).
 
 ##### `.oil_consumption() → float`
 
@@ -11544,6 +12374,31 @@ Set the generator throttle (**0-1**). Power output and oil consumption scale lin
 | --- | --- | --- |
 | `"ok"` | success | The operation completed successfully. |
 
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
 Read commands you send from the editor's **Commands** tab while this script runs. Identical on every scriptable machine, see the guide: Script Commands
@@ -11559,7 +12414,7 @@ Generates up to **5,000 W** from Fuel Rods and cooling water. One rod lasts **72
 | Type | Power |
 | Power out | +5,000 W (feeds the grid) |
 | Consumes | Water, buffer 3 t |
-| Input buffer | 3 units |
+| Input buffer | Units: 3 |
 
 ### How to obtain
 
@@ -11592,7 +12447,7 @@ The outpost where this building is deployed. The returned `OutpostRef` includes 
 
 ##### `.water_in: FluidPort`
 
-Automatic cooling-water input. The reactor consumes **0.5-1 t/h** while heating and pauses safely if the supply runs dry.
+Automatic cooling-water input. The reactor consumes **0.5-1 t/h** whenever its heat setting is above **0**, and pauses safely if the supply runs dry.
 
 - **Returns** `FluidPort`. The automatic cooling-water input.
 
@@ -11655,6 +12510,31 @@ Current operating state: `running`, `overheated`, `no_fuel`, or `no_coolant`. Sh
 - **Returns** `str`. Overheat cools and recovers automatically; restored supplies resume automatically.
 - **Possible values** `"running"`, `"overheated"`, `"no_fuel"`, `"no_coolant"`
 
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
 Read commands you send from the editor's **Commands** tab while this script runs. Identical on every scriptable machine, see the guide: Script Commands
@@ -11702,7 +12582,7 @@ The outpost where this building is deployed. The returned `OutpostRef` includes 
 
 ##### `.set_tilt(degrees: float) → ActionResult` *(self only)*
 
-Set the panel tilt angle in degrees. Range is **0°** (flat) to **90°** (vertical); values outside are clamped. A well-tuned tracker holds output near its maximum throughout the day; a fixed tilt wastes a large fraction.
+Set the panel tilt angle in degrees. Range is **0°** (flat) to **90°** (vertical); values outside are clamped. A well-tuned tracker holds output near its maximum throughout the day; a fixed tilt wastes a large fraction. The panel returns to its resting tilt of **90°** when the script stops, ends, or errors.
 
 *Parameters*
 
@@ -11731,6 +12611,31 @@ Current panel tilt setpoint in degrees (**0-90**). Returns the value the script 
 Current power output in watts for this specific generator. Returns **0** if powered off. Computed live from sun elevation vs panel tilt, use it to verify the tracker is holding peak (compare current output against the panel's rated max).
 
 - **Returns** `float`. In watts.
+
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -11787,7 +12692,7 @@ Input flow port accepting steam from a Thermal Cap or Gas Tank. Call `self.steam
 
 ##### `.power_output() → float`
 
-Watts fed to the grid on the last power tick. Scales with `throttle()` and the steam actually available. **0** when idle or steam-starved. Updates once per power tick, a fresh `set_throttle(...)` is reflected on the next tick, not the same one. Use for live dashboards or to compare against Oxygen / Heat consumption to balance the power budget.
+Watts fed to the grid on the last power tick. Scales with `throttle()` and the steam actually available. **0** when idle or no steam is available. Insufficient but nonzero steam supply reduces output proportionally. Updates once per power tick, a fresh `set_throttle(...)` is reflected on the next tick, not the same one. Use for live dashboards or to compare against Oxygen / Heat consumption to balance the power budget.
 
 - **Returns** `float`. Watts currently fed to the grid.
 
@@ -11828,6 +12733,31 @@ Set the turbine throttle (**0.0-1.0**, clamped). **0** switches the turbine off 
 | Status | Kind | Meaning |
 | --- | --- | --- |
 | `"ok"` | success | The operation completed successfully. |
+
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -11878,7 +12808,7 @@ The outpost where this building is deployed. The returned `OutpostRef` includes 
 
 ##### `.get_docked() → list[str]`
 
-List of vehicle instance ids parked inside the station's local service pad plus its **~2 m** margin, or inside the owning Outpost's common service area. Each parked vehicle is docked at one station only: the one it picked with its own `dock()`, otherwise the eligible station with the shortest distance to its station position or its outpost's center, with equal-distance ties broken alphabetically by station id. Returns ids, not vehicles; dereference each via `get_component(id)` to read battery state, cargo, or anything else. Empty list means no vehicles docked. Call each iteration; the list can change between ticks as vehicles drive in or out.
+List of vehicle instance ids parked inside the station's local service pad plus its **~2 m** margin, or inside the owning Outpost's common service area. Each parked vehicle is docked at one station only: the one it picked with its own `dock()`, otherwise the eligible station closest to the vehicle, measured to the station or its outpost's center, whichever is closer, with equal-distance ties broken alphabetically by station id. Returns ids; read each vehicle with `get_component(id)`. Empty list means no vehicles docked. Call each iteration; the list can change between ticks as vehicles drive in or out.
 
 - **Returns** `list[str]`. Instance ids of the vehicles docked at this station. Read each vehicle's state via `get_component(id)`.
 
@@ -11903,7 +12833,7 @@ Queue a docked rover or Pioneer to charge until its battery reaches `target_leve
 | --- | --- | --- |
 | `"charging"` | success | A charging job is active. |
 | `"queued"` | success | The operation was added to the queue. |
-| `"target_reached"` | rejection | The vehicle is already at or above the requested charge or fuel level. |
+| `"target_reached"` | success | The vehicle is already at or above the requested charge or fuel level. |
 | `"not_docked"` | rejection | The requested vehicle is not docked at this station. |
 | `"station_offline"` | transient | The station is offline. |
 | `"invalid"` | rejection | One or more supplied arguments are outside the accepted domain. |
@@ -11942,7 +12872,7 @@ Clear every queued charge job on this station. Rescue-drone missions are separat
 
 | Status | Kind | Meaning |
 | --- | --- | --- |
-| `"ok"` | success | The command affected `.count` entries or units. |
+| `"ok"` | success | Command completed. Affected entries or units: `.count`. |
 | `"no_op"` | success | The command affected no entries or units. |
 
 ##### `.get_active() → list[str]`
@@ -11959,7 +12889,7 @@ List of vehicle ids in charge-queue order. The first `get_bay_count()` entries a
 
 ##### `.status(vehicle_id: str) → dict[str, JsonValue]`
 
-Detailed status for one vehicle: a dict with `state` (`"charging"`, `"queued"`, `"docked"`, `"target_reached"`, `"not_docked"`, `"station_offline"`, or `"missing"`), `target_level`, `battery_wh`, `capacity_wh`, `rate_w` (the pooled watts this vehicle is actually receiving, rises as fewer vehicles share the bays), `bay_index`, and `queue_index`. Use this for dashboards or queue managers.
+Detailed status for one vehicle: a `dict` with `state` (`"charging"`, `"queued"`, `"docked"`, `"target_reached"`, `"not_docked"`, `"station_offline"`, or `"missing"`), `target_level`, `battery_wh`, `capacity_wh`, `rate_w` (the pooled watts this vehicle is actually receiving, rises as fewer vehicles share the bays), `bay_index`, and `queue_index`. Use this for dashboards or queue managers.
 
 *Parameters*
 
@@ -12051,6 +12981,31 @@ Display name of the vehicle currently being rescued, or empty string if the dron
 
 - **Returns** `str`. Display name of the vehicle being rescued, or empty.
 
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
 Read commands you send from the editor's **Commands** tab while this script runs. Identical on every scriptable machine, see the guide: Script Commands
@@ -12129,7 +13084,7 @@ Forges a volcanic fragment by holding the crucible in a target temperature band 
 | Power in | -15 W (draws from grid) |
 | Consumes | Steam, buffer 20 t |
 | Consumes | Water, buffer 20 t |
-| Output buffer | 30 units |
+| Output buffer | Units: 30 |
 | Stockpile | 30 units (mixed) |
 
 ### How to obtain
@@ -12261,7 +13216,7 @@ The selected recipe's target band `[low, high]` in °C, `self.required_range()`.
 
 ##### `self.required_materials() → dict[str, int]`
 
-Lists the fabricated materials required by the selected recipe as `{item_id: count}`. Load exactly those amounts before casting. Iterate with `.items()`. Returns an empty dict when no recipe is selected.
+Lists the fabricated materials required by the selected recipe as `{item_id: count}`. Load exactly those amounts before casting. Iterate with `.items()`. Returns an empty `dict` when no recipe is selected.
 
 - **Returns** `dict[str, int]`. `{item_id: count}` of the fabricated materials the selected recipe needs: load EXACTLY these (no more, no less) before `cast()`. `{}` if no recipe is set. Iterate with `.items()`.
 
@@ -12280,9 +13235,9 @@ Current crucible temperature in °C, `self.temperature()`, ranging **100** (cold
 
 ##### `self.temp_rate() → float`
 
-Net temperature change in °C/h right now, `self.temp_rate()`. Positive = heating and negative = cooling. Full heat is +2400 °C/h and full cool is -2400 °C/h; with both knobs at 0, an unlocked crucible above baseline cools naturally at -20 °C/h. Returns 0 at the 100 °C baseline or while a cast is in progress.
+Net temperature change in °C/h right now, `self.temp_rate()`. Positive = heating and negative = cooling. Full heat alone reaches +2400 °C/h and full cool alone reaches -2400 °C/h with power, enough input fluid, and room within the 100-1000 °C limits. With both knobs at 0, an unlocked crucible cools naturally at up to -20 °C/h until it reaches 100 °C. Heating can raise it from 100 °C. Returns 0 while a cast is in progress.
 
-- **Returns** `float`. Current net temperature rate in °C/h, signed: positive = heating and negative = cooling. Full heat is +2400 °C/h and full cool is -2400 °C/h. With both knobs at 0, an unlocked crucible above baseline returns -20 °C/h for passive cooling; returns 0 at baseline or during a cast.
+- **Returns** `float`. Net rate in °C/h: positive = heating, negative = cooling. Full heat alone reaches +2400 °C/h and full cool alone -2400 °C/h with power, enough fluid, and room within 100-1000 °C. With both knobs at 0, an unlocked crucible cools at up to -20 °C/h to 100 °C. Heating can raise it from 100 °C. Returns 0 during a cast.
 
 ##### `self.heat() → float`
 
@@ -12357,15 +13312,15 @@ Set the cool knob (water to temperature down), `self.set_cool(100)` for -2400 °
 
 ##### `self.load(fragment_id: str, properties: ItemProperties | None = None, property_match: str | None = None) → ActionResult` *(self only)*
 
-Pull a raw volcanic sample of `fragment_id` from `self.input` into the chamber, usually `self.load(self.recipe())`. Optional `properties` and `property_match` select a specific identity using the standard any, subset, or exact convention.
+Pull a raw volcanic sample of `fragment_id` from `self.input` into the chamber, usually `self.load(self.recipe())`. Optional `properties` and `property_match` select a specific identity using the standard `any`, `subset`, or `exact` convention.
 
 *Parameters*
 
 | Name | Type | Description |
 | --- | --- | --- |
 | `fragment_id` | `str` | A raw Volcanic fragment id staged in `self.input`. Usually `recipe()`. |
-| `properties` | `ItemProperties \| None` | Optional property dict, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
-| `property_match` | `str \| None` | Optional selection mode: any, subset, or exact |
+| `properties` | `ItemProperties \| None` | Optional property `dict`, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
+| `property_match` | `str \| None` | Optional selection mode: `"any"`, `"subset"`, or `"exact"` |
 
 - **Returns** `ActionResult`
 - **Result fields** `.status`, `.message`
@@ -12386,7 +13341,7 @@ Pull a raw volcanic sample of `fragment_id` from `self.input` into the chamber, 
 
 ##### `self.eject() → ActionResult` *(self only)*
 
-Stage the chamber sample and all loaded materials in `self.output` without changing their properties. A single-material output may require a send/eject cycle for each item type.
+Stage the chamber sample and all loaded materials in `self.output` without changing their properties. A single-material output may require a `send`/`eject` cycle for each item type.
 
 - **Returns** `ActionResult`
 - **Result fields** `.status`, `.message`
@@ -12421,6 +13376,31 @@ Forge the loaded fragment, `self.cast()`.
 | `"no_recipe"` | rejection | No recipe is currently selected. |
 | `"busy"` | transient | The component is already performing another operation. |
 | `"output_full"` | rejection | The output has no capacity for the result. |
+
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -12475,7 +13455,7 @@ The collected `Specimen` waiting for transfer, or `None` if the slot is empty. P
 
 ##### `self.scan() → list[FragmentLocation]`
 
-Lists fragment locations in this outpost's biome, nearest first. Each `FragmentLocation` includes `coords`, distance, and whether it has been cataloged. Cataloged locations also reveal their fragment id, name, and rarity; unknown locations leave those details as `None`. To identify an unknown location, collect it with `bio_collector.collect(location.coords)` and analyze it at a Bio Lab. Recipes and creature identity are not revealed here. Analyzed fragments also appear in `journal.cataloged_fragments(...)`.
+Lists fragment locations in this outpost's biome, nearest first. Each `FragmentLocation` includes `coords`, `distance`, and whether it has been `cataloged`. Cataloged locations also reveal their `fragment_id`, `name`, and `rarity`; unknown locations leave those details as `None`. To identify an unknown location, collect it with `bio_collector.collect(location.coords)` and analyze it at a Bio Lab. Recipes and creature identity are not revealed here. Analyzed fragments also appear in `journal.cataloged_fragments(...)`.
 
 - **Returns** `list[FragmentLocation]`. Every fragment in this outpost's biome, nearest first. A fragment's identity stays `None` until it has been analyzed; recipes and creature identity stay hidden.
 
@@ -12519,6 +13499,31 @@ Discard the specimen currently held in collector cargo. Use this when the collec
 | `"empty"` | rejection | The relevant source or queue is empty. |
 | `"busy"` | transient | The component is already performing another operation. |
 
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
 Read commands you send from the editor's **Commands** tab while this script runs. Identical on every scriptable machine, see the guide: Script Commands
@@ -12533,12 +13538,12 @@ Inspects a deep-biome fragment against a fixed rulebook, quizzing your script on
 | --- | --- |
 | Type | Atmosphere |
 | Power in | -25 W (draws from grid) |
-| Input buffer | 10 units |
-| Output buffer | 10 units |
+| Input buffer | Units: 10 |
+| Output buffer | Units: 10 |
 
 ### How to obtain
 
-1. Requires the **Deep-Sea Conditioning** research (Temperature 1,200).
+1. Requires the **Deep Fragment Conditioning** research (Temperature 1,200).
 2. Buy from the Shop for 225,000 cr.
 
 **Access via:** `self / get_component(id)`
@@ -12581,9 +13586,9 @@ The `OutputSlot` for Conditioned or ejected samples. Exact sample properties are
 
 ##### `self.report() → dict[str, JsonValue]`
 
-The loaded fragment's full condition report, `self.report()` returns `{property: value}` for all 10 properties (`glow`, `brightness`, `smell`, `gunk`, `cracks`, `feel`, `twitch`, `bugs`, `weight`, `sound`). Read the whole thing: the combo rules need siblings (brightness reads glow, weight reads gunk, sound reads cracks). Word properties are strings, numbers are numbers. `{}` if nothing is loaded. Iterate with `.items()` or index `report["gunk"]`.
+The loaded fragment's full condition report, `self.report()` returns `{property: value}` for all 10 properties (`glow`, `brightness`, `smell`, `gunk`, `cracks`, `feel`, `twitch`, `bugs`, `weight`, `sound`). Read the whole thing: the combo rules need siblings (`brightness` reads `glow`, `weight` reads `gunk`, `sound` reads `cracks`). Word properties are strings, numbers are numbers. `{}` if nothing is loaded. Iterate with `.items()` or index `report["gunk"]`.
 
-- **Returns** `dict[str, JsonValue]`. All ten condition properties for the loaded fragment, or `{}` when empty. Word values are strings and numeric values are numbers. Read the full report because brightness uses glow, weight uses gunk, and sound uses cracks.
+- **Returns** `dict[str, JsonValue]`. All ten condition properties for the loaded fragment, or `{}` when empty. Word values are strings and numeric values are numbers. Read the full report because `brightness` uses `glow`, `weight` uses `gunk`, and `sound` uses `cracks`.
 
 ##### `self.properties() → list[str]`
 
@@ -12619,21 +13624,21 @@ The 5 stage results so far, `self.lights()` returns a list of `"green"` (correct
 
 ##### `self.is_running() → bool`
 
-`True` while a 5-stage run is live (a fragment is loaded with stages left), `self.is_running()`. Drive the gauntlet with `while cond.is_running(): prop = cond.current(); ...`. Goes `False` when the run finishes, burns, or nothing is loaded.
+`True` while a 5-stage run is live (a fragment is loaded with stages left), `self.is_running()`. Drive the gauntlet with `while cond.is_running(): prop = cond.current(); ...`. Goes `False` when the run finishes, when a wrong call burns the loaded fragment, or when nothing is loaded.
 
-- **Returns** `bool`. `True` while a 5-stage run is in progress (a fragment is loaded and stages remain). Loop on it: `while cond.is_running(): ...`. Goes `False` when the run finishes, burns, or nothing is loaded.
+- **Returns** `bool`. `True` while a 5-stage run is in progress (a fragment is loaded and stages remain). Loop on it: `while cond.is_running(): ...`. Goes `False` when the run finishes, when a wrong call burns the loaded fragment, or when nothing is loaded.
 
 ##### `self.load(fragment_id: str, properties: ItemProperties | None = None, property_match: str | None = None) → ActionResult` *(self only)*
 
-Pull one raw deep sample from `self.input` into the chamber and start a fresh 5-stage run. Optional `properties` and `property_match` select a specific identity using the standard any, subset, or exact convention.
+Pull one raw deep sample from `self.input` into the chamber and start a fresh 5-stage run. Optional `properties` and `property_match` select a specific identity using the standard `any`, `subset`, or `exact` convention.
 
 *Parameters*
 
 | Name | Type | Description |
 | --- | --- | --- |
 | `fragment_id` | `str` | A raw Deep fragment id staged in `self.input`. |
-| `properties` | `ItemProperties \| None` | Optional property dict, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
-| `property_match` | `str \| None` | Optional selection mode: any, subset, or exact |
+| `properties` | `ItemProperties \| None` | Optional property `dict`, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
+| `property_match` | `str \| None` | Optional selection mode: `"any"`, `"subset"`, or `"exact"` |
 
 - **Returns** `ActionResult`
 - **Result fields** `.status`, `.message`
@@ -12707,6 +13712,31 @@ Stamp the current property as damaged.
 | `"busy"` | transient | The component is already performing another operation. |
 | `"output_full"` | rejection | The output has no capacity for the result. |
 
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
 Read commands you send from the editor's **Commands** tab while this script runs. Identical on every scriptable machine, see the guide: Script Commands
@@ -12721,8 +13751,8 @@ Delivers biology samples to fulfill a Bio Order, the biology counterpart to the 
 | --- | --- |
 | Type | Atmosphere |
 | Power in | -8 W (draws from grid) |
-| Input buffer | 10 units |
-| Output buffer | 10 units |
+| Input buffer | Units: 10 |
+| Output buffer | Units: 10 |
 
 ### How to obtain
 
@@ -12756,7 +13786,7 @@ The outpost where this building is deployed. The returned `OutpostRef` includes 
 
 The `InputSlot` for `deliver()` samples. Holds one item id until emptied by `deliver()` or `eject()`. `stacks()` lists property variants, not multiple fragment types. Connect local storage: Inventory at home, a Storage Bin or Warehouse elsewhere. Exact sample properties are preserved. Recover unused samples with `self.input.eject(destination, item_id, count, properties, "exact")`; the destination must be local. Active deliveries keep their samples reserved.
 
-- **Returns** `InputSlot`. For property-bearing samples. Inventory is available only at Nocturna Base; remote Exchanges use local freight. Recover an unused exact sample with `eject(destination, item_id, count, properties, "exact")`.
+- **Returns** `InputSlot`. For property-bearing samples. Inventory is available only at Nocturna Base; remote Exchanges use compatible storage at their own outpost. Recover an unused exact sample with `eject(destination, item_id, count, properties, "exact")`.
 
 ##### `self.output: OutputSlot`
 
@@ -12768,7 +13798,7 @@ The `OutputSlot` that safely receives a surplus in-transit sample when another E
 
 ##### `self.orders() → list[BioOrder]`
 
-Lists every `BioOrder`, including orders you cannot fill yet. Each order includes its id, biome, requirements, reward, status, delivered samples, samples already `in_transit`, completion percent, and any required `target_glow`. Progress is shared by every Bio Exchange serving that order. Use `requires - delivered - in_transit` to avoid making samples that are already committed, then pass the chosen `order.id` to `set_order(...)`. From another script, call `get_component("bio_exchange_1").orders()`. `get_component("orders")` is for Earth Orders.
+Lists every `BioOrder`, including orders you cannot fill yet. Each order includes its `id`, `biome`, `requires`, `reward`, `status`, `delivered` samples, samples already `in_transit`, completion `percent`, and any required `target_glow`. Progress is shared by every Bio Exchange serving that order. Use `requires - delivered - in_transit` to avoid making samples that are already committed, then pass the chosen `order.id` to `set_order(...)`. From another script, call `get_component("bio_exchange_1").orders()`. `get_component("orders")` is for Earth Orders.
 
 - **Returns** `list[BioOrder]`. Every Bio Order. Delivered and in-transit counts are shared across all Bio Exchanges. Other scripts can query a deployed Exchange; Earth Orders come from `get_component("orders")` instead.
 
@@ -12825,7 +13855,7 @@ Check whether one exact item matches this Exchange's active Bio Order without mo
 | Name | Type | Description |
 | --- | --- | --- |
 | `item_id` | `str` | Candidate fragment id from an `ItemStack`. |
-| `properties` | `ItemProperties \| None` | Exact property dict from the same `ItemStack`, or None for a propertyless sample. |
+| `properties` | `ItemProperties \| None` | Exact property `dict` from the same `ItemStack`, or `None` for a propertyless sample. |
 
 - **Returns** `bool`. `True` when this exact item-property identity satisfies the active Bio Order's current sample contract. Use it while iterating a storage component's `stacks()` before calling `self.input.take(..., properties, "exact")`. `False` with no active order, for completed orders, or for an invalid or wrong variant.
 
@@ -12854,6 +13884,31 @@ Total credits this Exchange has earned across every completed Bio Order.
 
 - **Returns** `int`. Total credits this Exchange has earned across every completed Bio Order.
 
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
 Read commands you send from the editor's **Commands** tab while this script runs. Identical on every scriptable machine, see the guide: Script Commands
@@ -12868,7 +13923,7 @@ Automates the Analyze and Extract steps of the biology loop, studying a specimen
 | --- | --- |
 | Type | Atmosphere |
 | Power in | -5 W (draws from grid) |
-| Input buffer | 30 units |
+| Input buffer | Units: 30 |
 | Stockpile | 30 units (mixed) |
 
 ### How to obtain
@@ -12907,7 +13962,7 @@ The `Specimen` in the lab chamber right now, exposed as `self.specimen`, or `Non
 
 ##### `self.loaded_reagents: dict[str, int]`
 
-A dict `{reagent_id: qty}` of reagents staged for the next `extract()`. Iterate `.items()` to inspect.
+A `dict` `{reagent_id: qty}` of reagents staged for the next `extract()`. Iterate `.items()` to inspect.
 
 - **Returns** `dict[str, int]`. `{reagent_id: qty}` of reagents staged for the next `extract()`.
 
@@ -12973,7 +14028,7 @@ Identify the lab's current fragment and reveal its extraction recipe. Analysis t
 
 ##### `self.load(reagent_id: str, qty: int, properties: ItemProperties | None = None, property_match: str | None = None) → ActionResult` *(self only)*
 
-Stage a whole-number reagent quantity for the next `extract()` by consuming it from `self.input`. `self.load("alkaline_buffer", 4)`. Reagents are sold by the `shop`; both UI purchases and `shop.buy(reagent_id)` place them in base Inventory. Optional `properties` and `property_match` select a specific item identity using the standard any, subset, or exact convention. Fractional or negative quantities raise an argument error. Calling `extract()` with a mismatched recipe destroys the loaded reagents.
+Stage a whole-number reagent quantity for the next `extract()` by consuming it from `self.input`. `self.load("alkaline_buffer", 4)`. Reagents are sold by the `shop`; both UI purchases and `shop.buy(reagent_id)` place them in base Inventory. Optional `properties` and `property_match` select a specific item identity using the standard `any`, `subset`, or `exact` convention. Fractional or negative quantities raise an argument error. Calling `extract()` with a mismatched recipe destroys the loaded reagents.
 
 *Parameters*
 
@@ -12981,8 +14036,8 @@ Stage a whole-number reagent quantity for the next `extract()` by consuming it f
 | --- | --- | --- |
 | `reagent_id` | `str` | Reagent item id to load from the connected input. |
 | `qty` | `int` | Whole-number reagent units to load |
-| `properties` | `ItemProperties \| None` | Optional property dict, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
-| `property_match` | `str \| None` | Optional selection mode: any, subset, or exact |
+| `properties` | `ItemProperties \| None` | Optional property `dict`, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
+| `property_match` | `str \| None` | Optional selection mode: `"any"`, `"subset"`, or `"exact"` |
 
 - **Returns** `ActionResult`
 - **Result fields** `.status`, `.message`
@@ -13003,7 +14058,7 @@ Stage a whole-number reagent quantity for the next `extract()` by consuming it f
 
 ##### `self.unload_reagents() → ActionResult` *(self only)*
 
-Stage all loaded reagents in `self.output` without touching the specimen. Use this when you staged the wrong recipe.
+Stage loaded reagents in `self.output` without touching the specimen, as many as the output can hold. Use this when you staged the wrong recipe.
 
 - **Returns** `ActionResult`
 - **Result fields** `.status`, `.message`
@@ -13016,7 +14071,7 @@ Stage all loaded reagents in `self.output` without touching the specimen. Use th
 | `"ok"` | success | All loaded reagents were staged in the Bio Lab's output without changing the specimen. |
 | `"empty"` | rejection | The Bio Lab has no loaded reagents. |
 | `"busy"` | transient | The Bio Lab is currently taking, analyzing, or extracting. |
-| `"output_full"` | rejection | The output has no capacity for the loaded reagents; the reagents remain loaded. |
+| `"output_full"` | rejection | The output could not hold every loaded reagent; what fit was staged and the rest remain loaded. |
 
 ##### `self.extract() → ActionResult` *(self only)*
 
@@ -13055,6 +14110,31 @@ Drop the current specimen and stage any loaded reagents in `self.output`. Use it
 | `"busy"` | transient | The component is already performing another operation. |
 | `"output_full"` | rejection | The output has no capacity for the result. |
 
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
 Read commands you send from the editor's **Commands** tab while this script runs. Identical on every scriptable machine, see the guide: Script Commands
@@ -13069,8 +14149,8 @@ Tints a coastal fragment's glow to a target color using three built-in colored l
 | --- | --- |
 | Type | Atmosphere |
 | Power in | -12 W (draws from grid) |
-| Input buffer | 10 units |
-| Output buffer | 10 units |
+| Input buffer | Units: 10 |
+| Output buffer | Units: 10 |
 
 ### How to obtain
 
@@ -13123,15 +14203,15 @@ The `OutputSlot` for Luminous or ejected samples. Exact sample properties are pr
 
 ##### `self.load(fragment_id: str, properties: ItemProperties | None = None, property_match: str | None = None) → ActionResult` *(self only)*
 
-Pull a raw glowing coastal sample of `fragment_id` from `self.input` into the chamber, `self.load("gw_caudal_fin")`. Optional `properties` and `property_match` select a specific identity using the standard any, subset, or exact convention. Read its start color with `self.chamber.glow`.
+Pull a raw glowing coastal sample of `fragment_id` from `self.input` into the chamber, `self.load("gw_caudal_fin")`. Optional `properties` and `property_match` select a specific identity using the standard `any`, `subset`, or `exact` convention. Read its start color with `self.chamber.glow`.
 
 *Parameters*
 
 | Name | Type | Description |
 | --- | --- | --- |
 | `fragment_id` | `str` | A coastal fragment id staged in `self.input`. |
-| `properties` | `ItemProperties \| None` | Optional property dict, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
-| `property_match` | `str \| None` | Optional selection mode: any, subset, or exact |
+| `properties` | `ItemProperties \| None` | Optional property `dict`, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
+| `property_match` | `str \| None` | Optional selection mode: `"any"`, `"subset"`, or `"exact"` |
 
 - **Returns** `ActionResult`
 - **Result fields** `.status`, `.message`
@@ -13226,6 +14306,31 @@ Stage the unchanged chamber sample in `self.output`.
 | `"busy"` | transient | The component is already performing another operation. |
 | `"output_full"` | rejection | The output has no capacity for the result. |
 
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
 Read commands you send from the editor's **Commands** tab while this script runs. Identical on every scriptable machine, see the guide: Script Commands
@@ -13240,8 +14345,8 @@ Splices genes into geothermal fragments so they carry what an order needs. You w
 | --- | --- |
 | Type | Atmosphere |
 | Power in | -20 W (draws from grid) |
-| Input buffer | 10 units |
-| Output buffer | 10 units |
+| Input buffer | Units: 10 |
+| Output buffer | Units: 10 |
 
 ### How to obtain
 
@@ -13288,21 +14393,21 @@ The `InputSlot` for geothermal samples. It holds one sample item id at a time an
 
 The `OutputSlot` for spliced or ejected samples. Exact sample properties are preserved.
 
-- **Returns** `OutputSlot`. For spliced or ejected samples, preserving every property.
+- **Returns** `OutputSlot`. For samples whose genes `splice()` changed, or ejected samples, preserving every property.
 
 ### Methods
 
 ##### `self.load(fragment_id: str, properties: ItemProperties | None = None, property_match: str | None = None) → ActionResult` *(self only)*
 
-Pull a geothermal sample of `fragment_id` from `self.input` into the chamber, `self.load("gw_cardiac_node")`. Optional `properties` and `property_match` select a specific identity using the standard any, subset, or exact convention.
+Pull a geothermal sample of `fragment_id` from `self.input` into the chamber, `self.load("gw_cardiac_node")`. Optional `properties` and `property_match` select a specific identity using the standard `any`, `subset`, or `exact` convention.
 
 *Parameters*
 
 | Name | Type | Description |
 | --- | --- | --- |
 | `fragment_id` | `str` | A geothermal fragment id staged in `self.input`. |
-| `properties` | `ItemProperties \| None` | Optional property dict, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
-| `property_match` | `str \| None` | Optional selection mode: any, subset, or exact |
+| `properties` | `ItemProperties \| None` | Optional property `dict`, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
+| `property_match` | `str \| None` | Optional selection mode: `"any"`, `"subset"`, or `"exact"` |
 
 - **Returns** `ActionResult`
 - **Result fields** `.status`, `.message`
@@ -13375,6 +14480,31 @@ Stage the chamber fragment in `self.output` without splicing.
 | `"busy"` | transient | The component is already performing another operation. |
 | `"output_full"` | rejection | The output has no capacity for the result. |
 
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
 Read commands you send from the editor's **Commands** tab while this script runs. Identical on every scriptable machine, see the guide: Script Commands
@@ -13383,14 +14513,14 @@ Read commands you send from the editor's **Commands** tab while this script runs
 
 ## Feed Maker
 
-Crafts the creature feeds that Habitat colonies eat, working like the Fabricator from a recipe you choose. Each creature's recipe unlocks through a Biolab order, so it only makes what you've unlocked. Mk II is upgraded per machine with a Fabricator-made pack unlocked at 250,000 Wildlife: 1.5× crafting and input Auto Feeder speed, with 2× operating power. Crafting can advance while the feeder cools down.
+Crafts the creature feeds that Habitat colonies eat, working like the Fabricator from a recipe you choose. Each creature's recipe unlocks through a Biolab order, so it only makes what you've unlocked. Each machine is upgraded to Mk II with its own Fabricator-made pack, unlocked at 250,000 Wildlife: 1.5× crafting and input Auto Feeder speed, with 2× operating power. Crafting can advance while the feeder cools down.
 
 | Field | Value |
 | --- | --- |
 | Type | Biosphere |
 | Power in | Variable (draws from grid) |
 | Produces | Depends on the selected recipe |
-| Output buffer | 50 units |
+| Output buffer | Units: 50 |
 | Stockpile | 200 units (mixed) |
 | Recipes | 16 available |
 | Tiers | Mk II |
@@ -13464,7 +14594,7 @@ Find one unlocked feed recipe by id without looping through `list_recipes()`. Re
 
 ##### `.set_recipe(recipe_or_id: str | Recipe | IdRecord) → ActionResult` *(self only)*
 
-Pick which creature feed to craft by id or by passing a Recipe from `list_recipes()`, e.g. `self.set_recipe("craft_feed_salt_tortoise")`. Once set, ProcessingSystem crafts automatically whenever the stockpile holds the inputs and the output bin has room.
+Pick which creature feed to craft by its recipe id or by passing a `Recipe` from `list_recipes()`, e.g. `self.set_recipe("craft_feed_salt_tortoise")`. Once set, ProcessingSystem crafts automatically whenever the stockpile holds the inputs and the output bin has room.
 
 *Parameters*
 
@@ -13512,13 +14642,13 @@ Returns the current recipe id, or `""` when none is set (or the set recipe is no
 
 ##### `.get_recipe_inputs() → dict[str, int]`
 
-A dict mapping each input `item_id` → units consumed per craft for the current recipe (empty dict if no recipe set). Iterate it to know what to stock: `for item, qty in self.get_recipe_inputs().items(): self.input.take(item, qty * 5)`.
+A `dict` mapping each input `item_id` → units consumed per craft for the current recipe (empty `dict` if no recipe set). Iterate it to know what to stock: `for item, qty in self.get_recipe_inputs().items(): self.input.take(item, qty * 5)`.
 
 - **Returns** `dict[str, int]`. `{item_id: count}` consumed per craft, or empty if no recipe is set. Iterate it to stock the right life-forms and forage.
 
 ##### `.get_stockpile() → dict[str, int]`
 
-A dict mapping each `item_id` currently in the input stockpile → its unit count. Read it to see what's loaded before crafting.
+A `dict` mapping each `item_id` currently in the input stockpile → its unit count. Read it to see what's loaded before crafting.
 
 - **Returns** `dict[str, int]`. `{item_id: count}` currently in the input stockpile.
 
@@ -13552,6 +14682,31 @@ Completed feed units waiting in the output bin for pickup. Push them onward with
 
 - **Returns** `int`. Completed feed units waiting in the output bin for pickup.
 
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
 Read commands you send from the editor's **Commands** tab while this script runs. Identical on every scriptable machine, see the guide: Script Commands
@@ -13566,7 +14721,7 @@ Revives one species from Biology reagents staged in this Habitat's dedicated loc
 | --- | --- |
 | Type | Biosphere |
 | Power in | Variable (draws from grid) |
-| Input buffer | 50 units |
+| Input buffer | Units: 50 |
 | Stockpile | 25 units (mixed) |
 | Tiers | Mk II |
 
@@ -13615,7 +14770,7 @@ Supplies the Habitat with liquid. Connect a Liquid Tank with `self.liquid_in.con
 
 Stores feed for the colony. Connect a source with `self.input.connect("Feed Bin")`, then pull feed with `self.input.take("feed_salt_tortoise", 20)`. Compare `self.input.stacks()` with `required_feed()` after revival; only the colony's own feed item is useful. See `InputSlot`.
 
-- **Returns** `InputSlot`. Stock the colony's feed: `self.input.connect("Feed Bin")` then `self.input.take("feed_salt_tortoise", 20)`. Compare `stacks()` with `required_feed()` after revival; recover the wrong feed to local freight with `eject(...)`.
+- **Returns** `InputSlot`. Stock the colony's feed: `self.input.connect("Feed Bin")` then `self.input.take("feed_salt_tortoise", 20)`. Compare `stacks()` with `required_feed()` after revival; recover the wrong feed into compatible storage at this outpost with `eject(...)`.
 
 ##### `.reagents: InputSlot`
 
@@ -13697,7 +14852,7 @@ Attach an established species colony to this Habitat with `self.rehouse("salt_to
 
 ##### `.set_gas_intake(rate: float) → ActionResult` *(self only)*
 
-Set the gas inflow rate in **t/h**, pulled from the connected Gas Tank (wire it with `self.gas_in.connect("gas_tank_1")`) into the enclosure's gas reserve. This is the regulator actuator: read `gas_level()`, compare it with `gas_band()`, and raise intake below the band or lower it above the band. Idle at **0**. Clamps to `>= 0`.
+Set the gas inflow rate in **t/h**, pulled from the connected Gas Tank (wire it with `self.gas_in.connect("gas_tank_1")`) into the enclosure's gas reserve. This is the regulator actuator: read `gas_level()`, compare it with `gas_band()`, and raise intake below the band or lower it above the band. **0** stops the inflow. The rate returns to **0** when the script stops, ends, or errors. Clamps to `>= 0`.
 
 *Parameters*
 
@@ -13761,11 +14916,11 @@ Empties the selected enclosure reserve immediately: `self.purge_reserve("gas")` 
 
 | Exception | Condition |
 | --- | --- |
-| `ValueError` | medium must be "gas" or "liquid". |
+| `ValueError` | `medium` must be `"gas"` or `"liquid"`. |
 
 ##### `.set_liquid_intake(rate: float) → ActionResult` *(self only)*
 
-Set the liquid inflow rate in **t/h**, pulled from the connected Liquid Tank (`self.liquid_in.connect("liquid_tank_1")`) into the enclosure's liquid reserve. Meter it to hold `liquid_band()`. Idle at **0**. Clamps to `>= 0`.
+Set the liquid inflow rate in **t/h**, pulled from the connected Liquid Tank (`self.liquid_in.connect("liquid_tank_1")`) into the enclosure's liquid reserve. Meter it to hold `liquid_band()`. **0** stops the inflow. The rate returns to **0** when the script stops, ends, or errors. Clamps to `>= 0`.
 
 *Parameters*
 
@@ -13803,7 +14958,7 @@ Permanently purchase one node from this creature's tree. Pass a node id from `ge
 | --- | --- | --- |
 | `"ok"` | success | The operation completed successfully. |
 | `"unknown_node"` | rejection | The supplied Habitat bonus node identifier does not exist for this creature. |
-| `"already_purchased"` | rejection | The Habitat bonus node is already permanently purchased. |
+| `"already_purchased"` | success | The Habitat bonus node is already permanently purchased. |
 | `"population_locked"` | rejection | The local colony has not reached the required population. |
 | `"insufficient_insight"` | rejection | The shared Wildlife Insight balance is below the node cost. |
 
@@ -13967,14 +15122,14 @@ The exact feed item id required by the selected revival target or housed creatur
 
 The exotic gas required at the colony's current stage, such as `"swamp_gas"`, or `""` before gas is needed. The requirement becomes more demanding at later stages, so check it again as the colony grows. Other gases do not satisfy the required range.
 
-- **Returns** `str`. The exotic gas this creature needs at its CURRENT stage (some species switch to a deeper exotic at later stages, e.g. `"sulfur_gas"` → `"chlorine"`; a purchased Adaptation may retain the base gas instead), or `""` when gas isn't required yet. Pipe exactly this fluid; `gas_fluid()` must match it.
+- **Returns** `str`. The exotic gas this creature needs at its CURRENT stage (some species need a rarer exotic at later stages, e.g. `"sulfur_gas"` → `"chlorine"`; a purchased Adaptation may retain the base gas instead), or `""` when gas isn't required yet. Pipe exactly this fluid; `gas_fluid()` must match it.
 - **Possible values** `""`, `"swamp_gas"`, `"ammonia"`, `"sulfur_gas"`, `"chlorine"`
 
 ##### `.required_liquid() → str`
 
 The exotic liquid this creature needs at its current stage, e.g. `"brine"`; escalates at later stages (`"brine"` → `"cryofluid"` → `"quicksilver"`). `liquid_fluid()` must match it. `""` when liquid isn't required yet.
 
-- **Returns** `str`. The exotic liquid this creature needs at its current stage (some species switch to a deeper exotic at later stages, e.g. `"cryofluid"` → `"quicksilver"`; a purchased Adaptation may retain the base liquid instead), or `""` when liquid isn't required yet. `liquid_fluid()` must match it.
+- **Returns** `str`. The exotic liquid this creature needs at its current stage (some species need a rarer exotic at later stages, e.g. `"cryofluid"` → `"quicksilver"`; a purchased Adaptation may retain the base liquid instead), or `""` when liquid isn't required yet. `liquid_fluid()` must match it.
 - **Possible values** `""`, `"brine"`, `"cryofluid"`, `"quicksilver"`
 
 ##### `.next_required_gas() → str`
@@ -14005,9 +15160,9 @@ The next life stage's exact liquid window as `[low, high]` in **tons**. Returns 
 
 ##### `.carrying_capacity() → int`
 
-The colony's current ceiling. Population breeds toward it and plateaus there; a maxed colony consumes nothing. Earlier stage advances raise base capacity, but Thriving and Abundant share a base of **175,000**. Habitat Mk II doubles the base, while overcrowding can lower the live ceiling. Adaptations never change capacity. Reads **0** when empty.
+The colony's current ceiling. Population breeds toward it and plateaus there; a maxed colony consumes nothing. Earlier stage advances raise base capacity, but Thriving and Abundant share a base of **175,000**. Habitat Mk II doubles the base, while having too many buildings at the outpost can lower the live ceiling. Adaptations never change capacity. Reads **0** when empty.
 
-- **Returns** `int`. The colony's current ceiling. Earlier stage advances raise base capacity, but Thriving and Abundant share a base of **175,000**. Habitat Mk II doubles the base, while overcrowding can lower the live ceiling. Adaptations never change capacity. **0** when empty.
+- **Returns** `int`. The colony's current ceiling. Earlier stage advances raise base capacity, but Thriving and Abundant share a base of **175,000**. Habitat Mk II doubles the base, while having too many buildings at the outpost can lower the live ceiling. Adaptations never change capacity. **0** when empty.
 
 ##### `.headroom() → int`
 
@@ -14028,6 +15183,31 @@ What changes at the colony's next stage: `"capacity"`, `"gas"`, `"liquid"`, `"sw
 - **Returns** `str`. What changes at the next stage: more `"capacity"`, a new `"gas"` or `"liquid"`, `"switch_gas"`, `"switch_liquid"`, `"tighter_bands"`, or `"none"` at Abundant. Pair with `next_stage_population()` to prepare before the transition.
 - **Possible values** `"capacity"`, `"gas"`, `"liquid"`, `"switch_gas"`, `"switch_liquid"`, `"tighter_bands"`, `"none"`
 
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
 Read commands you send from the editor's **Commands** tab while this script runs. Identical on every scriptable machine, see the guide: Script Commands
@@ -14038,13 +15218,35 @@ Read commands you send from the editor's **Commands** tab while this script runs
 
 Warms the planet surface by producing heat. The best power setting shifts with the day's weather, so a script reads the conditions and holds the heater at the right level.
 
+### Mk I
+
 | Field | Value |
 | --- | --- |
 | Type | Atmosphere |
 | Power in | Variable (draws from grid) |
 | Produces | up to 0.252 heat / day at peak efficiency |
-| Input buffer | 4 units |
+| Input buffer | Units: 4 |
 | Tiers | Mk II, Mk III, and Mk IV |
+
+### Mk II
+
+| Field | Value |
+| --- | --- |
+| Produces | up to 1.184 heat / day at peak efficiency |
+
+### Mk III
+
+| Field | Value |
+| --- | --- |
+| Produces | up to 52.416 heat / day at peak efficiency |
+| Consumes | Steam, up to 12 t per hour, buffer 8 t |
+
+### Mk IV
+
+| Field | Value |
+| --- | --- |
+| Produces | up to 129.780 heat / day at peak efficiency |
+| Consumes | Fuel Rod, 0.1 per day |
 
 ### How to obtain
 
@@ -14076,7 +15278,7 @@ The outpost where this building is deployed. The returned `OutpostRef` includes 
 
 ##### `.input: InputSlot`
 
-Fuel Rod magazine for the Mk IV tier. Connect a Lead Cask to keep spare rods staged here; the generator swallows one whole rod at a time and burns it down internally. Empty and unused below Mk IV, and a Mk IV with no rod stops producing rather than degrading.
+Fuel Rod magazine for the Mk IV tier. Connect a Lead Cask to keep spare rods staged here; the heater swallows one whole rod at a time and burns it down internally. Empty and unused below Mk IV, and a Mk IV with no rod stops producing instead of falling back to Mk III output.
 
 - **Returns** `InputSlot`. Magazine for the Mk IV Fuel Rod supply. Empty and unused below Mk IV.
 
@@ -14090,7 +15292,7 @@ Steam supply port installed by the Mk III pack. Call `connect(...)` with a compa
 
 ##### `.set_power(watts: float) → ActionResult` *(self only)*
 
-Set base heater power from **0-10**; values outside that range are clamped. `0` turns heating off. The best positive setting depends on the current `thermal_state()`, so update it with `self.set_power(value)` as conditions change. Higher Mk tiers multiply grid draw without changing the best base setting. A poor setting wastes energy and reduces heat output.
+Set base heater power from **0-10**; values outside that range are clamped. `0` turns heating off. The best positive setting depends on the current `thermal_state()`, so update it with `self.set_power(value)` as conditions change. Higher Mk tiers multiply grid draw without changing the best base setting. A poor setting wastes energy and reduces heat output. The setting returns to **0** when the script stops, ends, or errors.
 
 *Parameters*
 
@@ -14145,6 +15347,31 @@ The tier actually in effect this tick: `tier()` normally, previous tier while `i
 
 - **Returns** `int`. The tier actually in effect this tick: `tier()` normally, the previous tier while `is_degraded()` is `True`.
 
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
 Read commands you send from the editor's **Commands** tab while this script runs. Identical on every scriptable machine, see the guide: Script Commands
@@ -14155,13 +15382,38 @@ Read commands you send from the editor's **Commands** tab while this script runs
 
 Draws CO2 from the atmosphere and turns it into breathable oxygen, one of the core steps toward a livable planet. It runs only when a script sets its intake.
 
+### Mk I
+
 | Field | Value |
 | --- | --- |
 | Type | Atmosphere |
 | Power in | -8 W (draws from grid) |
 | Produces | up to 0.240 ppt / day at peak efficiency |
-| Input buffer | 4 units |
+| Input buffer | Units: 4 |
 | Tiers | Mk II, Mk III, and Mk IV |
+
+### Mk II
+
+| Field | Value |
+| --- | --- |
+| Power in | -40 W (draws from grid) |
+| Produces | up to 1.200 ppt / day at peak efficiency |
+
+### Mk III
+
+| Field | Value |
+| --- | --- |
+| Power in | -160 W (draws from grid) |
+| Produces | up to 48.000 ppt / day at peak efficiency |
+| Consumes | Water, up to 8 t per hour, buffer 5 t |
+
+### Mk IV
+
+| Field | Value |
+| --- | --- |
+| Power in | -800 W (draws from grid) |
+| Produces | up to 120.000 ppt / day at peak efficiency |
+| Consumes | Fuel Rod, 0.1 per day |
 
 ### How to obtain
 
@@ -14193,7 +15445,7 @@ The outpost where this building is deployed. The returned `OutpostRef` includes 
 
 ##### `.input: InputSlot`
 
-Fuel Rod magazine for the Mk IV tier. Connect a Lead Cask to keep spare rods staged here; the generator swallows one whole rod at a time and burns it down internally. Empty and unused below Mk IV, and a Mk IV with no rod stops producing rather than degrading.
+Fuel Rod magazine for the Mk IV tier. Connect a Lead Cask to keep spare rods staged here; the generator swallows one whole rod at a time and burns it down internally. Empty and unused below Mk IV, and a Mk IV with no rod stops producing instead of falling back to Mk III output.
 
 - **Returns** `InputSlot`. Magazine for the Mk IV Fuel Rod supply. Empty and unused below Mk IV.
 
@@ -14207,7 +15459,7 @@ Water supply port installed by the Mk III pack. Call `connect(...)` with a compa
 
 ##### `.set_intake(value: float) → ActionResult` *(self only)*
 
-Set CO2 intake rate for this tick. Call `self.set_intake(atmosphere.get_co2() / 10)` each iteration, the chamber's peak-efficiency sweet spot is exactly **1/10th** of ambient CO2. Values above or below that point reduce efficiency smoothly; there is no precision-sensitive cutoff.
+Set the CO2 intake rate. It holds until you set it again and returns to **0** when the script stops, ends, or errors. Call `self.set_intake(atmosphere.get_co2() / 10)` each iteration, the chamber's peak-efficiency sweet spot is exactly **1/10th** of ambient CO2. Values above or below that point reduce efficiency smoothly; there is no precision-sensitive cutoff.
 
 *Parameters*
 
@@ -14281,6 +15533,31 @@ The tier actually in effect this tick: `tier()` normally, previous tier while `i
 
 - **Returns** `int`. The tier actually in effect this tick: `tier()` normally, the previous tier while `is_degraded()` is `True`.
 
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
 Read commands you send from the editor's **Commands** tab while this script runs. Identical on every scriptable machine, see the guide: Script Commands
@@ -14291,13 +15568,38 @@ Read commands you send from the editor's **Commands** tab while this script runs
 
 Compresses the thin atmosphere to raise surface pressure. It runs best when a script catches each sync window as its gauge sweeps; missed windows cost efficiency.
 
+### Mk I
+
 | Field | Value |
 | --- | --- |
 | Type | Atmosphere |
 | Power in | -7 W (draws from grid) |
 | Produces | up to 0.012 kPa / day at peak efficiency |
-| Input buffer | 4 units |
+| Input buffer | Units: 4 |
 | Tiers | Mk II, Mk III, and Mk IV |
+
+### Mk II
+
+| Field | Value |
+| --- | --- |
+| Power in | -35 W (draws from grid) |
+| Produces | up to 0.300 kPa / day at peak efficiency |
+
+### Mk III
+
+| Field | Value |
+| --- | --- |
+| Power in | -140 W (draws from grid) |
+| Produces | up to 2.400 kPa / day at peak efficiency |
+| Consumes | Water, up to 5 t per hour, buffer 5 t |
+
+### Mk IV
+
+| Field | Value |
+| --- | --- |
+| Power in | -700 W (draws from grid) |
+| Produces | up to 6.000 kPa / day at peak efficiency |
+| Consumes | Fuel Rod, 0.1 per day |
 
 ### How to obtain
 
@@ -14329,7 +15631,7 @@ The outpost where this building is deployed. The returned `OutpostRef` includes 
 
 ##### `.input: InputSlot`
 
-Fuel Rod magazine for the Mk IV tier. Connect a Lead Cask to keep spare rods staged here; the generator swallows one whole rod at a time and burns it down internally. Empty and unused below Mk IV, and a Mk IV with no rod stops producing rather than degrading.
+Fuel Rod magazine for the Mk IV tier. Connect a Lead Cask to keep spare rods staged here; the generator swallows one whole rod at a time and burns it down internally. Empty and unused below Mk IV, and a Mk IV with no rod stops producing instead of falling back to Mk III output.
 
 - **Returns** `InputSlot`. Magazine for the Mk IV Fuel Rod supply. Empty and unused below Mk IV.
 
@@ -14343,7 +15645,7 @@ Water supply port installed by the Mk III pack. Call `connect(...)` with a compa
 
 ##### `.gauge() → float`
 
-Current value on the resonance sweep (**0-100**). Rises each tick and wraps at **100**. Compare it to `next_window_low()` and `next_window_high()`; when the gauge is inside that range, both edges included, call `sync()`.
+Current value on the resonance sweep (**0-100**). Rises each tick while the generator's script runs and wraps at **100**. With no script running, the sweep pauses where it is. Compare it to `next_window_low()` and `next_window_high()`; when the gauge is inside that range, both edges included, call `sync()`.
 
 - **Returns** `float`. 0-100.
 
@@ -14403,6 +15705,31 @@ The tier actually in effect this tick: `tier()` normally, previous tier while `i
 
 - **Returns** `int`. The tier actually in effect this tick: `tier()` normally, the previous tier while `is_degraded()` is `True`.
 
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
 Read commands you send from the editor's **Commands** tab while this script runs. Identical on every scriptable machine, see the guide: Script Commands
@@ -14418,12 +15745,12 @@ Refines raw exotic feedstock into creature-grade gas or liquid, using tar as a r
 | Type | Biosphere |
 | Power in | Variable (draws from grid) |
 | Produces | Depends on the selected recipe |
-| Input buffer | 50 units |
+| Input buffer | Units: 50 |
 | Recipes | 4 available |
 
 ### How to obtain
 
-1. Requires the **Exotic Husbandry** research (Wildlife 1,000).
+1. Requires the **Exotic Fluids** research (Wildlife 1,000).
 2. Buy from the Shop for 80,000 cr.
 
 **Access via:** `self / get_component(id)`
@@ -14502,7 +15829,7 @@ Find one unlocked refining recipe by id without looping through `list_recipes()`
 
 ##### `.set_recipe(recipe_or_id: str | Recipe | IdRecord) → ActionResult` *(self only)*
 
-Pick which exotic to refine by id or by passing a Recipe from `list_recipes()`, e.g. `self.set_recipe("refine_chlorine")`. Once set, the refiner crafts automatically whenever the raw feedstock + tar are present and the out port has room.
+Pick which exotic to refine by its recipe id or by passing a `Recipe` from `list_recipes()`, e.g. `self.set_recipe("refine_chlorine")`. Once set, the refiner crafts automatically whenever the raw feedstock + tar are present and the out port has room.
 
 *Parameters*
 
@@ -14566,7 +15893,7 @@ Returns the current recipe id, or `""` when none is set (or the set recipe is no
 
 ##### `.get_recipe_inputs() → dict[str, int]`
 
-A dict mapping each input `item_id` → units consumed per craft, for the Refiner this is the **tar** cost, e.g. `{"tar": 5}` for a rare exotic. Empty dict if no recipe is set. Read it to keep the tar bin stocked: `for item, qty in self.get_recipe_inputs().items(): self.input.take(item, qty * 5)`. (The raw-feedstock fluid amount is metered on the input ports, not listed here.)
+A `dict` mapping each input `item_id` → units consumed per craft, for the Refiner this is the **tar** cost, e.g. `{"tar": 5}` for a rare exotic. Empty `dict` if no recipe is set. Read it to keep the tar bin stocked: `for item, qty in self.get_recipe_inputs().items(): self.input.take(item, qty * 5)`. (The raw-feedstock fluid amount is metered on the input ports, not listed here.)
 
 - **Returns** `dict[str, int]`. `{item_id: count}` consumed per craft: for the Refiner this is the tar cost, e.g. `{"tar": 5}`. Empty if no recipe is set. The raw-feedstock fluid cost is on the input ports, not here.
 
@@ -14584,7 +15911,7 @@ A dict mapping each input `item_id` → units consumed per craft, for the Refine
 
 ##### `.get_rate() → float`
 
-Refined exotic produced this tick in t/h. **0** when stalled or idle. Use to confirm throughput while balancing feedstock against demand.
+Current refined exotic output rate in t/h, measured this tick. **0** when stalled or idle. Use to confirm throughput while balancing feedstock against demand.
 
 - **Returns** `float`. Refined exotic produced this tick, in t/h. **0** when stalled or idle.
 
@@ -14594,9 +15921,96 @@ Fraction **0-1** through the current refine craft. Resets to 0 each time a craft
 
 - **Returns** `float`. Progress through the current refine craft (**0-1**).
 
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
 Read commands you send from the editor's **Commands** tab while this script runs. Identical on every scriptable machine, see the guide: Script Commands
+
+*Components / Terraforming*
+
+## Terraforming
+
+Read progress, completion targets, and milestones for the six terraforming pillars through `get_component("terraforming")`. The Terraform Index combines their capped contributions toward a fixed 1,000,000 TP goal.
+
+**Access via:** `get_component("terraforming")`
+
+**Every component has a stable `.id`. For a deployed machine, open the ⓘ on its card to find the exact ID, then pass that value to `get_component(id)`. IDs are case-sensitive.**
+
+### Properties
+
+##### `.id: str`
+
+Stable programmatic identifier for this component. Use it with `get_component(id)` and APIs that ask for component, planet, vehicle, station, or order ids.
+
+- **Returns** `str`
+
+##### `.name: str`
+
+Human-readable display name. Prefer `.id` for scripts that need to survive renames.
+
+- **Returns** `str`
+
+### Methods
+
+##### `.pillars() → list[TerraformPillar]`
+
+Read fresh snapshots of the available pillars in order: temperature, oxygen, pressure, then biomass, plants, and wildlife. The three Biosphere pillars appear together after Biosphere research. Call again to read updated progress.
+
+- **Returns** `list[TerraformPillar]`. Fresh `TerraformPillar` snapshots for the unlocked pillars.
+
+##### `.get_pillar(pillar_id: str) → TerraformPillar | None`
+
+Read a fresh snapshot of one pillar, for example `terraforming.get_pillar("biomass")`. Returns `None` only when that pillar is locked by Biosphere research. Unknown ids raise `ValueError`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `pillar_id` | `str` | One of `"temperature"`, `"oxygen"`, `"pressure"`, `"biomass"`, `"plants"`, or `"wildlife"`. |
+
+- **Returns** `TerraformPillar | None`. A fresh `TerraformPillar` snapshot, or `None` for a pillar locked by Biosphere research.
+
+*Raises*
+
+| Exception | Condition |
+| --- | --- |
+| `ValueError` | The supplied `pillar_id` is not one of the six terraforming pillar ids. |
+
+##### `.index_progress() → float`
+
+Read the overall Terraform Index percentage toward its fixed 1,000,000 TP goal. Atmosphere accounts for 70% and Biosphere for 30%; unlocking Biosphere does not change the goal.
+
+- **Returns** `float`. Terraform Index percentage on a **0-100** scale, with a fixed 1,000,000 TP goal.
+
+##### `.total_tp() → int`
+
+Read the Terraform Index in whole TP, capped at 1,000,000. Completing one pillar cannot replace progress in another.
+
+- **Returns** `int`. Whole Terraform Index points in the **0-1,000,000** range.
 
 *Components / Production & Storage*
 
@@ -14611,10 +16025,11 @@ Assembles finished parts from several refined materials at once. A script picks 
 | Consumes | Steam, buffer 10 t |
 | Consumes | Water, buffer 10 t |
 | Consumes | Oil, buffer 10 t |
-| Output buffer | 20 units |
-| Byproduct buffer | 20 units |
+| Output buffer | Units: 20 |
+| Byproduct buffer | Units: 20 |
 | Stockpile | 200 units (mixed) |
-| Recipes | 70 available |
+| Recipes | 75 available |
+| Tiers | Mk II and Mk III |
 
 ### How to obtain
 
@@ -14679,13 +16094,19 @@ Internal water process buffer for recipes that declare `fluid_inputs["water_in"]
 
 Internal oil process buffer for recipes that declare `fluid_inputs["oil_in"]` (oil-refining recipes). Call `self.oil_in.connect(...)` with an Oil Pump, oil Liquid Tank, or Large Liquid Tank's stable machine id or display name. A local source transfers directly; a remote source also needs a completed conflict-free liquid-pipe route between both locations. Read `self.oil_in.level()` / `.flow_rate()` to detect starvation. **10** ton buffer. See `FluidPort`.
 
-- **Returns** `FluidPort`. Process buffer. Call `connect(...)` with the provider's stable machine id or display name. A complete oil provider-consumer connection claims oil on the reachable physical component even while idle, full, or off; mere machine presence does not. Recipes with `fluid_inputs["oil_in"]` consume from it on craft completion.
+- **Returns** `FluidPort`. Process buffer. Call `connect(...)` with the provider's stable machine id or display name. A complete oil provider-consumer connection sets the reachable pipe network's contents to oil even while idle, full, or off; mere machine presence does not. Recipes with `fluid_inputs["oil_in"]` consume from it on craft completion.
 
 ### Methods
 
+##### `.tier() → int`
+
+Installed machinery tier: `1` for Mk I, `2` for Mk II, or `3` for Mk III where supported.
+
+- **Returns** `int`
+
 ##### `.list_recipes() → list[Recipe]`
 
-Every recipe this fabricator has been given a blueprint for. Returns Recipe objects with `.tier`, `.id`, `.name`, `.inputs`, `.output_item`, `.output_count`, `.duration_game_hours`, `.power_draw`, `.fluid_inputs` (tons consumed per run), and optional byproduct fields. Locked recipes (no blueprint yet) do not appear, the list reflects what the player can actually craft today. `sorted(self.list_recipes(), key=lambda recipe: recipe.tier)` orders the available queue from foundations upward.
+Every recipe this fabricator has been given a blueprint for. Returns `Recipe` objects with `.tier`, `.id`, `.name`, `.inputs`, `.output_item`, `.output_count`, `.duration_game_hours`, `.power_draw`, `.fluid_inputs` (tons consumed per run), and optional byproduct fields. Locked recipes (no blueprint yet) do not appear, the list reflects what the player can actually craft today. `sorted(self.list_recipes(), key=lambda recipe: recipe.tier)` orders the available queue from foundations upward.
 
 - **Returns** `list[Recipe]`. The recipes this Fabricator has unlocked.
 
@@ -14703,7 +16124,7 @@ Find one unlocked recipe by id without looping through `list_recipes()`. Returns
 
 ##### `.set_recipe(recipe_or_id: str | Recipe | IdRecord) → ActionResult` *(self only)*
 
-Select which recipe to assemble: `self.set_recipe("craft_gas_pipe_segment")`, or pass a Recipe from `list_recipes()`. Setting a recipe doesn't clear the stockpile, so leftovers from a previous recipe stay until consumed or `self.input.flush()` discards them.
+Select which recipe to assemble: `self.set_recipe("craft_gas_pipe_segment")`, or pass a `Recipe` from `list_recipes()`. Setting a recipe doesn't clear the stockpile, so leftovers from a previous recipe stay until consumed or `self.input.flush()` discards them.
 
 *Parameters*
 
@@ -14747,17 +16168,17 @@ Unset the selected recipe and leave the Fabricator idle. The input stockpile is 
 Current recipe id as a string, or the empty string if no recipe is set. Use to gate other logic or confirm after `set_recipe()`.
 
 - **Returns** `str`. Empty when no recipe is set.
-- **Possible values** `""`, `"craft_gas_pipe_segment"`, `"craft_liquid_pipe_segment"`, `"craft_power_line_segment"`, `"craft_gas_pipe_bridge"`, `"craft_liquid_pipe_bridge"`, `"craft_power_line_bridge"`, `"craft_pressure_valve"`, `"craft_machine_frame"`, `"craft_circuit_panel"`, `"craft_control_unit"`, `"craft_battery_cell"`, `"craft_thermal_cap_kit"`, `"craft_turbine_rotor"`, `"craft_tank_lining"`, `"craft_water_pump"`, `"craft_oil_pump"`, `"craft_lubricant"`, `"craft_plastic"`, `"craft_rubber"`, `"craft_tar"`, `"craft_reinforced_biopolymer"`, `"craft_enrichment_compound"`, `"craft_drone_station_kit"`, `"craft_drone_station_kit_medium"`, `"craft_drone_station_kit_large"`, `"craft_drone_service_station_kit"`, `"craft_mining_drill_kit"`, `"craft_mining_drill_industrial_kit"`, `"craft_mining_drill_heavy_kit"`, `"craft_drone_small"`, `"craft_drone_medium"`, `"craft_drone_large"`, `"craft_electric_thruster"`, `"craft_heli_thruster"`, `"craft_cargo_pod_small"`, `"craft_cargo_pod_medium"`, `"craft_cargo_pod_large"`, `"craft_battery_pack"`, `"craft_oil_tank_small"`, `"craft_oil_tank_medium"`, `"craft_oil_tank_large"`, `"craft_coolant_loop"`, `"craft_neutron_capacitor"`, `"craft_seed_maker_kit"`, `"craft_plant_terraformer_kit"`, `"craft_grow_lamp_kit"`, `"craft_sprinkler_kit"`, `"craft_dispenser_kit"`, `"craft_garbage_disposal_kit"`, `"craft_exotic_gas_cap_kit"`, `"craft_exotic_spring_tap_kit"`, `"craft_fertilizer"`, `"craft_fertilizer_mk2"`, `"craft_fertilizer_mk3"`, `"craft_growth_accelerant"`, `"craft_yield_amplifier"`, `"craft_plant_terraformer_pack_mk2"`, `"craft_grow_lamp_pack_mk2"`, `"craft_grow_lamp_pack_mk3"`, `"craft_sprinkler_pack_mk2"`, `"craft_sprinkler_pack_mk3"`, `"craft_feed_maker_pack_mk2"`, `"craft_habitat_pack_mk2"`, `"craft_lead_plate"`, `"craft_oxygen_upgrade_pack_mk4"`, `"craft_heat_upgrade_pack_mk4"`, `"craft_pressure_upgrade_pack_mk4"`, `"craft_lead_cask"`, `"craft_shield_plating"`, `"craft_lightning_rod_kit"`
+- **Possible values** `""`, `"craft_smelter_pack_mk2"`, `"craft_fabricator_pack_mk2"`, `"craft_oil_pump_pack_mk2"`, `"craft_smelter_pack_mk3"`, `"craft_fabricator_pack_mk3"`, `"craft_gas_pipe_segment"`, `"craft_liquid_pipe_segment"`, `"craft_power_line_segment"`, `"craft_gas_pipe_bridge"`, `"craft_liquid_pipe_bridge"`, `"craft_power_line_bridge"`, `"craft_pressure_valve"`, `"craft_machine_frame"`, `"craft_circuit_panel"`, `"craft_control_unit"`, `"craft_battery_cell"`, `"craft_thermal_cap_kit"`, `"craft_turbine_rotor"`, `"craft_tank_lining"`, `"craft_water_pump"`, `"craft_oil_pump"`, `"craft_lubricant"`, `"craft_plastic"`, `"craft_rubber"`, `"craft_tar"`, `"craft_reinforced_biopolymer"`, `"craft_enrichment_compound"`, `"craft_drone_station_kit"`, `"craft_drone_station_kit_medium"`, `"craft_drone_station_kit_large"`, `"craft_drone_service_station_kit"`, `"craft_mining_drill_kit"`, `"craft_mining_drill_industrial_kit"`, `"craft_mining_drill_heavy_kit"`, `"craft_drone_small"`, `"craft_drone_medium"`, `"craft_drone_large"`, `"craft_electric_thruster"`, `"craft_heli_thruster"`, `"craft_cargo_pod_small"`, `"craft_cargo_pod_medium"`, `"craft_cargo_pod_large"`, `"craft_battery_pack"`, `"craft_oil_tank_small"`, `"craft_oil_tank_medium"`, `"craft_oil_tank_large"`, `"craft_coolant_loop"`, `"craft_neutron_capacitor"`, `"craft_seed_maker_kit"`, `"craft_plant_terraformer_kit"`, `"craft_grow_lamp_kit"`, `"craft_sprinkler_kit"`, `"craft_dispenser_kit"`, `"craft_garbage_disposal_kit"`, `"craft_exotic_gas_cap_kit"`, `"craft_exotic_spring_tap_kit"`, `"craft_fertilizer"`, `"craft_fertilizer_mk2"`, `"craft_fertilizer_mk3"`, `"craft_growth_accelerant"`, `"craft_yield_amplifier"`, `"craft_plant_terraformer_pack_mk2"`, `"craft_grow_lamp_pack_mk2"`, `"craft_grow_lamp_pack_mk3"`, `"craft_sprinkler_pack_mk2"`, `"craft_sprinkler_pack_mk3"`, `"craft_feed_maker_pack_mk2"`, `"craft_habitat_pack_mk2"`, `"craft_lead_plate"`, `"craft_oxygen_upgrade_pack_mk4"`, `"craft_heat_upgrade_pack_mk4"`, `"craft_pressure_upgrade_pack_mk4"`, `"craft_lead_cask"`, `"craft_shield_plating"`, `"craft_lightning_rod_kit"`
 
 ##### `.get_recipe_inputs() → dict[str, int]`
 
-Input requirements for the current recipe as a dict `{item_id: count_per_craft}`. Empty dict if no recipe is set. Use with `.keys()` / `.values()` / `.items()` to drive a loop: `for mat, need in self.get_recipe_inputs().items(): self.input.connect(bin_for(mat)); self.input.take(mat, need)`.
+Input requirements for the current recipe as a `dict` `{item_id: count_per_craft}`. Empty `dict` if no recipe is set. Use with `.keys()` / `.values()` / `.items()` to drive a loop: `for mat, need in self.get_recipe_inputs().items(): self.input.connect(bin_for(mat)); self.input.take(mat, need)`.
 
 - **Returns** `dict[str, int]`. `{item_id: count}` consumed per craft, or empty if no recipe is set.
 
 ##### `.get_stockpile() → dict[str, int]`
 
-Current stockpile contents as a dict `{item_id: count_currently_stored}`. Iterate with `.items()` to see every material; index directly with `self.get_stockpile()["iron_ingot"]` to read one. Essential for deciding what else needs pulling in.
+Current stockpile contents as a `dict` `{item_id: count_currently_stored}`. Iterate with `.items()` to see every material; index directly with `self.get_stockpile()["iron_ingot"]` to read one. Essential for deciding what else needs pulling in.
 
 - **Returns** `dict[str, int]`. `{item_id: count}` currently stored.
 
@@ -14791,6 +16212,31 @@ Completed units waiting in the output buffer. Drain them via `self.output.send(.
 
 - **Returns** `int`. Completed units waiting for pickup.
 
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
 Read commands you send from the editor's **Commands** tab while this script runs. Identical on every scriptable machine, see the guide: Script Commands
@@ -14806,7 +16252,7 @@ Presses Raw Uranium and lead plates into Fuel Rods or Nuclear Batteries, working
 | Type | Mining |
 | Power in | Variable (draws from grid) |
 | Produces | Depends on the selected recipe |
-| Output buffer | 5 units |
+| Output buffer | Units: 5 |
 | Stockpile | 40 units (mixed) |
 | Recipes | 2 available |
 
@@ -14843,11 +16289,11 @@ The outpost where this building is deployed. The returned `OutpostRef` includes 
 
 Receives Raw Uranium only from a Lead Cask and lead plates from an ordinary compatible local source. The port has one source relationship at a time, so reconnect it between materials.
 
-- **Returns** `InputSlot`. Stages Raw Uranium and lead plates. Raw Uranium may enter only from a Lead Cask; reconnect the one-source input to an ordinary local source for lead plates. While idle, recover ordinary items to local freight and hot cargo to a compatible Lead Cask with `eject(...)`.
+- **Returns** `InputSlot`. Stages Raw Uranium and lead plates. Raw Uranium may enter only from a Lead Cask; reconnect the one-source input to an ordinary local source for lead plates. While idle, use `eject(...)` to recover ordinary items into compatible storage at this outpost and radioactive cargo into a compatible Lead Cask.
 
 ##### `.output: OutputSlot`
 
-Output port. Fuel Rods are hot and only a Lead Cask (or their exact Supply Dock order) accepts them. Nuclear Batteries are ordinary fabricated products and may go to compatible local storage or home Inventory.
+Output port. Fuel Rods are radioactive and only a Lead Cask (or their exact Supply Dock order) accepts them. Nuclear Batteries are ordinary fabricated products and may go to compatible local storage or home Inventory.
 
 - **Returns** `OutputSlot`. Route Fuel Rods to a separate Lead Cask (or their exact Supply Dock order). Nuclear Batteries are ordinary fabricated products and may route to ordinary compatible local storage or home Inventory.
 
@@ -14873,7 +16319,7 @@ Find one unlocked fuel recipe by id without looping through `list_recipes()`. Re
 
 ##### `.set_recipe(recipe_or_id: str | Recipe | IdRecord) → ActionResult` *(self only)*
 
-Select a Fuel Rod or Nuclear Battery recipe by id or by passing a Recipe from `list_recipes()`.
+Select a Fuel Rod or Nuclear Battery recipe by id or by passing a `Recipe` from `list_recipes()`.
 
 *Parameters*
 
@@ -14921,7 +16367,7 @@ The committed recipe id, empty when none.
 
 ##### `.get_recipe_inputs() → dict[str, int]`
 
-Input requirements for the committed recipe as a dict `{item_id: count_per_craft}`. Returns an empty dict when no recipe is committed.
+Input requirements for the committed recipe as a `dict` `{item_id: count_per_craft}`. Returns an empty `dict` when no recipe is committed.
 
 - **Returns** `dict[str, int]`. `{item_id: count}` consumed per craft, or empty if no recipe is set.
 
@@ -14939,7 +16385,7 @@ Current craft progress **0-1**. Progress survives power cuts and resumes.
 
 ##### `.get_stockpile() → dict[str, int]`
 
-Staged inputs by item id, `{"raw_uranium": 12, "lead_plate": 4}`-shaped dict.
+Staged inputs by item id, `{"raw_uranium": 12, "lead_plate": 4}`-shaped `dict`.
 
 - **Returns** `dict[str, int]`. Staged input materials, by item id.
 
@@ -14948,6 +16394,31 @@ Staged inputs by item id, `{"raw_uranium": 12, "lead_plate": 4}`-shaped dict.
 Finished products for the selected recipe waiting in the small output buffer.
 
 - **Returns** `int`. Finished products for the selected recipe waiting in the output buffer.
+
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -15004,7 +16475,7 @@ Move one sector up, down, left, or right with `self.move("E14")`; diagonal moves
 | `"ok"` | success | The operation completed successfully. |
 | `"invalid"` | rejection | One or more supplied arguments are outside the accepted domain. |
 | `"too_far"` | rejection | The requested target is outside interaction distance. |
-| `"already_here"` | rejection | The vehicle is already at the requested destination. |
+| `"already_here"` | success | The vehicle is already at the requested destination. |
 | `"overheated"` | transient | The component is too hot for the requested operation or would exceed its heat limit by performing it. |
 | `"moving"` | transient | The vehicle or component is currently moving. |
 | `"busy"` | transient | The component is already performing another operation. |
@@ -15207,7 +16678,7 @@ Light the current plantable cell with the Harvester's work lamp, even if it is a
 | --- | --- | --- |
 | `"ok"` | success | The operation completed successfully. |
 | `"locked"` | rejection | The required feature, recipe, or operation is locked. |
-| `"not_plantable"` | rejection | The current cell cannot receive the requested plant treatment. |
+| `"not_plantable"` | rejection | The current cell cannot receive this light, water, or salt treatment. |
 | `"overheated"` | transient | The component is too hot for the requested operation or would exceed its heat limit by performing it. |
 | `"moving"` | transient | The vehicle or component is currently moving. |
 | `"busy"` | transient | The component is already performing another operation. |
@@ -15227,7 +16698,7 @@ Water the current plantable cell from the Harvester's onboard supply, even if it
 | `"ok"` | success | The operation completed successfully. |
 | `"locked"` | rejection | The required feature, recipe, or operation is locked. |
 | `"insufficient_water"` | rejection | The Harvester has less than the 1 t of onboard water required for treatment. |
-| `"not_plantable"` | rejection | The current cell cannot receive the requested plant treatment. |
+| `"not_plantable"` | rejection | The current cell cannot receive this light, water, or salt treatment. |
 | `"overheated"` | transient | The component is too hot for the requested operation or would exceed its heat limit by performing it. |
 | `"moving"` | transient | The vehicle or component is currently moving. |
 | `"busy"` | transient | The component is already performing another operation. |
@@ -15249,7 +16720,7 @@ Refill the Harvester's onboard water supply from the home outpost's water tanks,
 | `"moving"` | transient | The vehicle or component is currently moving. |
 | `"overheated"` | transient | The component is too hot for the requested operation or would exceed its heat limit by performing it. |
 | `"tank_empty"` | rejection | The source tank is empty. |
-| `"already_full"` | rejection | The target is already at full capacity. |
+| `"already_full"` | success | The target is already at full capacity. |
 | `"busy"` | transient | The component is already performing another operation. |
 
 ##### `.dispense_salt() → ActionResult` *(self only)*
@@ -15267,7 +16738,7 @@ Treat the current plantable cell with one unit of `salt` from Inventory, even if
 | `"ok"` | success | The operation completed successfully. |
 | `"locked"` | rejection | The required feature, recipe, or operation is locked. |
 | `"no_salt"` | rejection | No salt is available for the treatment. |
-| `"not_plantable"` | rejection | The current cell cannot receive the requested plant treatment. |
+| `"not_plantable"` | rejection | The current cell cannot receive this light, water, or salt treatment. |
 | `"overheated"` | transient | The component is too hot for the requested operation or would exceed its heat limit by performing it. |
 | `"moving"` | transient | The vehicle or component is currently moving. |
 | `"busy"` | transient | The component is already performing another operation. |
@@ -15413,7 +16884,7 @@ Harvest the ready crop in the current cell. The action takes **0.5 hours** and t
 
 ##### `.cell(sector: str) → Cell | None`
 
-Read one grid sector as a `Cell` snapshot. Unscanned natural ground has status `"unknown"` until scanned; the depot and player-created plants or providers stay visible. The snapshot includes plant, growth, conditions, and remaining treatment hours. Returns `None` for an invalid sector.
+Read one grid sector as a `Cell` snapshot. Unscanned natural ground has `status` `"unknown"` until scanned; the depot and player-created plants or providers stay visible. The snapshot includes plant, growth, conditions, and remaining treatment hours. Returns `None` for an invalid sector.
 
 *Parameters*
 
@@ -15427,13 +16898,38 @@ Read one grid sector as a `Cell` snapshot. Unscanned natural ground has status `
 
 Read every harvester-grid sector as a list of `Cell` snapshots. Unscanned natural ground reports status `"unknown"`; scan sectors before planning around occupancy. Use the list for field-wide planting, treatment-route scheduling, uprooting, undeploying, and harvesting policies.
 
-- **Returns** `list[Cell]`. Every cell on the board. Unscanned natural ground has status `"unknown"`; scanned cells expose occupancy. Player-created plants and providers, growth, direct conditions, precise remaining treatment times, active fertilizer tier, and accumulated forage stay visible.
+- **Returns** `list[Cell]`. Every cell on the board. Unscanned natural ground has `status` `"unknown"`; scanned cells expose occupancy. Player-created plants and providers, growth, direct conditions, precise remaining treatment times, active fertilizer tier, and accumulated forage stay visible.
 
 ##### `.position() → str`
 
 Current sector id as a string. Same position source as `get_position()`, exposed as a property-style read for grid scripts.
 
 - **Returns** `str`. The sector the harvester currently occupies (e.g. `"E13"`). The Plants verbs all act on this cell; `self.move(...)` to act elsewhere.
+
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -15443,9 +16939,9 @@ Read commands you send from the editor's **Commands** tab while this script runs
 
 ## Inventory
 
-Inventory is the physical storeroom at **Nocturna Base**. Its page and read-only script methods are visible planet-wide, but ordinary freight to machines or vehicles reaches it only at the home outpost; remote sites use local storage and vehicles. Purchases land here.
+Inventory is the physical storeroom at **Nocturna Base**. Its page and read-only script methods are visible planet-wide, but it exchanges ordinary freight with machines or vehicles, in either direction, only at the home outpost; remote sites use local storage and vehicles. Purchases land here.
 
-Deploy, undeploy, decommission, upgrade, and empty-rig hardware controls are explicit commissioning or service orders, not freight routes. Manual Biology uses Inventory at home and a selected same-outpost Warehouse elsewhere; Habitat reagents are staged locally.
+Deploy, undeploy, decommission, upgrade, and hardware mounting controls are explicit commissioning or service orders, not freight routes. Manual Biology uses Inventory at home and a selected same-outpost Warehouse elsewhere; Habitat reagents are staged locally.
 
 | Field | Value |
 | --- | --- |
@@ -15479,7 +16975,7 @@ Lists every occupied item stack as an `ItemStack` with `.id`, `.count`, and exac
 
 ##### `.get_slots() → list[Slot]`
 
-Lists every current Inventory slot. Inventory starts with **36** slots, and Cargo Expansion can increase it to **60**. Stackable items hold **10** units per slot, or **20** after **Bigger Stacks**. Each `Slot` has a zero-based index from `0` through `get_size() - 1`, plus its item id, name, value, count, and properties. Properties are an exact identity dict, or `None` for ordinary items. Use them to distinguish variants with the same id and to select an exact item during transfers.
+Lists every current Inventory slot. Inventory starts with **36** slots, and Cargo Expansion can increase it to **60**. Stackable items hold **10** units per slot, or **20** after **Bigger Stacks**. Each `Slot` has a zero-based index from `0` through `get_size() - 1`, plus its item `id`, `name`, `value`, `count`, and `properties`. Properties are an exact identity `dict`, or `None` for ordinary items. Use them to distinguish variants with the same id and to select an exact item during transfers.
 
 - **Returns** `list[Slot]`. Snapshots, each with the stack's exact `.properties` identity.
 
@@ -15504,7 +17000,7 @@ Check whether Inventory has room. With no argument, `has_space()` is `True` when
 | Name | Type | Description |
 | --- | --- | --- |
 | `item_id` | `str \| None` | Optional item id, makes the check stack-aware for that exact variant |
-| `properties` | `ItemProperties \| None` | Exact property dict from a `Slot` or `ItemStack`; None selects the propertyless variant |
+| `properties` | `ItemProperties \| None` | Exact property `dict` from a `Slot` or `ItemStack`; `None` selects the propertyless variant |
 
 - **Returns** `bool`. Uses exact property identity when an item id is supplied.
 
@@ -15517,7 +17013,7 @@ How many units of one exact item identity fit **right now**: remaining room in p
 | Name | Type | Description |
 | --- | --- | --- |
 | `item_id` | `str` | Item id to size remaining room for |
-| `properties` | `ItemProperties \| None` | Exact property dict from a `Slot` or `ItemStack`; None selects the propertyless variant |
+| `properties` | `ItemProperties \| None` | Exact property `dict` from a `Slot` or `ItemStack`; `None` selects the propertyless variant |
 
 - **Returns** `int`. Units of this exact property variant that fit right now.
 
@@ -15532,8 +17028,8 @@ Requires **Auto Feeders** research. Move up to whole-number `count` units of `it
 | `target` | `str` | Display name or instance id of another storage endpoint at the same outpost |
 | `item_id` | `str` | Item id to move |
 | `count` | `int` | Whole-number max units to transfer |
-| `properties` | `ItemProperties \| None` | Optional property dict, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
-| `property_match` | `str \| None` | Optional selection mode: any, subset, or exact |
+| `properties` | `ItemProperties \| None` | Optional property `dict`, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
+| `property_match` | `str \| None` | Optional selection mode: `"any"`, `"subset"`, or `"exact"` |
 
 - **Returns** `TransferResult`
 - **Result fields** `.status`, `.message`
@@ -15543,7 +17039,7 @@ Requires **Auto Feeders** research. Move up to whole-number `count` units of `it
 
 | Status | Kind | Meaning |
 | --- | --- | --- |
-| `"ok"` | success | Moved all `.moved` requested units. |
+| `"ok"` | success | Moved requested units: `.moved`. |
 | `"partial"` | partial | Moved `.moved` of `.requested` requested units; source availability or destination capacity limited the transfer. |
 | `"no_op"` | success | No units were requested, so no state changed. |
 | `"research_required"` | rejection | The required material-transfer research is not unlocked. |
@@ -15560,8 +17056,8 @@ Requires **Auto Feeders** research. Move up to whole-number `count` units of `it
 | `"source_changed"` | transient | The source changed between transfer planning and commit. |
 | `"target_under_construction"` | transient | The configured target is still under construction. |
 | `"target_wrong_material"` | rejection | The destination is latched to or accepts a different material. |
-| `"hot_cargo_requires_cask"` | rejection | A transfer endpoint does not support this hot cargo. |
-| `"cask_accepts_hot_only"` | rejection | Lead Casks accept only supported hot cargo. |
+| `"hot_cargo_requires_cask"` | rejection | A transfer endpoint does not support this radioactive cargo. |
+| `"cask_accepts_hot_only"` | rejection | Lead Casks accept only radioactive cargo: Raw Uranium and Fuel Rods. |
 | `"slots_full"` | rejection | The destination has capacity but no slot for this material identity. |
 | `"target_full"` | rejection | The destination has no capacity for matching units. |
 | `"target_changed"` | transient | The destination changed between transfer planning and commit. |
@@ -15606,8 +17102,23 @@ Remove every unit of `item_id` from inventory. For credits, use `shop.sell_all(i
 
 | Status | Kind | Meaning |
 | --- | --- | --- |
-| `"ok"` | success | The command affected `.count` entries or units. |
+| `"ok"` | success | Command completed. Affected entries or units: `.count`. |
 | `"no_op"` | success | The command affected no entries or units. |
+
+##### `.compact() → TransferResult`
+
+Do what the Inventory page's **Compact** button does: merge partial stacks of the same item and pack every stack toward the first slot, so the empty slots come last. Takes effect at once. Items with different properties stay in separate stacks.
+
+- **Returns** `TransferResult`
+- **Result fields** `.status`, `.message`
+- **Success payload** `.requested`, `.moved`
+
+*Outcomes*
+
+| Status | Kind | Meaning |
+| --- | --- | --- |
+| `"ok"` | success | Repositioned units: `.moved`, merging matching stacks and packing them from the first Inventory slot. |
+| `"already_compact"` | success | The Inventory is already compact: no matching stacks can merge and no empty slot comes before an occupied one. |
 
 ##### `.get_size() → int`
 
@@ -15713,20 +17224,20 @@ Lists the item variants stored across all physical slots as `ItemStack` values. 
 
 ##### `.space_for(item_id: str, properties: ItemProperties | None = None) → int`
 
-How many more units of one exact item variant fit **right now**, using room in matching-identity slots plus every empty slot. Omit `properties` for ordinary propertyless items, or pass the full `.properties` dict returned by `stacks()`. This never counts room belonging to a different property variant.
+How many more units of one exact item variant fit **right now**, using room in matching-identity slots plus every empty slot. Omit `properties` for ordinary propertyless items, or pass the full `.properties` `dict` returned by `stacks()`. This never counts room belonging to a different property variant.
 
 *Parameters*
 
 | Name | Type | Description |
 | --- | --- | --- |
 | `item_id` | `str` | Item id to size remaining room for |
-| `properties` | `ItemProperties \| None` | Full property dict for the variant, or None for propertyless items |
+| `properties` | `ItemProperties \| None` | Full property `dict` for the variant, or `None` for propertyless items |
 
 - **Returns** `int`. Units of that exact item variant that fit right now.
 
 ##### `.has_space(item_id: str, amount: int, properties: ItemProperties | None = None) → bool`
 
-`True` if at least whole-number `amount` more units of that exact item variant fit. Omit `properties` for propertyless items or pass the full property dict. Use before a transfer to avoid partial moves.
+`True` if at least whole-number `amount` more units of that exact item variant fit. Omit `properties` for propertyless items or pass the full property `dict`. Use before a transfer to avoid partial moves.
 
 *Parameters*
 
@@ -15734,7 +17245,7 @@ How many more units of one exact item variant fit **right now**, using room in m
 | --- | --- | --- |
 | `item_id` | `str` | Item id |
 | `amount` | `int` | Whole-number units required |
-| `properties` | `ItemProperties \| None` | Full property dict for the variant, or None for propertyless items |
+| `properties` | `ItemProperties \| None` | Full property `dict` for the variant, or `None` for propertyless items |
 
 - **Returns** `bool`
 
@@ -15756,7 +17267,7 @@ Requires **Auto Feeders** research. Consolidate every exact item variant into th
 
 | Status | Kind | Meaning |
 | --- | --- | --- |
-| `"ok"` | success | Compacted `.moved` units into fewer Warehouse slots. |
+| `"ok"` | success | Compacted units: `.moved` into fewer Warehouse slots. |
 | `"already_compact"` | success | Every exact item variant already occupies the fewest possible Warehouse slots. |
 | `"research_required"` | rejection | The required material-transfer research is not unlocked. |
 | `"busy"` | transient | This material endpoint is already handling another material operation. |
@@ -15776,8 +17287,8 @@ Requires **Auto Feeders** research. Move up to whole-number `count` units of `it
 | `target` | `str` | Display name or instance id of another storage endpoint at the same outpost |
 | `item_id` | `str` | Item id to move |
 | `count` | `int` | Whole-number max units to transfer |
-| `properties` | `ItemProperties \| None` | Optional property dict, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
-| `property_match` | `str \| None` | Optional selection mode: any, subset, or exact |
+| `properties` | `ItemProperties \| None` | Optional property `dict`, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
+| `property_match` | `str \| None` | Optional selection mode: `"any"`, `"subset"`, or `"exact"` |
 
 - **Returns** `TransferResult`
 - **Result fields** `.status`, `.message`
@@ -15787,7 +17298,7 @@ Requires **Auto Feeders** research. Move up to whole-number `count` units of `it
 
 | Status | Kind | Meaning |
 | --- | --- | --- |
-| `"ok"` | success | Moved all `.moved` requested units. |
+| `"ok"` | success | Moved requested units: `.moved`. |
 | `"partial"` | partial | Moved `.moved` of `.requested` requested units; source availability or destination capacity limited the transfer. |
 | `"no_op"` | success | No units were requested, so no state changed. |
 | `"research_required"` | rejection | The required material-transfer research is not unlocked. |
@@ -15804,8 +17315,8 @@ Requires **Auto Feeders** research. Move up to whole-number `count` units of `it
 | `"source_changed"` | transient | The source changed between transfer planning and commit. |
 | `"target_under_construction"` | transient | The configured target is still under construction. |
 | `"target_wrong_material"` | rejection | The destination is latched to or accepts a different material. |
-| `"hot_cargo_requires_cask"` | rejection | A transfer endpoint does not support this hot cargo. |
-| `"cask_accepts_hot_only"` | rejection | Lead Casks accept only supported hot cargo. |
+| `"hot_cargo_requires_cask"` | rejection | A transfer endpoint does not support this radioactive cargo. |
+| `"cask_accepts_hot_only"` | rejection | Lead Casks accept only radioactive cargo: Raw Uranium and Fuel Rods. |
 | `"slots_full"` | rejection | The destination has capacity but no slot for this material identity. |
 | `"target_full"` | rejection | The destination has no capacity for matching units. |
 | `"target_changed"` | transient | The destination changed between transfer planning and commit. |
@@ -15814,18 +17325,18 @@ Requires **Auto Feeders** research. Move up to whole-number `count` units of `it
 
 ## Lead Cask
 
-Shielded stationary storage for hot radioactive cargo. Drones drop Raw Uranium into it, the Fuel Assembler draws from it and returns finished Fuel Rods, and the Reactor pulls its fuel from it.
+Shielded stationary storage for radioactive cargo. Drones drop Raw Uranium into it, the Fuel Assembler draws from it and returns finished Fuel Rods, and the Reactor pulls its fuel from it.
 
 | Field | Value |
 | --- | --- |
 | Type | Mining |
-| Storage | 100 units |
+| Storage | Units: 100 |
 
 ### How to obtain
 
 1. The recipe unlocks when you complete **Helios, Plate Order**.
 2. Requires the **Shielded Logistics** research (Oxygen 3,000).
-3. Fabricate a **Lead Cask** on a **Fabricator**: 3× Lead Plate and 1× Machine Frame.
+3. Fabricate **Lead Cask** on a **Fabricator**: 3× Lead Plate and 1× Machine Frame.
 4. Deploy it from your Inventory.
 
 **Access via:** `get_component(id)`
@@ -15856,15 +17367,15 @@ The outpost where this building is deployed. The returned `OutpostRef` includes 
 
 ##### `.count(item_id: str) → int`
 
-Units of `item_id` currently casked. Returns **0** when the cask is empty or latched to the other hot item. Inventory, Storage Bins, and Warehouses expose the same `count(item_id)` query.
+Units of `item_id` currently casked. Returns **0** when the cask is empty or latched to the other radioactive item. Inventory, Storage Bins, and Warehouses expose the same `count(item_id)` query.
 
 *Parameters*
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `item_id` | `str` | Hot item id to count |
+| `item_id` | `str` | Radioactive item id to count |
 
-- **Returns** `int`. Units of that hot item currently casked.
+- **Returns** `int`. Units of that radioactive item currently casked.
 
 ##### `.fill_percent() → float`
 
@@ -15880,9 +17391,9 @@ Maximum hot units (**100**).
 
 ##### `.material() → str`
 
-What the cask is latched to, `"raw_uranium"`, `"fuel_rod"`, or empty. One material per cask, like every stock bin.
+What the cask is latched to: `"raw_uranium"`, `"fuel_rod"`, or `""` when it is empty. One material per cask, like every stock bin.
 
-- **Returns** `str`. Empty when unassigned. Lead Casks accept only hot items. Ordinary storage and inventory refuse them; designated shielded receivers accept them.
+- **Returns** `str`. Empty when unassigned. Lead Casks accept only radioactive items. Ordinary storage and inventory refuse them; designated shielded receivers accept them.
 - **Possible values** `""`, `"raw_uranium"`, `"fuel_rod"`
 
 ##### `.transfer_to(target: str, item_id: str, count: int, properties: ItemProperties | None = None, property_match: str | None = None) → TransferResult`
@@ -15896,8 +17407,8 @@ Requires **Auto Feeders** research. Move up to whole-number `count` units of `it
 | `target` | `str` | Display name or instance id of another storage endpoint at the same outpost |
 | `item_id` | `str` | Item id to move |
 | `count` | `int` | Whole-number max units to transfer |
-| `properties` | `ItemProperties \| None` | Optional property dict, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
-| `property_match` | `str \| None` | Optional selection mode: any, subset, or exact |
+| `properties` | `ItemProperties \| None` | Optional property `dict`, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
+| `property_match` | `str \| None` | Optional selection mode: `"any"`, `"subset"`, or `"exact"` |
 
 - **Returns** `TransferResult`
 - **Result fields** `.status`, `.message`
@@ -15907,7 +17418,7 @@ Requires **Auto Feeders** research. Move up to whole-number `count` units of `it
 
 | Status | Kind | Meaning |
 | --- | --- | --- |
-| `"ok"` | success | Moved all `.moved` requested units. |
+| `"ok"` | success | Moved requested units: `.moved`. |
 | `"partial"` | partial | Moved `.moved` of `.requested` requested units; source availability or destination capacity limited the transfer. |
 | `"no_op"` | success | No units were requested, so no state changed. |
 | `"research_required"` | rejection | The required material-transfer research is not unlocked. |
@@ -15924,8 +17435,8 @@ Requires **Auto Feeders** research. Move up to whole-number `count` units of `it
 | `"source_changed"` | transient | The source changed between transfer planning and commit. |
 | `"target_under_construction"` | transient | The configured target is still under construction. |
 | `"target_wrong_material"` | rejection | The destination is latched to or accepts a different material. |
-| `"hot_cargo_requires_cask"` | rejection | A transfer endpoint does not support this hot cargo. |
-| `"cask_accepts_hot_only"` | rejection | Lead Casks accept only supported hot cargo. |
+| `"hot_cargo_requires_cask"` | rejection | A transfer endpoint does not support this radioactive cargo. |
+| `"cask_accepts_hot_only"` | rejection | Lead Casks accept only radioactive cargo: Raw Uranium and Fuel Rods. |
 | `"slots_full"` | rejection | The destination has capacity but no slot for this material identity. |
 | `"target_full"` | rejection | The destination has no capacity for matching units. |
 | `"target_changed"` | transient | The destination changed between transfer planning and commit. |
@@ -15947,7 +17458,7 @@ Mk I static drill for deposits up to hardness 1 (Iron, Silicon): 25 t/h at stand
 
 1. The recipe unlocks when you complete **Helios, Cargo Pod Run**.
 2. Requires the **Basic Drone Operations** research (Terraform Index 180,000).
-3. Fabricate a **Mining Drill Kit** on a **Fabricator**: 3× Machine Frame, 1× Control Unit, 1× Circuit Panel, and 2 t Water.
+3. Fabricate **Mining Drill Kit** on a **Fabricator**: 3× Machine Frame, 1× Control Unit, 1× Circuit Panel, and 2 t Water.
 4. Build it on a mineral site with a Pioneer's Constructor.
 
 **Access via:** `self / get_component(id)`
@@ -15970,17 +17481,48 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 ##### `.output: PickupOutputSlot`
 
-`PickupOutputSlot` exposing the Drill's stockpile through `count()`, `capacity()`, and `stacks()`. A physically present Rover or Pioneer pulls through its own input; a drone flies with `go_to_drill()` and loads with `cargo.load()`. The Drill has no direct item-routing methods.
+`PickupOutputSlot` exposing the Drill's stockpile through `count()`, `capacity()`, and `stacks()`. A physically present Rover or Pioneer pulls through its own `input`; a drone flies with `go_to_drill()` and loads with `cargo.load()`. The Drill has no direct item-routing methods.
 
-- **Returns** `PickupOutputSlot`. Exposes stockpile reads. A physically present Rover or Pioneer pulls through its input; a drone uses `go_to_drill()` and `cargo.load()`.
+- **Returns** `PickupOutputSlot`. Exposes stockpile reads. A physically present Rover or Pioneer pulls through its `input`; a drone uses `go_to_drill()` and `cargo.load()`.
 
 ### Methods
+
+##### `.site() → MiningSite | None`
+
+The `MiningSite` this drill sits on. Read `.item_id` for the mineral it extracts, and `.purity` and `.hardness` for the deposit under it. `None` when the drill stands on no mineral site.
+
+- **Returns** `MiningSite | None`. A snapshot of the mineral site this drill sits on, or `None` when it stands on none.
 
 ##### `.drill_rate() → float`
 
 Mineral extraction rate in t/h right now: the full rate while drilling, and **0** whenever the drill is powered off, has no deposit under it, cannot cut the deposit's hardness, or its stockpile is full. Adjusted for site purity and drill tier.
 
 - **Returns** `float`. t/h being extracted right now, or **0** when not drilling. Accounts for site purity and drill tier.
+
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -15997,9 +17539,10 @@ Refines raw ore into metal stock, one unit at a time, following a recipe you cho
 | Type | Mining |
 | Power in | Variable (draws from grid) |
 | Produces | Depends on the selected recipe |
-| Input buffer | 50 units |
-| Output buffer | 50 units |
+| Input buffer | Units: 50 |
+| Output buffer | Units: 50 |
 | Recipes | 7 available |
+| Tiers | Mk II and Mk III |
 
 ### How to obtain
 
@@ -16044,9 +17587,15 @@ Sends refined material out of the Smelter. At home it can use Inventory; remote 
 
 ### Methods
 
+##### `.tier() → int`
+
+Installed machinery tier: `1` for Mk I, `2` for Mk II, or `3` for Mk III where supported.
+
+- **Returns** `int`
+
 ##### `.list_recipes() → list[Recipe]`
 
-Every recipe this smelter has been given a blueprint for. Returns Recipe objects with `.tier`, `.id`, `.name`, `.inputs`, `.output_item`, `.output_count`, `.duration_game_hours`, and `.power_draw`. Locked recipes (no blueprint yet) do not appear, the list reflects what the player can actually run today. Day-1 starts with `"smelt_iron_ingot"` only; more arrive as blueprints unlock.
+Every recipe this smelter has been given a blueprint for. Returns `Recipe` objects with `.tier`, `.id`, `.name`, `.inputs`, `.output_item`, `.output_count`, `.duration_game_hours`, and `.power_draw`. Locked recipes (no blueprint yet) do not appear, the list reflects what the player can actually run today. Day-1 starts with `"smelt_iron_ingot"` only; more arrive as blueprints unlock.
 
 - **Returns** `list[Recipe]`. The recipes this Smelter has unlocked.
 
@@ -16064,7 +17613,7 @@ Find one unlocked recipe by id without looping through `list_recipes()`. Returns
 
 ##### `.set_recipe(recipe_or_id: str | Recipe | IdRecord) → ActionResult` *(self only)*
 
-Select which recipe the smelter should run. Call `self.set_recipe("smelt_iron_ingot")` or pass a Recipe from `list_recipes()`.
+Select which recipe the smelter should run. Call `self.set_recipe("smelt_iron_ingot")` or pass a `Recipe` from `list_recipes()`.
 
 *Parameters*
 
@@ -16112,7 +17661,7 @@ Current recipe id as a string, or the empty string if no recipe is set. Use afte
 
 ##### `.get_recipe_inputs() → dict[str, int]`
 
-Input requirements for the current recipe as a dict `{item_id: count_per_craft}`. Returns an empty dict if no recipe is set.
+Input requirements for the current recipe as a `dict` `{item_id: count_per_craft}`. Returns an empty `dict` if no recipe is set.
 
 - **Returns** `dict[str, int]`. `{item_id: count}` consumed per craft, or empty if no recipe is set.
 
@@ -16136,9 +17685,34 @@ Units currently in the input buffer, waiting to be smelted. Check before `self.i
 
 ##### `.get_output_count() → int`
 
-Units currently in the output buffer, waiting to be drained. Check before `self.output.send(...)`, if high, unload downstream first; if low, let processing catch up.
+Units currently in the output buffer, waiting to be drained. Check before `self.output.send(...)`, if high, send this output onward first; if low, let processing catch up.
 
 - **Returns** `int`. Units in the output buffer.
+
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -16153,7 +17727,7 @@ A passive base container that holds one material at a time. The first deposit se
 | Field | Value |
 | --- | --- |
 | Type | Mining |
-| Storage | 500 units |
+| Storage | Units: 500 |
 
 ### How to obtain
 
@@ -16248,7 +17822,7 @@ Fraction full in the range **0-1**. Common threshold for rebalance scripts: `if 
 
 ##### `.transfer_from_inventory(item_id: str, count: int, properties: ItemProperties | None = None, property_match: str | None = None) → TransferResult`
 
-Requires **Auto Feeders** research and a Storage Bin at the home outpost. Move up to whole-number `count` units of `item_id` from Inventory into the bin, preserving exact properties. The call waits for the feeder cycle to finish, and the bin cannot start another transfer during that cycle. A property dict selects a subset by default. Pass `"exact"` as `property_match` for a full identity, including `None` for propertyless items.
+Requires **Auto Feeders** research and a Storage Bin at the home outpost. Move up to whole-number `count` units of `item_id` from Inventory into the bin, preserving exact properties. The call waits for the feeder cycle to finish, and the bin cannot start another transfer during that cycle. A property `dict` matches as a subset (`"subset"`) by default. Pass `"exact"` as `property_match` for a full identity, including `None` for propertyless items.
 
 *Parameters*
 
@@ -16256,8 +17830,8 @@ Requires **Auto Feeders** research and a Storage Bin at the home outpost. Move u
 | --- | --- | --- |
 | `item_id` | `str` | Item id to pull from inventory |
 | `count` | `int` | Whole-number max units to transfer |
-| `properties` | `ItemProperties \| None` | Optional property dict, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
-| `property_match` | `str \| None` | Optional selection mode: any, subset, or exact |
+| `properties` | `ItemProperties \| None` | Optional property `dict`, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
+| `property_match` | `str \| None` | Optional selection mode: `"any"`, `"subset"`, or `"exact"` |
 
 - **Returns** `TransferResult`
 - **Result fields** `.status`, `.message`
@@ -16267,7 +17841,7 @@ Requires **Auto Feeders** research and a Storage Bin at the home outpost. Move u
 
 | Status | Kind | Meaning |
 | --- | --- | --- |
-| `"ok"` | success | Moved all `.moved` requested units. |
+| `"ok"` | success | Moved requested units: `.moved`. |
 | `"partial"` | partial | Moved `.moved` of `.requested` requested units; source availability or destination capacity limited the transfer. |
 | `"no_op"` | success | No units were requested, so no state changed. |
 | `"research_required"` | rejection | The required material-transfer research is not unlocked. |
@@ -16278,21 +17852,21 @@ Requires **Auto Feeders** research and a Storage Bin at the home outpost. Move u
 | `"source_empty"` | rejection | The source has no matching units available. |
 | `"source_changed"` | transient | The source changed between transfer planning and commit. |
 | `"target_wrong_material"` | rejection | The destination is latched to or accepts a different material. |
-| `"hot_cargo_requires_cask"` | rejection | A transfer endpoint does not support this hot cargo. |
+| `"hot_cargo_requires_cask"` | rejection | A transfer endpoint does not support this radioactive cargo. |
 | `"target_full"` | rejection | The destination has no capacity for matching units. |
 | `"target_changed"` | transient | The destination changed between transfer planning and commit. |
 
 ##### `.transfer_to_inventory(count: int, properties: ItemProperties | None = None, property_match: str | None = None) → TransferResult`
 
-Requires **Auto Feeders** research and a Storage Bin at the home outpost. Move up to whole-number `count` units back to Inventory, preserving exact properties. The call waits for the feeder cycle to finish, and the bin cannot start another transfer during that cycle. A property dict selects a subset by default. Pass `"exact"` as `property_match` for a full identity, including `None` for propertyless items. If the bin drains completely, its item-id latch clears.
+Requires **Auto Feeders** research and a Storage Bin at the home outpost. Move up to whole-number `count` units back to Inventory, preserving exact properties. The call waits for the feeder cycle to finish, and the bin cannot start another transfer during that cycle. A property `dict` matches as a subset (`"subset"`) by default. Pass `"exact"` as `property_match` for a full identity, including `None` for propertyless items. If the bin drains completely, its item-id latch clears.
 
 *Parameters*
 
 | Name | Type | Description |
 | --- | --- | --- |
 | `count` | `int` | Whole-number max units to transfer |
-| `properties` | `ItemProperties \| None` | Optional property dict, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
-| `property_match` | `str \| None` | Optional selection mode: any, subset, or exact |
+| `properties` | `ItemProperties \| None` | Optional property `dict`, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
+| `property_match` | `str \| None` | Optional selection mode: `"any"`, `"subset"`, or `"exact"` |
 
 - **Returns** `TransferResult`
 - **Result fields** `.status`, `.message`
@@ -16302,7 +17876,7 @@ Requires **Auto Feeders** research and a Storage Bin at the home outpost. Move u
 
 | Status | Kind | Meaning |
 | --- | --- | --- |
-| `"ok"` | success | Moved all `.moved` requested units. |
+| `"ok"` | success | Moved requested units: `.moved`. |
 | `"partial"` | partial | Moved `.moved` of `.requested` requested units; source availability or destination capacity limited the transfer. |
 | `"no_op"` | success | No units were requested, so no state changed. |
 | `"research_required"` | rejection | The required material-transfer research is not unlocked. |
@@ -16326,8 +17900,8 @@ Requires **Auto Feeders** research. Move up to whole-number `count` units of `it
 | `target` | `str` | Display name or instance id of another storage endpoint at the same outpost |
 | `item_id` | `str` | Item id to move |
 | `count` | `int` | Whole-number max units to transfer |
-| `properties` | `ItemProperties \| None` | Optional property dict, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
-| `property_match` | `str \| None` | Optional selection mode: any, subset, or exact |
+| `properties` | `ItemProperties \| None` | Optional property `dict`, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
+| `property_match` | `str \| None` | Optional selection mode: `"any"`, `"subset"`, or `"exact"` |
 
 - **Returns** `TransferResult`
 - **Result fields** `.status`, `.message`
@@ -16337,7 +17911,7 @@ Requires **Auto Feeders** research. Move up to whole-number `count` units of `it
 
 | Status | Kind | Meaning |
 | --- | --- | --- |
-| `"ok"` | success | Moved all `.moved` requested units. |
+| `"ok"` | success | Moved requested units: `.moved`. |
 | `"partial"` | partial | Moved `.moved` of `.requested` requested units; source availability or destination capacity limited the transfer. |
 | `"no_op"` | success | No units were requested, so no state changed. |
 | `"research_required"` | rejection | The required material-transfer research is not unlocked. |
@@ -16354,8 +17928,8 @@ Requires **Auto Feeders** research. Move up to whole-number `count` units of `it
 | `"source_changed"` | transient | The source changed between transfer planning and commit. |
 | `"target_under_construction"` | transient | The configured target is still under construction. |
 | `"target_wrong_material"` | rejection | The destination is latched to or accepts a different material. |
-| `"hot_cargo_requires_cask"` | rejection | A transfer endpoint does not support this hot cargo. |
-| `"cask_accepts_hot_only"` | rejection | Lead Casks accept only supported hot cargo. |
+| `"hot_cargo_requires_cask"` | rejection | A transfer endpoint does not support this radioactive cargo. |
+| `"cask_accepts_hot_only"` | rejection | Lead Casks accept only radioactive cargo: Raw Uranium and Fuel Rods. |
 | `"slots_full"` | rejection | The destination has capacity but no slot for this material identity. |
 | `"target_full"` | rejection | The destination has no capacity for matching units. |
 | `"target_changed"` | transient | The destination changed between transfer planning and commit. |
@@ -16452,20 +18026,20 @@ Lists the item variants stored across all physical slots as `ItemStack` values. 
 
 ##### `.space_for(item_id: str, properties: ItemProperties | None = None) → int`
 
-How many more units of one exact item variant fit **right now**, using room in matching-identity slots plus every empty slot. Omit `properties` for ordinary propertyless items, or pass the full `.properties` dict returned by `stacks()`. This never counts room belonging to a different property variant.
+How many more units of one exact item variant fit **right now**, using room in matching-identity slots plus every empty slot. Omit `properties` for ordinary propertyless items, or pass the full `.properties` `dict` returned by `stacks()`. This never counts room belonging to a different property variant.
 
 *Parameters*
 
 | Name | Type | Description |
 | --- | --- | --- |
 | `item_id` | `str` | Item id to size remaining room for |
-| `properties` | `ItemProperties \| None` | Full property dict for the variant, or None for propertyless items |
+| `properties` | `ItemProperties \| None` | Full property `dict` for the variant, or `None` for propertyless items |
 
 - **Returns** `int`. Units of that exact item variant that fit right now.
 
 ##### `.has_space(item_id: str, amount: int, properties: ItemProperties | None = None) → bool`
 
-`True` if at least whole-number `amount` more units of that exact item variant fit. Omit `properties` for propertyless items or pass the full property dict. Use before a transfer to avoid partial moves.
+`True` if at least whole-number `amount` more units of that exact item variant fit. Omit `properties` for propertyless items or pass the full property `dict`. Use before a transfer to avoid partial moves.
 
 *Parameters*
 
@@ -16473,7 +18047,7 @@ How many more units of one exact item variant fit **right now**, using room in m
 | --- | --- | --- |
 | `item_id` | `str` | Item id |
 | `amount` | `int` | Whole-number units required |
-| `properties` | `ItemProperties \| None` | Full property dict for the variant, or None for propertyless items |
+| `properties` | `ItemProperties \| None` | Full property `dict` for the variant, or `None` for propertyless items |
 
 - **Returns** `bool`
 
@@ -16495,7 +18069,7 @@ Requires **Auto Feeders** research. Consolidate every exact item variant into th
 
 | Status | Kind | Meaning |
 | --- | --- | --- |
-| `"ok"` | success | Compacted `.moved` units into fewer Warehouse slots. |
+| `"ok"` | success | Compacted units: `.moved` into fewer Warehouse slots. |
 | `"already_compact"` | success | Every exact item variant already occupies the fewest possible Warehouse slots. |
 | `"research_required"` | rejection | The required material-transfer research is not unlocked. |
 | `"busy"` | transient | This material endpoint is already handling another material operation. |
@@ -16515,8 +18089,8 @@ Requires **Auto Feeders** research. Move up to whole-number `count` units of `it
 | `target` | `str` | Display name or instance id of another storage endpoint at the same outpost |
 | `item_id` | `str` | Item id to move |
 | `count` | `int` | Whole-number max units to transfer |
-| `properties` | `ItemProperties \| None` | Optional property dict, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
-| `property_match` | `str \| None` | Optional selection mode: any, subset, or exact |
+| `properties` | `ItemProperties \| None` | Optional property `dict`, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
+| `property_match` | `str \| None` | Optional selection mode: `"any"`, `"subset"`, or `"exact"` |
 
 - **Returns** `TransferResult`
 - **Result fields** `.status`, `.message`
@@ -16526,7 +18100,7 @@ Requires **Auto Feeders** research. Move up to whole-number `count` units of `it
 
 | Status | Kind | Meaning |
 | --- | --- | --- |
-| `"ok"` | success | Moved all `.moved` requested units. |
+| `"ok"` | success | Moved requested units: `.moved`. |
 | `"partial"` | partial | Moved `.moved` of `.requested` requested units; source availability or destination capacity limited the transfer. |
 | `"no_op"` | success | No units were requested, so no state changed. |
 | `"research_required"` | rejection | The required material-transfer research is not unlocked. |
@@ -16543,8 +18117,8 @@ Requires **Auto Feeders** research. Move up to whole-number `count` units of `it
 | `"source_changed"` | transient | The source changed between transfer planning and commit. |
 | `"target_under_construction"` | transient | The configured target is still under construction. |
 | `"target_wrong_material"` | rejection | The destination is latched to or accepts a different material. |
-| `"hot_cargo_requires_cask"` | rejection | A transfer endpoint does not support this hot cargo. |
-| `"cask_accepts_hot_only"` | rejection | Lead Casks accept only supported hot cargo. |
+| `"hot_cargo_requires_cask"` | rejection | A transfer endpoint does not support this radioactive cargo. |
+| `"cask_accepts_hot_only"` | rejection | Lead Casks accept only radioactive cargo: Raw Uranium and Fuel Rods. |
 | `"slots_full"` | rejection | The destination has capacity but no slot for this material identity. |
 | `"target_full"` | rejection | The destination has no capacity for matching units. |
 | `"target_changed"` | transient | The destination changed between transfer planning and commit. |
@@ -16553,7 +18127,7 @@ Requires **Auto Feeders** research. Move up to whole-number `count` units of `it
 
 ## Waste Processor
 
-Permanently destroys one script-selected waste stream: items, liquids, or gases. Use the item input for unwanted stock, `liquid_in` for surplus water or other liquids, and `gas_in` for gases. It destroys only while the script that armed it is still running. It has no output and recovers no value.
+Permanently destroys one script-selected waste stream: items, liquids, or gases. Use the item `input` for unwanted stock, `liquid_in` for surplus water or other liquids, and `gas_in` for gases. It destroys only while the script that armed it is still running. It has no output and recovers no value.
 
 | Field | Value |
 | --- | --- |
@@ -16564,7 +18138,7 @@ Permanently destroys one script-selected waste stream: items, liquids, or gases.
 ### How to obtain
 
 1. The recipe unlocks with the **Waste Processing** research (Oxygen 1,400).
-2. Fabricate a **Waste Processor Kit** on a **Fabricator**: 2× Machine Frame, 4× Iron Ingot, and 1× Circuit Panel.
+2. Fabricate **Waste Processor Kit** on a **Fabricator**: 2× Machine Frame, 4× Iron Ingot, and 1× Circuit Panel.
 3. Deploy it from your Inventory.
 
 **Access via:** `self / get_component(id)`
@@ -16661,7 +18235,7 @@ Select exactly one destruction stream: `"items"`, `"liquid"`, or `"gas"`. Changi
 
 | Exception | Condition |
 | --- | --- |
-| `ValueError` | mode must be "items", "liquid", or "gas". |
+| `ValueError` | `mode` must be `"items"`, `"liquid"`, or `"gas"`. |
 
 ##### `.mode() → str`
 
@@ -16706,6 +18280,31 @@ Read the last gas destruction rate in t/h. At 100% outpost efficiency, the maxim
 Read whether the selected mode is currently processing staged material.
 
 - **Returns** `bool`. `True` while the selected mode is processing staged material. Pure destruction has no output port and recovers no value.
+
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -16774,7 +18373,7 @@ Pick up one Construction job from the shared planning queue and build or deconst
 
 ## Drill Module *(MODULE)*
 
-Extracts minerals through `self.drill`. Each drill cuts its hardness limit and everything below it: the basic drill reaches hardness **1** (Iron, Silicon) at **1.0×** speed using **10 W**; Industrial reaches **3**, adding Titanium, Cobalt, Lead and Rare Earth, at **0.75×** using **20 W**; Heavy reaches **4**, adding Neutronium, at **0.6×** using **30 W**. There is no hardness-2 drill: Titanium and Cobalt are cut by the Industrial. Without a mounted Drill Module, the vehicle cannot mine.
+Extracts minerals through `self.drill`. Each drill cuts its hardness limit and everything below it: the basic drill reaches hardness **1** (Iron, Silicon) at **1.0×** mining time using **10 W**; Industrial reaches **3**, adding Titanium, Cobalt, Lead and Rare Earth, at **0.75×** using **20 W**; Heavy reaches **4**, adding Neutronium, at **0.6×** using **30 W**. These are per-unit time multipliers, so lower means faster mining. There is no hardness-2 drill: Titanium and Cobalt are cut by the Industrial. Without a mounted Drill Module, the vehicle cannot mine.
 
 **Access via:** `self.drill`
 
@@ -16798,7 +18397,7 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 ##### `.mine() → ActionResult` *(self only)*
 
-Extract **1** unit of the current site's mineral into vehicle cargo. Mining takes `mineral_base_minutes × drill.speed_multiplier() / site_purity` game-time, and the script pauses until it finishes. Base minutes: Iron and Silicon **15**, Lead **18**, Titanium and Cobalt **20**, Rare Earth **25**, Neutronium **30**; `site_purity` is **1** standard, **2** rich, **3** pure. The drill draws its power for the whole dig, so one unit costs its watts × the mining time: the basic drill (**10 W**) mining for **15** minutes uses **2.5 Wh**.
+Extract **1** unit of the current site's mineral into vehicle cargo. Mining takes `mineral_base_minutes × drill.speed_multiplier() / site_purity` game-time, and the script pauses until it finishes. Base minutes: Iron and Silicon **15**, Lead **18**, Titanium and Cobalt **20**, Rare Earth **25**, Neutronium **30**; `site_purity` is **1** `standard`, **2** `rich`, **3** `pure`. The drill draws its power for the whole dig, so one unit costs its watts × the mining time: the basic drill (**10 W**) mining for **15** minutes uses **2.5 Wh**.
 
 - **Returns** `ActionResult`
 - **Result fields** `.status`, `.message`
@@ -16828,7 +18427,7 @@ Maximum mineral hardness this drill can extract.
 
 | Exception | Condition |
 | --- | --- |
-| `ReferenceError` | This DrillModule reference is stale because its module is no longer mounted. Read self.drill again after mounting a drill. |
+| `ReferenceError` | This `DrillModule` reference is stale because its module is no longer mounted. Read `self.drill` again after mounting a drill. |
 
 ##### `.speed_multiplier() → float`
 
@@ -16840,7 +18439,7 @@ Per-unit time multiplier (lower = faster).
 
 | Exception | Condition |
 | --- | --- |
-| `ReferenceError` | This DrillModule reference is stale because its module is no longer mounted. Read self.drill again after mounting a drill. |
+| `ReferenceError` | This `DrillModule` reference is stale because its module is no longer mounted. Read `self.drill` again after mounting a drill. |
 
 *Components / Vehicles & Modules*
 
@@ -16856,7 +18455,7 @@ Small aerial cargo drone, 1 thruster + 2 modules.
 
 1. The recipe unlocks when you complete **Helios, Rotor Run**.
 2. Requires the **Basic Drone Operations** research (Terraform Index 180,000).
-3. Fabricate a **Drone (Small)** on a **Fabricator**: 1× Rare Earth Core, 1× Titanium Ingot, 1× Control Unit, and 2 t Water.
+3. Fabricate **Drone (Small)** on a **Fabricator**: 1× Rare Earth Core, 1× Titanium Ingot, 1× Control Unit, and 2 t Water.
 4. Deploy it from your Inventory.
 
 **Access via:** `self / get_component(id)`
@@ -16891,7 +18490,7 @@ Reads fuel on heli drones. Use `self.oil_tank.level()` for current oil in **tons
 
 ##### `.cargo: DroneCargo`
 
-Manages mounted Cargo Pods and the Bio Extractor's sealed chamber. Each pod holds one item type and unlatches when empty; the extractor chamber holds one life-form type and fills first. Use `self.cargo.count()`, `contents()`, `capacity()`, and `space_for(item_id)` to plan loads. `load()` and `unload()` work while docked at a Drone Depot; `load()` also works at a field Mining Drill or Lead Cask. Exact item properties are preserved. See `DroneCargo`.
+Each Cargo Pod holds one item type; the Bio Extractor chamber holds one life-form type. Containers unlatch when empty. Loads top up matching containers before using empty ones, with life-form chambers before pods within each group. Plan with `self.cargo.count()`, `contents()`, `capacity()`, and `space_for(item_id)`. `load()` and `unload()` work while docked at a Drone Depot; `load()` also works at a field Mining Drill or Lead Cask. Item properties are preserved. See `DroneCargo`.
 
 - **Returns** `DroneCargo`. Mounted Cargo Pods plus the Bio Extractor's typed 25 t chamber. Use `space_for(item_id)` because biological room is item-specific.
 
@@ -16911,7 +18510,7 @@ Portable Bio Extractor
 
 ##### `.go_to_station(name: str) → ActionResult` *(self only)*
 
-Queue a route to the named Drone Depot or Drone Service Station and return immediately without waiting for docking. An accepted powered route reports `"traveling"` immediately; position and docking advance after simulation advances. Stop, completion, or error cancels the flight and clears the route. Compare `current_station()` with the destination's stable id to confirm arrival. Moving between drone buildings inside the same outpost is a local transfer and costs no flight fuel. Drone Service Stations accept parked arrivals even while unpowered. A full Drone Depot keeps the drone undocked in `"waiting_bay"` until a physical bay opens.
+Queue a route to the named Drone Depot or Drone Service Station; the call returns at once, without waiting for docking. Once a powered route is accepted, `status()` reports `"traveling"`; position and docking advance with the simulation. Stop, completion, or error cancels the flight and clears the route. Compare `current_station()` with the destination's stable id to confirm arrival. Moving between drone buildings inside the same outpost is a local transfer and costs no flight fuel. Drone Service Stations accept parked arrivals even while unpowered. A full Drone Depot keeps the drone undocked in `"waiting_bay"` until a physical bay opens.
 
 *Parameters*
 
@@ -16935,7 +18534,7 @@ Queue a route to the named Drone Depot or Drone Service Station and return immed
 
 ##### `.undock() → ActionResult` *(self only)*
 
-Release the station berth without flying anywhere. The drone keeps its exact world position, cargo, modules, fuel, and exposure, clears any dormant route, resets throttle to **0**, and becomes idle. An active rescue, or an active or queued Drone Service Station charge/refuel job, retains control until that station-owned work ends. Use `go_to_station(...)` when the drone should claim a berth again. Self-only.
+Release the station berth without flying anywhere. The drone keeps its exact world position, cargo, modules, fuel, and exposure, clears any dormant route, resets throttle to **0**, and becomes `idle`. An active rescue, or an active or queued Drone Service Station charge/refuel job, retains control until that station-owned work ends. Use `go_to_station(...)` when the drone should claim a berth again. Self-only.
 
 - **Returns** `ActionResult`
 - **Result fields** `.status`, `.message`
@@ -16951,7 +18550,7 @@ Release the station berth without flying anywhere. The drone keeps its exact wor
 
 ##### `.go_to_drill(name: str) → ActionResult` *(self only)*
 
-Fly to a named field Mining Drill for ore pickup. Hauling needs no field module. An accepted powered route reports `"traveling"` immediately, then the drone flies in a straight line and hovers on arrival. Compare `current_drill()` with the destination's stable id to confirm that cargo loading is available. Stopping or completing the script, hitting an error, or calling `go_to_station()` cancels this route.
+Fly to a named field Mining Drill for ore pickup. Hauling needs no field module. Once a powered route is accepted, `status()` reports `"traveling"` immediately, then the drone flies in a straight line and hovers on arrival. Compare `current_drill()` with the destination's stable id to confirm that cargo loading is available. Stopping or completing the script, hitting an error, or calling `go_to_station()` cancels this route.
 
 *Parameters*
 
@@ -17006,7 +18605,7 @@ Straight-line distance in meters from the drone's current position to the given 
 
 ##### `.go_to(x: float, y: float) → ActionResult` *(self only)*
 
-Fly to any world coordinate as a base drone capability; no field module is required. An accepted powered route reports `"traveling"` immediately, then the drone flies in a straight line and hovers on arrival. Stopping or completing the script, hitting an error, or calling `go_to_station()` cancels this route. For Weather, pass the exact x and y assembled from checksum-valid storm packets.
+Fly to any world coordinate as a base drone capability; no field module is required. Once a powered route is accepted, `status()` reports `"traveling"` immediately, then the drone flies in a straight line and hovers on arrival. Stopping or completing the script, hitting an error, or calling `go_to_station()` cancels this route. For Weather, pass the exact `x` and `y` assembled from checksum-valid storm packets.
 
 *Parameters*
 
@@ -17032,7 +18631,7 @@ Fly to any world coordinate as a base drone capability; no field module is requi
 
 ##### `.collect() → CollectResult` *(self only)*
 
-Collect one weather aftermath batch at the drone's exact current coordinate. A successful batch transfers at most **5** Storm Glass or Raw Uranium. Raw Uranium collection adds **40** exposure without Shield Plating and **0** with it; the batch is retained even if it reaches the scramble threshold.
+Collect one weather aftermath batch at the drone's exact current coordinate. A successful batch transfers at most **5** Storm Glass or Raw Uranium. Raw Uranium collection adds **40** exposure without Shield Plating and **0** with it; the batch is kept even if the drone's exposure reaches capacity and the drone is scrambled.
 
 - **Returns** `CollectResult`
 - **Result fields** `.status`, `.message`
@@ -17051,7 +18650,7 @@ Collect one weather aftermath batch at the drone's exact current coordinate. A s
 
 ##### `.exposure() → float`
 
-Current extraction exposure, from **0** to `exposure_capacity()`. It changes only when collecting Raw Uranium or receiving Service Station care; simply flying across a hidden aftermath is inert. A working drone docked at a powered Drone Service Station clears **10 per hour**. At capacity the drone is scrambled and requires Service Station rescue.
+Current extraction exposure, from **0** to `exposure_capacity()`. It changes only when collecting Raw Uranium or receiving Service Station care; flying over a hidden aftermath deposit adds no exposure. Any docked drone that is not scrambled clears **10 per hour** at a powered Drone Service Station. At capacity the drone is scrambled and requires Service Station rescue.
 
 - **Returns** `float`. Radiation exposure from **0** to capacity. An unplated uranium collection adds **40**; Shield Plating adds **0**. A powered Drone Service Station clears non-terminal exposure at **10/h**. At capacity the drone scrambles and requires rescue.
 
@@ -17065,13 +18664,13 @@ The **100** exposure scramble threshold. An unplated drone can collect two 5-uni
 
 `True` with Shield Plating mounted. Plating reduces Raw Uranium extraction exposure to zero, halves each Cargo Pod's capacity, and raises fuel burn **1.5×** because lead is heavy.
 
-- **Returns** `bool`. `True` when Shield Plating is mounted: zero Raw Uranium extraction exposure and required for hot-cargo loads from Lead Casks; halves Cargo Pod capacity and raises burn.
+- **Returns** `bool`. `True` when Shield Plating is mounted: zero Raw Uranium extraction exposure and required for radioactive-cargo loads from Lead Casks; halves Cargo Pod capacity and multiplies energy use by **1.5**.
 
 ##### `.range_remaining() → float`
 
 Estimated flight distance in meters at the current energy and throttle. Electric burn is **5 Wh/h** at full throttle; Heli burn is **5 t/h Oil**. Both scale with throttle squared, so slower routes stretch range.
 
-- **Returns** `float`. Estimated meters of flight at current charge and current throttle. **0** if throttle is 0 or battery or oil is empty.
+- **Returns** `float`. Estimated meters of flight from the current battery charge or oil, at the current throttle. **0** if throttle is 0 or battery or oil is empty.
 
 ##### `.throttle() → float`
 
@@ -17164,7 +18763,7 @@ Request a hardware service order that returns the module in an explicit whole-nu
 
 ##### `.status() → str`
 
-Current operational activity for progress and blocker handling, not an arrival test. `"idle"` can mean docked, hovering at a field coordinate, or holding a queued route at zero throttle; charging or refueling can begin immediately after docking. `"waiting_bay"` means the drone reached a full Depot but is not docked, `"holding_weather"` is a temporary heli hold, and stalled or scrambled states need intervention. Use `current_station()` or `current_drill()` to confirm arrival at an interaction endpoint.
+Current operational activity for progress and blocker handling, not an arrival test. `"idle"` can mean docked, hovering at a field coordinate, or holding a queued route at zero throttle; `charging` or `refueling` can begin immediately after docking. `"waiting_bay"` means the drone reached a full Depot but is not docked, `"holding_weather"` is a temporary heli hold, and `stalled` or `scrambled` states need intervention. Use `current_station()` or `current_drill()` to confirm arrival at an interaction endpoint.
 
 - **Returns** `str`. Current operational activity. Use `current_station()` for the separate physical-arrival check.
 - **Possible values** `"idle"`, `"traveling"`, `"charging"`, `"refueling"`, `"waiting_service"`, `"waiting_oil"`, `"waiting_bay"`, `"being_rescued"`, `"holding_weather"`, `"scrambled"`, `"stalled_no_battery"`, `"stalled_no_oil"`, `"stalled_no_route"`
@@ -17181,6 +18780,31 @@ Current rescue mission phase for this drone: `"none"`, `"outbound"`, `"charging"
 
 - **Returns** `str`
 - **Possible values** `"none"`, `"outbound"`, `"charging"`, `"carrying"`, `"returning"`
+
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -17258,7 +18882,7 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 ##### `.set_target(x: float, y: float) → ActionResult` *(self only)*
 
-Set target coordinates to drive toward. **Returns immediately**, the vehicle then drives asynchronously over subsequent ticks while this script remains active. Poll `get_distance_to(x, y)` or `get_position()` in a wait loop to detect proximity. Use a tolerance, normally `while self.nav.get_distance_to(x, y) > 2:`, instead of waiting for exact zero, then call `self.nav.brake()` before `drill.mine()` or another stationary action. For an at-building action, target that building's `BuildingRef.position` rather than the outpost footprint anchor. The vehicle stops and clears its route if the script stops, ends, or errors.
+Set target coordinates without changing the throttle. **Returns immediately**. Call `self.nav.set_throttle(0.5)` to drive asynchronously while this script remains active. Poll `get_distance_to(x, y)` or `get_position()` in a wait loop. Use a distance tolerance, such as `while self.nav.get_distance_to(x, y) > 2:`, rather than exact zero, then call `self.nav.brake()` before `drill.mine()` or another stationary action. For an at-building action, target the building's `BuildingRef.position`, not its outpost footprint anchor. Stopping, ending, or failing the script stops the vehicle and clears its route.
 
 *Parameters*
 
@@ -17303,7 +18927,7 @@ Set throttle (**0.0-1.0**, clamped). `self.nav.set_throttle(0.5)` cruises; `1.0`
 
 ##### `.throttle() → float`
 
-Current throttle setpoint (**0.0-1.0**). Returns the value the script last wrote via `self.nav.set_throttle(...)`, or **0** after Stop, completion, error, or `brake()`. Distinct from `get_speed()`, `throttle()` is your intent, `get_speed()` is what the vehicle actually moved last tick.
+Current throttle setpoint (**0.0-1.0**). Returns the value the script last wrote via `self.nav.set_throttle(...)`, or **0** after Stop, completion, error, or `brake()`. Distinct from `get_speed()`, `throttle()` is your intent, `get_speed()` is the vehicle's speed in meters per hour on its last drive tick.
 
 - **Returns** `float`. Current throttle setpoint (**0.0-1.0**).
 
@@ -17389,7 +19013,7 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 ##### `.battery: Battery`
 
-Aggregated battery pool across every Portable Battery in every mounted Battery Holder. `self.battery.level()` returns a **0-1** fraction; `self.battery.wh()` raw watt-hours; `self.battery.capacity()` the summed max. For per-holder detail, `self.battery.holders()` returns each Holder with its `.batteries` list. The aggregate view covers most scripts, introspection is for advanced rebalance logic. If zero Portable Batteries are installed, the Pioneer can't move. See `Battery`.
+Aggregated battery pool across every Portable Battery in every mounted Battery Holder. `self.battery.level()` returns a **0-1** fraction; `self.battery.wh()` raw watt-hours; `self.battery.capacity()` the summed max. For per-holder detail, `self.battery.holders()` returns each `Holder` with its `.batteries` list. The aggregate view covers most scripts, introspection is for advanced rebalance logic. If zero Portable Batteries are installed, the Pioneer can't move. See `Battery`.
 
 - **Returns** `Battery`. Aggregated across every battery in every mounted Battery Holder.
 
@@ -17401,7 +19025,7 @@ Combines the Portable Bins in the Pioneer's Cargo Racks. Use `count()`, `capacit
 
 ##### `.nav: NavModule`
 
-Drives the Pioneer. Set a destination in meters from base with `self.nav.set_target(x, y)`. The call returns immediately and the Pioneer keeps driving while the script runs. A distance tolerance means the Pioneer is close enough, not stopped, so call `self.nav.brake()` before mining, constructing, or transferring cargo. The Pioneer stops and clears its route if the script stops, ends, or errors. Requires a Nav Module in a Universal slot. See `NavModule` for throttle, braking, and position.
+Set a destination with `self.nav.set_target(x, y)` and open the throttle with `self.nav.set_throttle(0.5)` to drive the Pioneer. Both calls return immediately; setting a destination leaves the throttle unchanged. Distance tolerance means close enough, not stopped: call `self.nav.brake()` before mining, construction, or cargo transfer. Stopping, ending, or failing the script stops the Pioneer and clears its route. Requires a Nav Module in a Universal slot.
 
 - **Returns** `NavModule`. When a Nav Module is mounted.
 
@@ -17425,17 +19049,47 @@ Builds or removes Planet Map blueprints from Plan Mode or scripts. Read pending 
 
 ##### `.input: VehicleInputSlot`
 
-Loads cargo from Inventory at home, local storage at outposts, field-extractor stockpiles, or a nearby stopped cargo vehicle. Field and vehicle transfers require service range; both vehicles must be stopped. It never destroys cargo; use `self.cargo.discard(rack_index)` to jettison one rack. Requires **Auto Feeders**. See `VehicleInputSlot`.
+Loads cargo from Inventory at home, local storage at outposts, field-extractor stockpiles, or a nearby stopped cargo vehicle. Loading from a field stockpile or from another vehicle requires service range; a vehicle-to-vehicle load also needs both vehicles stopped. It never destroys cargo; use `self.cargo.discard(rack_index)` to jettison one rack. Requires **Auto Feeders**. See `VehicleInputSlot`.
 
 - **Returns** `VehicleInputSlot`
 
 ##### `.output: OutputSlot`
 
-Unloads cargo to Inventory, a Storage Bin, a Warehouse, or a nearby stopped cargo vehicle. Inventory freight is physically available only while the Pioneer is parked at home. Remote outposts use their local stores. Vehicle-to-vehicle handoffs require both vehicles stopped within **~2 m**. Requires **Auto Feeders** research. See `OutputSlot`.
+Unloads cargo to Inventory, a Storage Bin, a Warehouse, or a nearby stopped cargo vehicle. Unloading into Inventory works only while the Pioneer is parked at home. Remote outposts use their local stores. Vehicle-to-vehicle handoffs require both vehicles stopped within **~2 m**. Requires **Auto Feeders** research. See `OutputSlot`.
 
 - **Returns** `OutputSlot`
 
 ### Methods
+
+##### `.swap_batteries(charger: str, slots: list[tuple[int, int]] | None = None, min_level: float = 1.0) → BatterySwapResult` *(self only)*
+
+Atomically exchange selected installed batteries for unqueued cells of the same type at or above `min_level`. The Pioneer must be parked in the charger's service area. All selected cells must have replacements; failure changes nothing. Drained cells occupy the vacated sockets, even when full. The call yields during normal handling and locks both endpoints. Charged stock can be used during an outage. No Inventory items are read or written.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `charger` | `str` | Local Battery Charger instance ID or unique display name. |
+| `slots` | `list[tuple[int, int]] \| None` | A list of (holder slot, internal slot) pairs, or `None` for every installed portable battery. Empty list exchanges nothing. |
+| `min_level` | `float` | Required charge fraction greater than 0 and at most 1; defaults to 1.0. |
+
+- **Returns** `BatterySwapResult`
+- **Result fields** `.status`, `.message`
+- **Success payload** `.swapped_count`
+
+*Outcomes*
+
+| Status | Kind | Meaning |
+| --- | --- | --- |
+| `"ok"` | success | The operation completed. |
+| `"no_op"` | success | No changes were needed. |
+| `"not_found"` | rejection | No Battery Charger matches that reference. |
+| `"under_construction"` | rejection | Construction is not complete. |
+| `"busy"` | transient | An endpoint is still handling batteries or cargo. |
+| `"not_at_service_point"` | rejection | The Pioneer is not parked in this charger's service area. |
+| `"invalid_slots"` | rejection | A selected rig socket does not contain a supported battery. |
+| `"no_compatible_battery"` | rejection | There are not enough unqueued replacements of the required battery type. |
+| `"insufficient_charged_batteries"` | rejection | Available replacements do not meet the requested minimum charge. |
 
 ##### `.status() → str`
 
@@ -17446,7 +19100,7 @@ Read the Pioneer's current physical activity. Each call reads fresh state, inclu
 
 ##### `.is_being_rescued() → bool`
 
-`True` while a Vehicle Charging Station rescue drone is actively recovering this Pioneer. Use this to pause movement, mining, or construction scripts even if the battery has started rising above zero.
+`True` while a Vehicle Charging Station rescue drone is charging this Pioneer where it stands. Use this to pause movement, mining, or construction scripts even if the battery has started rising above zero.
 
 - **Returns** `bool`
 
@@ -17459,7 +19113,7 @@ Current rescue mission phase for this Pioneer: `"none"`, `"outbound"`, `"chargin
 
 ##### `.dock(station: str) → ActionResult` *(self only)*
 
-Pick which Vehicle Charging Station this parked Pioneer docks at: `self.dock("charging_station_2")`. Every station inside an outpost covers the whole outpost, so this chooses between them. Without a choice, the Pioneer docks at the eligible station with the shortest distance to its station position or its outpost's center; equal-distance ties are broken alphabetically by station id. The choice lasts until the Pioneer drives away or the station is removed. Moving to another station ends any charging job at the old one, and the new station charges the Pioneer once its own script calls `charge()`.
+Pick which Vehicle Charging Station this parked Pioneer docks at: `self.dock("charging_station_2")`. Every station inside an outpost covers the whole outpost, so this chooses between them. Without a choice, the Pioneer docks at the eligible station closest to the vehicle, measured to the station or its outpost's center, whichever is closer; equal-distance ties are broken alphabetically by station id. The choice lasts until the Pioneer drives away or the station is removed. Moving to another station ends any charging job at the old one, and the new station charges the Pioneer once its own script calls `charge()`.
 
 *Parameters*
 
@@ -17606,6 +19260,31 @@ Request a service order that returns the portable item in a container's whole-nu
 | `"inventory_full"` | rejection | Inventory has no capacity for the result. |
 | `"container_not_empty"` | rejection | The module's cargo container is not empty. |
 
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
 Read commands you send from the editor's **Commands** tab while this script runs. Identical on every scriptable machine, see the guide: Script Commands
@@ -17659,7 +19338,7 @@ Everything carried in the Rover's integrated hold. `self.cargo.count()` returns 
 
 ##### `.nav: NavModule`
 
-Drives the Rover. Set a destination in meters from base with `self.nav.set_target(x, y)`. The call returns immediately and the Rover keeps driving while the script runs. A distance tolerance means the Rover is close enough, not stopped, so call `self.nav.brake()` before mining, scanning, surveying, or transferring cargo. The Rover stops and clears its route if the script stops, ends, or errors. Requires a mounted Nav Module. See `NavModule` for throttle, braking, and speed.
+Set a destination with `self.nav.set_target(x, y)` and open the throttle with `self.nav.set_throttle(0.5)` to drive the Rover. Both calls return immediately; setting a destination leaves the throttle unchanged. Distance tolerance means close enough, not stopped: call `self.nav.brake()` before mining, scanning, surveying, or cargo transfer. Stopping, ending, or failing the script stops the Rover and clears its route. Requires a mounted Nav Module.
 
 - **Returns** `NavModule`. When a Nav Module is mounted, else unavailable.
 
@@ -17677,13 +19356,13 @@ Extracts one mineral unit from the surveyed site under the Rover with `self.dril
 
 ##### `.input: VehicleInputSlot`
 
-Loads cargo from Inventory at home, local storage at outposts, field-extractor stockpiles, or a nearby stopped cargo vehicle. Field and vehicle transfers require service range; both vehicles must be stopped. It never destroys cargo; use `self.cargo.discard(0)` to jettison the hold. Requires **Auto Feeders**. See `VehicleInputSlot`.
+Loads cargo from Inventory at home, local storage at outposts, field-extractor stockpiles, or a nearby stopped cargo vehicle. Loading from a field stockpile or from another vehicle requires service range; a vehicle-to-vehicle load also needs both vehicles stopped. It never destroys cargo; use `self.cargo.discard(0)` to jettison the hold. Requires **Auto Feeders**. See `VehicleInputSlot`.
 
 - **Returns** `VehicleInputSlot`
 
 ##### `.output: OutputSlot`
 
-Unloads cargo to Inventory, a Storage Bin, a Warehouse, or a nearby stopped cargo vehicle. Inventory freight is physically available only while the Rover is parked at home. Remote outposts use their local stores. Vehicle-to-vehicle handoffs require both vehicles stopped within **~2 m**. Requires **Auto Feeders** research. See `OutputSlot`.
+Unloads cargo to Inventory, a Storage Bin, a Warehouse, or a nearby stopped cargo vehicle. Unloading into Inventory works only while the Rover is parked at home. Remote outposts use their local stores. Vehicle-to-vehicle handoffs require both vehicles stopped within **~2 m**. Requires **Auto Feeders** research. See `OutputSlot`.
 
 - **Returns** `OutputSlot`
 
@@ -17691,14 +19370,14 @@ Unloads cargo to Inventory, a Storage Bin, a Warehouse, or a nearby stopped carg
 
 ##### `.status() → str`
 
-Read the Rover's current physical activity. Each call reads fresh state, including through `get_component(...)`. An idle Rover may still have a script running or a job assigned.
+Read the Rover's current physical activity. Each call reads fresh state, including through `get_component(...)`. An `idle` Rover may still have a script running or a job assigned.
 
 - **Returns** `str`. Current vehicle activity, evaluated when called.
 - **Possible values** `"idle"`, `"moving"`, `"stranded"`, `"scanning"`, `"surveying"`, `"drilling"`, `"discarding"`, `"constructing"`, `"transferring"`, `"charging"`, `"queued"`, `"being_rescued"`
 
 ##### `.is_being_rescued() → bool`
 
-`True` while a Vehicle Charging Station rescue drone is actively recovering this Rover. Use this to pause movement or mining scripts even if the battery has started rising above zero.
+`True` while a Vehicle Charging Station rescue drone is charging this Rover where it stands. Use this to pause movement or mining scripts even if the battery has started rising above zero.
 
 - **Returns** `bool`
 
@@ -17711,7 +19390,7 @@ Current rescue mission phase for this Rover: `"none"`, `"outbound"`, `"charging"
 
 ##### `.dock(station: str) → ActionResult` *(self only)*
 
-Pick which Vehicle Charging Station this parked Rover docks at: `self.dock("charging_station_2")`. Every station inside an outpost covers the whole outpost, so this chooses between them. Without a choice, the Rover docks at the eligible station with the shortest distance to its station position or its outpost's center; equal-distance ties are broken alphabetically by station id. The choice lasts until the Rover drives away or the station is removed. Moving to another station ends any charging job at the old one, and the new station charges the Rover once its own script calls `charge()`.
+Pick which Vehicle Charging Station this parked Rover docks at: `self.dock("charging_station_2")`. Every station inside an outpost covers the whole outpost, so this chooses between them. Without a choice, the Rover docks at the eligible station closest to the vehicle, measured to the station or its outpost's center, whichever is closer; equal-distance ties are broken alphabetically by station id. The choice lasts until the Rover drives away or the station is removed. Moving to another station ends any charging job at the old one, and the new station charges the Rover once its own script calls `charge()`.
 
 *Parameters*
 
@@ -17858,6 +19537,31 @@ Uninstall a portable item from a container module's internal slot. **Not used on
 | `"inventory_full"` | rejection | Inventory has no capacity for the result. |
 | `"container_not_empty"` | rejection | The module's cargo container is not empty. |
 
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
 Read commands you send from the editor's **Commands** tab while this script runs. Identical on every scriptable machine, see the guide: Script Commands
@@ -17866,7 +19570,7 @@ Read commands you send from the editor's **Commands** tab while this script runs
 
 ## Sonar Module *(MODULE)*
 
-Finds and surveys world sites through `self.sonar`. A scan checks the area around the vehicle; driving alone does not scan. Use `get_component("nocturna").points_of_interest()` to find unscanned "?" markers, travel near one, then call `scan()` and `survey(site)`. Each sonar reveals its hardness limit and everything below it: Basic **50 m**, hardness **1**; Wide **180 m**, hardness **3** (adds Titanium and Cobalt); Deep **280 m**, hardness **4**. Research unlocks thermal vents, wells, and exotic deposits. Results are saved in the Journal. Local Harvester sectors, biological sites, and radiation fields use different scanners.
+Find and survey world sites through `self.sonar`. A scan checks the vehicle's surroundings; driving alone does not scan. Use `get_component("nocturna").points_of_interest()` to find unscanned contacts, travel near one, then call `scan()` and `survey(site)`. Basic sonar reaches **50 m** and hardness **1**; Extended **180 m** and **3**; Deep or Seismic **280 m** and **4**. Seismic also identifies deep oil potential after Advanced Oil Extraction. Resource research gates still apply. Results are saved in the Journal. See sonar guide for the sonar comparison, research requirements and scan-to-survey workflow.
 
 **Access via:** `self.sonar`
 
@@ -17912,11 +19616,11 @@ Sweep for compatible `Site`s within range of the vehicle's current position. Con
 
 | Exception | Condition |
 | --- | --- |
-| `ReferenceError` | This SonarModule reference is stale because its module is no longer mounted. Read self.sonar again after mounting a sonar. |
+| `ReferenceError` | This `SonarModule` reference is stale because its module is no longer mounted. Read `self.sonar` again after mounting a sonar. |
 
 ##### `.survey(site: str | Site | IdRecord) → SurveyResult` *(self only)*
 
-Reveal the details available for a productive `Site`. Pass either its string id or a `Site` from `scan()`. A repeat survey is free and instant unless a better sonar tier can reveal more. Inert `GeologicalAnomaly` contacts are already resolved by scanning.
+Reveal the details available for a productive `Site`. Pass either its string id or a `Site` from `scan()`. A repeat survey is free and instant unless a better sonar tier can reveal more. Ordinary scanning resolves inert `GeologicalAnomaly` contacts. Seismic Sonar and Advanced Oil Extraction allow a paid deep-oil survey of those formations, including ones already surveyed. Confirmed reservoirs become Oil Wells at the same coordinates; known dry formations are free to revisit.
 
 *Parameters*
 
@@ -17945,45 +19649,45 @@ Reveal the details available for a productive `Site`. Pass either its string id 
 
 | Exception | Condition |
 | --- | --- |
-| `ValueError` | survey() requires a non-empty site id or a Site object. |
-| `ReferenceError` | This SonarModule reference is stale because its module is no longer mounted. Read self.sonar again after mounting a sonar. |
+| `ValueError` | `survey()` requires a non-empty site id or a `Site` object. |
+| `ReferenceError` | This `SonarModule` reference is stale because its module is no longer mounted. Read `self.sonar` again after mounting a sonar. |
 
 ##### `.range() → float`
 
 Current sonar range in meters.
 
-- **Returns** `float`. In meters: **50** basic, **180** Wide, **280** Deep. A stale captured module reference raises `ReferenceError`.
+- **Returns** `float`. In meters: **50** basic, **180** Extended, **280** Deep or Seismic. A stale captured module reference raises `ReferenceError`.
 
 *Raises*
 
 | Exception | Condition |
 | --- | --- |
-| `ReferenceError` | This SonarModule reference is stale because its module is no longer mounted. Read self.sonar again after mounting a sonar. |
+| `ReferenceError` | This `SonarModule` reference is stale because its module is no longer mounted. Read `self.sonar` again after mounting a sonar. |
 
 ##### `.hardness_limit() → int`
 
 Maximum mineral hardness this sonar can identify.
 
-- **Returns** `int`. **1** basic, **3** Wide, **4** Deep. A stale captured module reference raises `ReferenceError`.
+- **Returns** `int`. **1** basic, **3** Extended, **4** Deep or Seismic. A stale captured module reference raises `ReferenceError`.
 
 *Raises*
 
 | Exception | Condition |
 | --- | --- |
-| `ReferenceError` | This SonarModule reference is stale because its module is no longer mounted. Read self.sonar again after mounting a sonar. |
+| `ReferenceError` | This `SonarModule` reference is stale because its module is no longer mounted. Read `self.sonar` again after mounting a sonar. |
 
 ##### `.tier() → str`
 
-Survey-depth tier granted by this sonar: `"basic"` / `"wide"` / `"deep"`. Controls how much of a thermal vent or exotic deposit is revealed by `survey()`; `"deep"` is also required for oil-well discovery.
+Survey-depth tier granted by this sonar: `"basic"` / `"wide"` / `"deep"` / `"seismic"`. Controls how much of a thermal vent or exotic deposit is revealed by `survey()`; Deep or Seismic Sonar is also required for oil-well discovery.
 
-- **Returns** `str`. The survey depth this sonar grants. It controls thermal and exotic detail; `"deep"` is required for oil-well discovery. A stale captured module reference raises `ReferenceError`.
-- **Possible values** `"basic"`, `"wide"`, `"deep"`
+- **Returns** `str`. The survey depth this sonar grants. It controls thermal and exotic detail; Deep or Seismic Sonar is required for oil-well discovery. A stale captured module reference raises `ReferenceError`.
+- **Possible values** `"basic"`, `"wide"`, `"deep"`, `"seismic"`
 
 *Raises*
 
 | Exception | Condition |
 | --- | --- |
-| `ReferenceError` | This SonarModule reference is stale because its module is no longer mounted. Read self.sonar again after mounting a sonar. |
+| `ReferenceError` | This `SonarModule` reference is stale because its module is no longer mounted. Read `self.sonar` again after mounting a sonar. |
 
 *Components / Logistics & Orders*
 
@@ -18037,7 +19741,7 @@ Store a JSON-safe value under a named key. Dictionaries inside the value must us
 
 ##### `.transaction(key: str, default: JsonValue, updater: Callable) → ActionResult`
 
-Atomically transform one stored value within the same archive value limits. The updater may be any pure callable; it receives the latest value or supplied default and cannot sleep, yield, or mutate the world.
+Atomically transform one stored value within the same archive value limits. The `updater` may be any pure callable; it receives the latest value or supplied `default` and cannot `sleep()`, yield, or mutate the world.
 
 *Parameters*
 
@@ -18063,7 +19767,7 @@ Atomically transform one stored value within the same archive value limits. The 
 
 ##### `.get(key: str, default: JsonValue = None) → JsonValue`
 
-Read a stored value by key. If the key is missing, returns the optional default argument; if no default is provided, returns `None`. Reading does not consume or modify the entry.
+Read a stored value by key. If the key is missing, returns the optional `default` argument; if no `default` is provided, returns `None`. Reading does not consume or modify the entry.
 
 *Parameters*
 
@@ -18156,7 +19860,7 @@ Remove archived entries. With no prefix it clears the whole archive; with a pref
 
 | Status | Kind | Meaning |
 | --- | --- | --- |
-| `"ok"` | success | The command affected `.count` entries or units. |
+| `"ok"` | success | Command completed. Affected entries or units: `.count`. |
 | `"no_op"` | success | The command affected no entries or units. |
 | `"invalid_key"` | rejection | The supplied key is invalid. |
 
@@ -18176,7 +19880,7 @@ Remove archived entries. With no prefix it clears the whole archive; with a pref
 
 1. The recipe unlocks when you complete **Helios, Frame Order**.
 2. Requires the **Basic Drone Operations** research (Terraform Index 180,000).
-3. Fabricate a **Drone Depot Kit** on a **Fabricator**: 2× Machine Frame, 1× Control Unit, 2× Gas Pipe Segment, 2× Liquid Pipe Segment, and 3 t Water.
+3. Fabricate **Drone Depot Kit** on a **Fabricator**: 2× Machine Frame, 1× Control Unit, 2× Gas Pipe Segment, 2× Liquid Pipe Segment, and 3 t Water.
 4. Deploy it from your Inventory.
 
 **Access via:** `self / get_component(id)`
@@ -18247,6 +19951,31 @@ How many distinct materials this depot can hold at once. A depot is a transfer p
 
 - **Returns** `int`. How many distinct materials this depot can hold at once (**3** / **4** / **6** depending on tier).
 
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
 Read commands you send from the editor's **Commands** tab while this script runs. Identical on every scriptable machine, see the guide: Script Commands
@@ -18267,7 +19996,7 @@ Charges electric drones in the field and recovers heli drones for queued refueli
 
 1. The recipe unlocks when you complete **Spire, Drone Power Trial**.
 2. Requires the **Basic Drone Operations** research (Terraform Index 180,000).
-3. Fabricate a **Drone Service Station Kit** on a **Fabricator**: 2× Machine Frame, 1× Control Unit, 2× Circuit Panel, 1× Battery Cell, and 1× Liquid Pipe Segment.
+3. Fabricate **Drone Service Station Kit** on a **Fabricator**: 2× Machine Frame, 1× Control Unit, 2× Circuit Panel, 1× Battery Cell, and 1× Liquid Pipe Segment.
 4. Deploy it from your Inventory.
 
 **Access via:** `self / get_component(id)`
@@ -18329,7 +20058,7 @@ Queue a parked electric drone to charge until its battery reaches `target_level`
 | --- | --- | --- |
 | `"charging"` | success | A charging job is active. |
 | `"queued"` | success | The operation was added to the queue. |
-| `"target_reached"` | rejection | The vehicle is already at or above the requested charge or fuel level. |
+| `"target_reached"` | success | The vehicle is already at or above the requested charge or fuel level. |
 | `"not_docked"` | rejection | The requested vehicle is not docked at this station. |
 | `"station_offline"` | transient | The station is offline. |
 | `"invalid"` | rejection | One or more supplied arguments are outside the accepted domain. |
@@ -18355,7 +20084,7 @@ Queue a parked heli drone to refuel until its oil tank reaches `target_level` (g
 | --- | --- | --- |
 | `"refueling"` | success | A refueling job is active. |
 | `"queued"` | success | The operation was added to the queue. |
-| `"target_reached"` | rejection | The vehicle is already at or above the requested charge or fuel level. |
+| `"target_reached"` | success | The vehicle is already at or above the requested charge or fuel level. |
 | `"not_docked"` | rejection | The requested vehicle is not docked at this station. |
 | `"station_offline"` | transient | The station is offline. |
 | `"no_oil"` | rejection | No oil is available for the operation. |
@@ -18370,7 +20099,7 @@ Send the recovery vehicle to a field drone chosen by your script; there is no hi
 | Name | Type | Description |
 | --- | --- | --- |
 | `drone_name` | `str` | Display name or id of the stranded drone to service. |
-| `target_level` | `float` | Optional battery/oil target greater than **0** and at most **1**. Electric rescue charges to it in the field; heli recovery submits it to the station refueling FIFO. Defaults to **1.0**. |
+| `target_level` | `float` | Optional battery/oil target greater than **0** and at most **1**. Electric drones are charged up to it in the field; heli drones are carried back and join the station's refueling queue with it as their target. Defaults to **1.0**. |
 
 - **Returns** `ActionResult`
 - **Result fields** `.status`, `.message`
@@ -18448,14 +20177,14 @@ Clear every active or queued charge and refuel job on this station. Docked drone
 
 | Status | Kind | Meaning |
 | --- | --- | --- |
-| `"ok"` | success | The command affected `.count` entries or units. |
+| `"ok"` | success | Command completed. Affected entries or units: `.count`. |
 | `"no_op"` | success | The command affected no entries or units. |
 
 ##### `.get_active() → list[str]`
 
 List of drone ids currently occupying active service bays (charging or refueling). An oil-blocked heli is waiting, not active.
 
-- **Returns** `list[str]`. Ids of the drones occupying active service bays (charging or refueling). Oil-blocked heli jobs are waiting, not active.
+- **Returns** `list[str]`. Ids of the drones occupying active service bays (charging or refueling). Heli drone refueling jobs held up because the station has no oil are waiting, not active.
 
 ##### `.get_queue() → list[str]`
 
@@ -18465,7 +20194,7 @@ One FIFO list of drone ids across electric charging and heli refueling. Oil-bloc
 
 ##### `.status(drone_id: str) → dict[str, JsonValue]`
 
-Detailed status for one drone's service job. Electric drones return a dict with `state`, `target_level`, `battery_wh`, `capacity_wh`, `rate_w`, `bay_index`, `queue_index`. Heli drones return `state`, `target_level`, `oil_tons`, `capacity_tons`, `rate_tons_per_hour`, `bay_index`, `queue_index`.
+Detailed status for one drone's service job. Electric drones return a `dict` with `state`, `target_level`, `battery_wh`, `capacity_wh`, `rate_w`, `bay_index`, `queue_index`. Heli drones return `state`, `target_level`, `oil_tons`, `capacity_tons`, `rate_tons_per_hour`, `bay_index`, `queue_index`.
 
 *Parameters*
 
@@ -18505,6 +20234,31 @@ Returns the oil t/h currently being pushed into the named heli drone (**0** if i
 
 - **Returns** `float`. **t/h** currently being pushed into that heli drone, **0** if it is not being refueled.
 
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
 Read commands you send from the editor's **Commands** tab while this script runs. Identical on every scriptable machine, see the guide: Script Commands
@@ -18513,7 +20267,7 @@ Read commands you send from the editor's **Commands** tab while this script runs
 
 ## Earth Orders
 
-Read Earth's current orders, future campaign requirements and rewards, and completed campaign history through `get_component("orders")`. Supply Dock scripts can use campaign and Weekly Orders to decide what to ship, while dashboards can show progress. Scripts cannot create or cancel Earth Orders. Bio Orders come from a Bio Exchange instead.
+Read Earth's current orders, the requirements and rewards of upcoming campaign orders, and completed campaign orders through `get_component("orders")`. Supply Dock scripts can use campaign and Weekly Orders to decide what to ship, while dashboards can show progress. Scripts cannot create or cancel Earth Orders. Bio Orders come from a Bio Exchange instead.
 
 **Access via:** `get_component("orders")`
 
@@ -18545,7 +20299,7 @@ Current contractor campaign Orders as a stable list of `Order` objects. These or
 
 Plan future production and reward paths with upcoming contractor campaign Orders, in campaign declaration order, preserving each contractor's queue sequence. Excludes current orders, completed orders, and Weekly Earth Orders. Upcoming orders cannot be assigned to Supply Docks until they become current. See `Order`.
 
-- **Returns** `list[Order]`. Future campaign orders (status `"upcoming"`), in campaign declaration order. Empty when no upcoming campaign orders remain.
+- **Returns** `list[Order]`. Future campaign orders (`status` is `"upcoming"`), in campaign declaration order. Empty when no upcoming campaign orders remain.
 
 ##### `.list_weekly_orders() → list[Order]`
 
@@ -18563,13 +20317,13 @@ Look up a specific Earth Order by id, including upcoming campaign orders for pla
 | --- | --- | --- |
 | `order_id` | `str` | Earth Order id from `list_orders()`, `list_upcoming_orders()`, `list_weekly_orders()`, or `completed_orders()` |
 
-- **Returns** `Order | None`. A campaign order with status `"upcoming"`, `"active"`, or `"completed"`, or a Weekly Earth Order from the current board. `None` for unknown or expired weekly ids. Bio Order ids are read from a Bio Exchange.
+- **Returns** `Order | None`. A campaign order whose `status` is `"upcoming"`, `"active"`, or `"completed"`, or a Weekly Earth Order from the current board. `None` for unknown or expired weekly ids. Bio Order ids are read from a Bio Exchange.
 
 ##### `.completed_orders() → list[Order]`
 
 Permanent contractor campaign history, ordered by completion time (oldest first). Weekly completions stay on the current Weekly board and are intentionally excluded from this ledger.
 
-- **Returns** `list[Order]`. Earth Orders already delivered, in order of completion.
+- **Returns** `list[Order]`. Completed contractor campaign orders, in order of completion. Excludes Weekly Earth Orders.
 
 *Components / Logistics & Orders*
 
@@ -18695,18 +20449,18 @@ Wait for and take one queued message from any listed channel. Channels listed fi
 | Status | Kind | Meaning |
 | --- | --- | --- |
 | `"ok"` | success | One queued message was consumed from the first listed channel with waiting work. The result includes that channel and its copied message. |
-| `"invalid_channel"` | rejection | At least one listed channel id is invalid. No message was consumed; channel and packet are None. |
+| `"invalid_channel"` | rejection | At least one listed channel id is invalid. No message was consumed; `channel` and `packet` are `None`. |
 
 *Raises*
 
 | Exception | Condition |
 | --- | --- |
-| `TypeError` | channels must be a list containing only channel-id strings. |
-| `ValueError` | channels must contain 1-128 entries. |
+| `TypeError` | `channels` must be a list containing only channel-id strings. |
+| `ValueError` | `channels` must contain 1-128 entries. |
 
 ##### `.wait_broadcast(channel: str) → WaitBroadcastResult`
 
-Wait for the next broadcast on a channel. Every script already waiting captures that publication, including a repeated value or None. Existing broadcasts do not satisfy a new wait. Only this script pauses; queued messages remain untouched. The first publication is retained even if another broadcast follows or the channel is cleared. Pausing retains that signal for resume; stopping abandons the wait.
+Wait for the next broadcast on a channel. Every script already waiting captures that publication, including a repeated value or `None`. Existing broadcasts do not satisfy a new wait. Only this script pauses; queued messages remain untouched. The first publication is retained even if another broadcast follows or the channel is cleared. Pausing retains that signal for resume; stopping abandons the wait.
 
 *Parameters*
 
@@ -18833,7 +20587,7 @@ Store a channel's latest JSON-safe value without consuming queue slots. Dictiona
 
 ##### `.latest(channel: str) → JsonValue`
 
-Return the most recent value broadcast on a channel, or `None` if the channel has no latest value. Reading latest does not consume it.
+Return the most recent value broadcast on a channel, or `None` if the channel has no latest value. Reading `latest()` does not consume it.
 
 *Parameters*
 
@@ -18909,7 +20663,7 @@ Remove a channel's queued messages and latest broadcast.
 
 | Status | Kind | Meaning |
 | --- | --- | --- |
-| `"ok"` | success | The command affected `.count` entries or units. |
+| `"ok"` | success | Command completed. Affected entries or units: `.count`. |
 | `"no_op"` | success | The command affected no entries or units. |
 | `"invalid_channel"` | rejection | The supplied channel id is outside the Signal Bus naming rules. |
 
@@ -18955,9 +20709,9 @@ The outpost where this building is deployed. The returned `OutpostRef` includes 
 
 ##### `.input: InputSlot`
 
-Load only what the active Order still needs with `connect(...)` and `take(...)`, or push from a parked cargo vehicle. Excess stays at the source, and active-order cargo stays reserved. After `clear_order()` or completion, use `eject(destination, item_id, count)` to recover leftovers to Inventory at Nocturna Base or local freight elsewhere. `flush()` destroys loaded cargo. Requires **Auto Feeders** research. See `InputSlot`.
+Load only what the active Order still needs with `connect(...)` and `take(...)`, or push from a parked cargo vehicle. Excess stays at the source, and active-order cargo stays reserved. After `clear_order()` or completion, use `eject(destination, item_id, count)` to recover leftovers to Inventory at Nocturna Base, or into compatible storage at the dock's own outpost elsewhere. `flush()` destroys loaded cargo. Requires **Auto Feeders** research. See `InputSlot`.
 
-- **Returns** `InputSlot`. Order-aware: accepts only the active Order's remaining need. After the Order clears or completes, `eject(...)` recovers leftover cargo to explicit local freight; `flush()` destroys it.
+- **Returns** `InputSlot`. Order-aware: accepts only the active Order's remaining need. After the Order clears or completes, `eject(...)` recovers leftover cargo into a compatible destination you name at this outpost; `flush()` destroys it.
 
 ### Methods
 
@@ -19056,7 +20810,7 @@ Toggle the continuous dispatcher. `True` resumes shipping; `False` pauses it. Lo
 
 ##### `.is_enabled() → bool`
 
-`True` while the dispatcher is active. It becomes `False` after `set_enabled(False)` or when the assigned Order completes. A new dock starts enabled, so assigning an Order while cargo is loaded begins shipping immediately.
+`True` when the dispatcher is enabled, even if it is idle. `set_enabled(False)`, order completion, and weekly expiry disable it. A new dock starts enabled. Assign an `Order` while the dock is empty, then load it; an enabled, powered dock ships cargo its `Order` still needs.
 
 - **Returns** `bool`. `True` when the dispatcher is active, `False` after `set_enabled(False)`. Newly deployed docks default to enabled.
 
@@ -19074,9 +20828,34 @@ The `item_id` the dispatcher is currently emitting, or `None` when idle (no powe
 
 ##### `.dispatch_progress() → float`
 
-Fraction **0-1** of the current unit's accumulator toward emission. Holds at **0** while the dock has nothing shippable loaded, the charge starts when a shippable unit lands. Drives the perimeter-clock animation on the dock card; scripts can use it to estimate "next launch in X hours."
+Normalized **0-1** progress toward the next dispatch pulse or launch cycle; a cycle can emit multiple cargo units according to the dispatch upgrade. Holds at **0** while the dock has nothing shippable loaded, the charge starts when a shippable unit lands. Drives the perimeter-clock animation on the dock card; scripts can use it to estimate "next launch in X hours."
 
-- **Returns** `float`. Fraction of the current unit's accumulation toward emission (**0-1**). At **1.0** a unit is emitted and the counter resets.
+- **Returns** `float`. Normalized progress toward the next dispatch pulse (**0-1**).
+
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -19108,6 +20887,35 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 ### Methods
 
+##### `.plan_upgrade(item_id: str, machine: str | Component) → BlueprintPlanResult`
+
+Queue an Oil Pump pack installation. The pump keeps operating until a parked Pioneer with the pack in cargo completes the construction job at its service area. Each pump can have one pending upgrade or dismantling job.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `item_id` | `str` | Oil Pump upgrade pack item id. |
+| `machine` | `str \| Component` | Oil Pump name, id, or component to upgrade in place. |
+
+- **Returns** `BlueprintPlanResult`
+- **Result fields** `.status`, `.message`
+- **Success payload** `.blueprint_ids`
+
+*Outcomes*
+
+| Status | Kind | Meaning |
+| --- | --- | --- |
+| `"ok"` | success | Construction blueprints created: `count`. |
+| `"locked"` | rejection | The required construction technology or kit recipe has not been unlocked. |
+| `"not_found"` | rejection | The target machine no longer exists. |
+| `"not_upgrade_item"` | rejection | The supplied item is not an upgrade pack. |
+| `"wrong_machine_type"` | rejection | The pack or target is not compatible with field Oil Pump installation. |
+| `"under_construction"` | rejection | The target machine is still under construction. |
+| `"tier_not_ready"` | rejection | The target machine is not at the tier required by this pack. |
+| `"target_claimed"` | rejection | The required map feature is claimed, or the target machine already has a planned upgrade or dismantling job. |
+| `"blocked"` | rejection | The requested construction or deconstruction is blocked by existing or planned infrastructure. |
+
 ##### `.plan_structure(kind: str, x: float, y: float, rotation: int = 0) → BlueprintPlanResult`
 
 Create one point-structure construction ghost from script coordinates. Supported kinds are `"outpost"`, `"thermal_cap"`, `"water_pump"`, `"oil_pump"`, `"exotic_gas_cap"`, `"exotic_spring_tap"`, `"mining_drill"`, `"mining_drill_industrial"`, and `"mining_drill_heavy"`. Drill kinds require their matching Earth Order kit recipe. Coordinates snap to the map grid. Extraction structures snap to the exact matching surveyed feature, while Outposts use the snapped footprint anchor. The optional clockwise rotation is `0`, `90`, `180`, or `270`. The ghost enters the shared queue immediately; a Pioneer still constructs it later.
@@ -19137,7 +20945,7 @@ Create one point-structure construction ghost from script coordinates. Supported
 | `"wrong_target"` | rejection | The requested position does not contain the map feature required by this structure. |
 | `"unsurveyed_target"` | rejection | The required map feature has not been surveyed. |
 | `"too_hard"` | rejection | The selected Mining Drill cannot cut this deposit's mineral hardness. |
-| `"target_claimed"` | rejection | The required map feature already has a built or planned extractor. |
+| `"target_claimed"` | rejection | The required map feature is claimed, or the target machine already has a planned upgrade or dismantling job. |
 | `"occupied"` | rejection | The requested structure footprint overlaps existing or planned construction, or a physical anomaly. |
 | `"clearance"` | rejection | The requested structure footprint crosses an Outpost or physical-anomaly clearance boundary. |
 | `"blocked"` | rejection | The requested construction or deconstruction is blocked by existing or planned infrastructure. |
@@ -19224,7 +21032,7 @@ Create one utility bridge job from script coordinates. Requires Constructor Modu
 | `"ok"` | success | Construction blueprints created: `count`. |
 | `"locked"` | rejection | The required construction technology or kit recipe has not been unlocked. |
 | `"invalid_medium"` | rejection | The requested infrastructure medium is not supported. |
-| `"invalid_axis"` | rejection | A bridge axis must be "horizontal" or "vertical". |
+| `"invalid_axis"` | rejection | A bridge axis must be `"horizontal"` or `"vertical"`. |
 | `"out_of_bounds"` | rejection | At least one requested construction tile lies outside the planet bounds. |
 | `"blocked"` | rejection | The requested construction or deconstruction is blocked by existing or planned infrastructure. |
 | `"already_exists"` | success | The matching infrastructure route already exists, so no blueprint was created. |
@@ -19256,7 +21064,7 @@ Mark built infrastructure or a normal map building at the coordinate for deconst
 | `"already_queued"` | success | A matching deconstruction blueprint is already queued. |
 | `"ambiguous_target"` | rejection | More than one deconstructable target matches that position and layer. Choose a more specific layer or another tile. |
 | `"out_of_bounds"` | rejection | At least one requested construction tile lies outside the planet bounds. |
-| `"invalid_layer"` | rejection | A deconstruction layer must be "auto", "building", "gas", "liquid", or "power". |
+| `"invalid_layer"` | rejection | A deconstruction layer must be `"auto"`, `"building"`, `"gas"`, `"liquid"`, or `"power"`. |
 | `"blocked"` | rejection | The requested construction or deconstruction is blocked by existing or planned infrastructure. |
 
 ##### `.cancel(blueprint_id: str) → ActionResult`
@@ -19315,8 +21123,8 @@ Captures gas from a cyclic exotic deposit during its active phase. Connect `self
 
 ### How to obtain
 
-1. The recipe unlocks with the **Exotic Husbandry** research (Wildlife 1,000).
-2. Fabricate a **Exotic Gas Cap Kit** on a **Fabricator**: 2× Titanium Ingot and 2× Gas Pipe Segment.
+1. The recipe unlocks with the **Exotic Fluids** research (Wildlife 1,000).
+2. Fabricate **Exotic Gas Cap Kit** on a **Fabricator**: 2× Titanium Ingot and 2× Gas Pipe Segment.
 3. Build it on a surveyed exotic deposit with a Pioneer's Constructor.
 
 **Access via:** `self / get_component(id)`
@@ -19347,7 +21155,7 @@ Fluid output for the buffered gas. This port may declare one destination with `s
 
 ##### `.deposit() → ExoticDeposit | None`
 
-The `ExoticDeposit` this cap is bolted to, `.id`, `position()`, `fluid()`, `current_phase()`, cycle timing. Field availability is gated by the sonar tier that last surveyed the deposit: basic reveals phase only, wide adds rates, deep adds cycle timing. `None` if the cap isn't on a deposit. Use `deposit.current_phase()` to check whether the source is active. See `ExoticDeposit`.
+The `ExoticDeposit` this cap is bolted to, `.id`, `position()`, `fluid()`, `current_phase()`, cycle timing. Field availability is gated by the sonar tier that last surveyed the deposit: `"basic"` reveals phase only, `"wide"` adds rates, `"deep"` adds cycle timing. `None` if the cap isn't on a deposit. Use `deposit.current_phase()` to check whether the source is `active`. See `ExoticDeposit`.
 
 - **Returns** `ExoticDeposit | None`. The deposit attached to this cap, or `None`. Its cycle, survey and collector methods read live state on each call: keep the object and call its methods for fresh readings. The `.surveyed` property remains a creation-time snapshot.
 
@@ -19377,7 +21185,7 @@ Current release-valve setting, `0.0` (holding) to `1.0` (wide open). Read it bac
 
 ##### `.set_throttle(t: float) → ActionResult` *(self only)*
 
-Open the cap's release valve from `0.0` to `1.0` (clamped). `0` holds the buffer; `1.0` releases gas across reachable connected destinations as fast as buffer supply, headroom, and throughput allow. This script-owned setpoint resets to `0` when the script stops, ends, or errors. `[self only]`
+Open the cap's release valve from `0.0` to `1.0` (clamped). `0` holds the buffer; `1.0` releases gas across reachable connected destinations as fast as buffer supply, headroom, and throughput allow. This script-owned setpoint resets to `0` when the script stops, ends, or errors. **self only**
 
 *Parameters*
 
@@ -19394,6 +21202,31 @@ Open the cap's release valve from `0.0` to `1.0` (clamped). `0` holds the buffer
 | Status | Kind | Meaning |
 | --- | --- | --- |
 | `"ok"` | success | The operation completed successfully. |
+
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -19413,8 +21246,8 @@ Captures liquid from a cyclic exotic spring during its active phase. Connect `se
 
 ### How to obtain
 
-1. The recipe unlocks with the **Exotic Husbandry** research (Wildlife 1,000).
-2. Fabricate a **Exotic Spring Tap Kit** on a **Fabricator**: 2× Titanium Ingot, 2× Liquid Pipe Segment, and 1× Pressure Valve.
+1. The recipe unlocks with the **Exotic Fluids** research (Wildlife 1,000).
+2. Fabricate **Exotic Spring Tap Kit** on a **Fabricator**: 2× Titanium Ingot, 2× Liquid Pipe Segment, and 1× Pressure Valve.
 3. Build it on a surveyed exotic deposit with a Pioneer's Constructor.
 
 **Access via:** `self / get_component(id)`
@@ -19437,7 +21270,7 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 ##### `.liquid_out: FluidPort`
 
-Fluid output for the buffered liquid. This port may declare one destination with `self.liquid_out.connect("Cryofluid Tank")`; additional consumers may connect their own compatible input ports to this Tap. Because the Tap is a field structure, every destination needs a compatible completed Liquid Pipe component reaching the Tap and the destination. `connected_to()` reports only this port's own declaration; `flow_rate()` reports total live release. See `FluidPort`.
+Fluid output for the buffered liquid. This port may declare one destination with `self.liquid_out.connect("Cryofluid Tank")`; additional consumers may connect their own compatible input ports to this Tap. Because the Tap is a field structure, every destination needs a compatible completed Liquid Pipe network connecting the Tap and the destination. `connected_to()` reports only this port's own declaration; `flow_rate()` reports total live release. See `FluidPort`.
 
 - **Returns** `FluidPort`. The deposit's liquid. This port may declare one destination with `self.liquid_out.connect("Cryofluid Tank")`; additional consumers may connect their own compatible inputs to the Tap. Completed liquid-pipe networks carry liquid between outposts.
 
@@ -19445,7 +21278,7 @@ Fluid output for the buffered liquid. This port may declare one destination with
 
 ##### `.deposit() → ExoticDeposit | None`
 
-The `ExoticDeposit` this tap is bolted to, `.id`, `position()`, `fluid()`, `current_phase()`, cycle timing. Field availability is gated by the sonar tier that last surveyed the deposit (basic / wide / deep). `None` if the tap isn't on a deposit. Use `deposit.current_phase()` to check whether the source is active. See `ExoticDeposit`.
+The `ExoticDeposit` this tap is bolted to, `.id`, `position()`, `fluid()`, `current_phase()`, cycle timing. Field availability is gated by the sonar tier that last surveyed the deposit (`basic` / `wide` / `deep`). `None` if the tap isn't on a deposit. Use `deposit.current_phase()` to check whether the source is `active`. See `ExoticDeposit`.
 
 - **Returns** `ExoticDeposit | None`. The deposit attached to this tap, or `None`. Its cycle, survey and collector methods read live state on each call: keep the object and call its methods for fresh readings. The `.surveyed` property remains a creation-time snapshot.
 
@@ -19475,7 +21308,7 @@ Current release-valve setting, `0.0` (holding) to `1.0` (wide open). Read it bac
 
 ##### `.set_throttle(t: float) → ActionResult` *(self only)*
 
-Open the tap's release valve from `0.0` to `1.0` (clamped). `0` holds the buffer; `1.0` releases liquid across reachable connected destinations as fast as buffer supply, headroom, and throughput allow. This script-owned setpoint resets to `0` when the script stops, ends, or errors. `[self only]`
+Open the tap's release valve from `0.0` to `1.0` (clamped). `0` holds the buffer; `1.0` releases liquid across reachable connected destinations as fast as buffer supply, headroom, and throughput allow. This script-owned setpoint resets to `0` when the script stops, ends, or errors. **self only**
 
 *Parameters*
 
@@ -19492,6 +21325,31 @@ Open the tap's release valve from `0.0` to `1.0` (clamped). `0` holds the buffer
 | Status | Kind | Meaning |
 | --- | --- | --- |
 | `"ok"` | success | The operation completed successfully. |
+
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -19539,25 +21397,25 @@ The outpost where this building is deployed. The returned `OutpostRef` includes 
 
 ##### `.gas_in: FluidPort`
 
-The latched gas id (e.g. `"steam"`, `"ammonia"`), or `""` while empty. The tank commits to the first gas it receives and holds only that until it drains to **0**, then re-latches.
+Connect a gas output to this input port to store its gas.
 
-- **Returns** `FluidPort`. Accepts any gas while empty. Call `connect(...)` with the provider's stable machine id or display name; the first exact gas delivered latches the tank.
+- **Returns** `FluidPort`. Accepts any gas while empty. Call `connect(...)` with the provider's stable machine id or display name; after that, the tank accepts only the first gas delivered until it is empty.
 
 ##### `.gas_out: FluidPort`
 
-The latched gas id (e.g. `"steam"`, `"ammonia"`), or `""` while empty. The tank commits to the first gas it receives and holds only that until it drains to **0**, then re-latches.
+Connect this output port to a gas input to supply the stored gas.
 
 - **Returns** `FluidPort`. Neutral while empty; provides the tank's latched gas to connected consumers.
 
 ##### `.steam_in: FluidPort`
 
-The latched gas id (e.g. `"steam"`, `"ammonia"`), or `""` while empty. The tank commits to the first gas it receives and holds only that until it drains to **0**, then re-latches.
+Connect a gas output to this input port to store its gas.
 
 - **Returns** `FluidPort`. `FluidPort` input for the tank's exact latched gas. This property exists only while `fluid()` is `"steam"`.
 
 ##### `.steam_out: FluidPort`
 
-The latched gas id (e.g. `"steam"`, `"ammonia"`), or `""` while empty. The tank commits to the first gas it receives and holds only that until it drains to **0**, then re-latches.
+Connect this output port to a gas input to supply the stored gas.
 
 - **Returns** `FluidPort`. `FluidPort` output for the tank's exact latched gas. This property exists only while `fluid()` is `"steam"`.
 
@@ -19596,7 +21454,7 @@ Gas arriving in t/h. **0** means no upstream flow, for example a dormant source,
 
 ##### `.outflow_rate() → float`
 
-Gas leaving in t/h. **0** means downstream consumer is saturated or the pipe is disconnected.
+Gas leaving in t/h. **0** means no gas was delivered, for example because the tank is empty, consumers are full or not drawing, or no valid route is connected.
 
 - **Returns** `float`. Gas leaving, in t/h.
 
@@ -19654,25 +21512,25 @@ The outpost where this building is deployed. The returned `OutpostRef` includes 
 
 ##### `.liquid_in: FluidPort`
 
-The latched liquid id (e.g. `"water"`, `"oil"`, `"frozen_essence"`), or `""` while empty. The tank commits to the first liquid it receives and holds only that until it drains to **0**, then re-latches.
+Connect a liquid output to this input port to store its liquid.
 
-- **Returns** `FluidPort`. Accepts any liquid while empty. Call `connect(...)` with the provider's stable machine id or display name; the first exact liquid delivered latches the reservoir.
+- **Returns** `FluidPort`. Accepts any liquid while empty. Call `connect(...)` with the provider's stable machine id or display name; after that, the reservoir accepts only the first liquid delivered until it is empty.
 
 ##### `.liquid_out: FluidPort`
 
-The latched liquid id (e.g. `"water"`, `"oil"`, `"frozen_essence"`), or `""` while empty. The tank commits to the first liquid it receives and holds only that until it drains to **0**, then re-latches.
+Connect this output port to a liquid input to supply the stored liquid.
 
 - **Returns** `FluidPort`. Carries the reservoir's latched liquid.
 
 ##### `.water_in: FluidPort`
 
-The latched liquid id (e.g. `"water"`, `"oil"`, `"frozen_essence"`), or `""` while empty. The tank commits to the first liquid it receives and holds only that until it drains to **0**, then re-latches.
+Connect a liquid output to this input port to store its liquid.
 
 - **Returns** `FluidPort`. `FluidPort` input for the tank's exact latched liquid. This property exists only while `fluid()` is `"water"`.
 
 ##### `.water_out: FluidPort`
 
-The latched liquid id (e.g. `"water"`, `"oil"`, `"frozen_essence"`), or `""` while empty. The tank commits to the first liquid it receives and holds only that until it drains to **0**, then re-latches.
+Connect this output port to a liquid input to supply the stored liquid.
 
 - **Returns** `FluidPort`. `FluidPort` output for the tank's exact latched liquid. This property exists only while `fluid()` is `"water"`.
 
@@ -19711,7 +21569,7 @@ Liquid arriving in t/h. **0** = no upstream flow.
 
 ##### `.outflow_rate() → float`
 
-Liquid leaving in t/h. **0** = no downstream consumer drawing.
+Liquid leaving in t/h. **0** means no liquid was delivered, for example because the tank is empty, consumers are full or not drawing, or no valid route is connected.
 
 - **Returns** `float`. Liquid leaving, in t/h.
 
@@ -19723,7 +21581,7 @@ Liquid leaving in t/h. **0** = no downstream consumer drawing.
 
 ##### `.is_empty() → bool`
 
-`True` when `level() == 0`; the tank is unlatched and downstream consumers are starved.
+`True` when `level() == 0`; the tank is no longer bound to a liquid, so the next liquid it receives sets its contents, and downstream consumers get nothing.
 
 - **Returns** `bool`
 
@@ -19769,25 +21627,25 @@ The outpost where this building is deployed. The returned `OutpostRef` includes 
 
 ##### `.liquid_in: FluidPort`
 
-The latched liquid id (e.g. `"water"`, `"oil"`, `"frozen_essence"`), or `""` while empty. The tank commits to the first liquid it receives and holds only that until it drains to **0**, then re-latches.
+Connect a liquid output to this input port to store its liquid.
 
-- **Returns** `FluidPort`. Accepts any liquid while empty. Call `connect(...)` with the provider's stable machine id or display name; the first exact liquid delivered latches the tank.
+- **Returns** `FluidPort`. Accepts any liquid while empty. Call `connect(...)` with the provider's stable machine id or display name; after that, the tank accepts only the first liquid delivered until it is empty.
 
 ##### `.liquid_out: FluidPort`
 
-The latched liquid id (e.g. `"water"`, `"oil"`, `"frozen_essence"`), or `""` while empty. The tank commits to the first liquid it receives and holds only that until it drains to **0**, then re-latches.
+Connect this output port to a liquid input to supply the stored liquid.
 
 - **Returns** `FluidPort`. Neutral while empty; provides the tank's latched liquid to connected consumers.
 
 ##### `.water_in: FluidPort`
 
-The latched liquid id (e.g. `"water"`, `"oil"`, `"frozen_essence"`), or `""` while empty. The tank commits to the first liquid it receives and holds only that until it drains to **0**, then re-latches.
+Connect a liquid output to this input port to store its liquid.
 
 - **Returns** `FluidPort`. `FluidPort` input for the tank's exact latched liquid. This property exists only while `fluid()` is `"water"`.
 
 ##### `.water_out: FluidPort`
 
-The latched liquid id (e.g. `"water"`, `"oil"`, `"frozen_essence"`), or `""` while empty. The tank commits to the first liquid it receives and holds only that until it drains to **0**, then re-latches.
+Connect this output port to a liquid input to supply the stored liquid.
 
 - **Returns** `FluidPort`. `FluidPort` output for the tank's exact latched liquid. This property exists only while `fluid()` is `"water"`.
 
@@ -19826,7 +21684,7 @@ Liquid arriving in t/h. **0** = no upstream flow.
 
 ##### `.outflow_rate() → float`
 
-Liquid leaving in t/h. **0** = no downstream consumer drawing.
+Liquid leaving in t/h. **0** means no liquid was delivered, for example because the tank is empty, consumers are full or not drawing, or no valid route is connected.
 
 - **Returns** `float`. Liquid leaving, in t/h.
 
@@ -19838,7 +21696,7 @@ Liquid leaving in t/h. **0** = no downstream consumer drawing.
 
 ##### `.is_empty() → bool`
 
-`True` when `level() == 0`; the tank is unlatched and downstream consumers are starved.
+`True` when `level() == 0`; the tank is no longer bound to a liquid, so the next liquid it receives sets its contents, and downstream consumers get nothing.
 
 - **Returns** `bool`
 
@@ -19848,17 +21706,26 @@ Liquid leaving in t/h. **0** = no downstream consumer drawing.
 
 Extracts oil from a surveyed well at a throttle your script sets. Oil wells run in active and dormant phases, so buffer the output through a Liquid Tank to ride out the dry spells.
 
+### Mk I
+
 | Field | Value |
 | --- | --- |
 | Type | Fluids |
 | Built on | Oil wells |
-| Power in | -5 W (draws from grid) |
+| Power in | Up to -5 W at full throttle (draws from grid) |
 | Produces | Oil, buffer 10 t |
+| Tiers | Mk II |
+
+### Mk II
+
+| Field | Value |
+| --- | --- |
+| Power in | Up to -100 W at full throttle (draws from grid) |
 
 ### How to obtain
 
 1. The recipe unlocks with the **Petroleum Survey** research (Oxygen 1,500).
-2. Fabricate a **Oil Pump** on a **Fabricator**: 2× Iron Ingot, 1× Titanium Ingot, 1× Pressure Valve, and 1× Circuit Panel.
+2. Fabricate **Oil Pump** on a **Fabricator**: 2× Iron Ingot, 1× Titanium Ingot, 1× Pressure Valve, and 1× Circuit Panel.
 3. Build it on a surveyed oil well with a Pioneer's Constructor.
 
 **Access via:** `self / get_component(id)`
@@ -19881,11 +21748,17 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 ##### `.oil_out: FluidPort`
 
-Fluid output for oil. This port may declare one destination with `self.oil_out.connect("Oil Reserve")`; additional consumers may connect their own `oil_in` ports to this Pump. Because the Pump is a field structure, every destination needs a compatible completed Liquid Pipe component reaching the Pump and the destination. `connected_to()` reports only this output port's declaration; `flow_rate()` reports total live delivery. The Pump stores nothing, so `level()` reads **0**. See `FluidPort`.
+Fluid output for oil. This port may declare one destination with `self.oil_out.connect("Oil Reserve")`; additional consumers may connect their own `oil_in` ports to this Pump. Because the Pump is a field structure, every destination needs a compatible completed Liquid Pipe network connecting the Pump and the destination. `connected_to()` reports only this output port's declaration; `flow_rate()` reports total live delivery. The Pump stores nothing, so `level()` reads **0**. See `FluidPort`.
 
-- **Returns** `FluidPort`. Routes oil to a connected target. Call `connect(...)` with the target's stable machine id or display name, then open `set_throttle(...)`. Completed liquid-pipe networks carry oil between outposts.
+- **Returns** `FluidPort`. Routes oil to a connected target. Call `connect(...)` with the target's stable machine id or display name, then call `set_throttle(...)` with a value above **0**. Completed liquid-pipe networks carry oil between outposts.
 
 ### Methods
+
+##### `.tier() → int`
+
+Installed machinery tier: `1` for Mk I, `2` for Mk II, or `3` for Mk III where supported.
+
+- **Returns** `int`
 
 ##### `.well() → OilWell`
 
@@ -19895,9 +21768,9 @@ The `OilWell` this pump is bolted to. Same shape as `WaterWell`, yield tier (1×
 
 ##### `.pump_rate() → float`
 
-Total oil delivered across every reachable connected destination this tick, in t/h. **0** when throttle is **0**, the well is dormant, or no destination can accept flow. See `is_stalled()` to tell a routing block from a dormant well.
+Current total oil delivery rate across every reachable connected destination, in t/h, measured this tick. **0** when throttle is **0**, the well is dormant, or no destination can accept flow. See `is_stalled()` to tell a routing block from a dormant well.
 
-- **Returns** `float`. Total oil delivered across every reachable connected destination this tick, in t/h. **0** when throttle is **0**, the well is dormant, or no destination can accept flow.
+- **Returns** `float`. Current total oil delivery rate across every reachable connected destination, in t/h, measured this tick. **0** when throttle is **0**, the well is dormant, or no destination can accept flow.
 
 ##### `.well_active() → bool`
 
@@ -19936,6 +21809,31 @@ Set the pump's total output rate (**0-1**) across reachable connected destinatio
 | Status | Kind | Meaning |
 | --- | --- | --- |
 | `"ok"` | success | The operation completed successfully. |
+
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -20061,7 +21959,7 @@ The home outpost as an `OutpostRef`.
 
 ##### `.nearest(x: float, y: float) → OutpostRef`
 
-Nearest owned outpost to the given world coordinate. Useful before routing a vehicle home to recharge or choosing where a constructor should stage.
+Nearest owned outpost to the given world coordinate. Useful before routing a vehicle to the nearest outpost to recharge or choosing where a constructor should stage.
 
 *Parameters*
 
@@ -20115,7 +22013,7 @@ Finds the grid containing `target_id`, which may be an outpost, building, or fie
 | `target_id` | `str` | Outpost, building, or field power-structure instance id |
 
 - **Returns** `PowerGrid | None`
-- **None means** `None` means the target is unknown, mobile, under construction, not a building or field power structure, or not part of a completed power grid.
+- **`None` means** `None` means the target is unknown, mobile, under construction, not a building or field power structure, or not part of a completed power grid.
 
 *Outcomes*
 
@@ -20191,7 +22089,7 @@ for grid in power.grids():
 
 ## Run Control
 
-Inspect machine scripts, discover and apply saved variants, and control execution remotely. Shared start/stop controller for machine scripts, the remote equivalent of a machine card's Run / Stop buttons. Use it to build a supervisor: one script that watches the base and shuts down another machine when it detects a fault, without parking that machine in a permanent `sleep` loop. This is the **run/stop axis**, separate from `power_control` (the breaker): `stop` ends a script and latches it off, while a power toggle only pauses and auto-resumes.
+Inspect machine scripts, discover and apply saved variants, and control execution remotely. Shared start/stop controller for machine scripts, the remote equivalent of a machine card's Run / Stop buttons and the script window's Pause / Resume. Use it to build a supervisor: one script that watches the base and shuts down another machine when it detects a fault, without parking that machine in a permanent `sleep` loop. This is the **run/stop axis**, separate from `power_control` (the breaker): `stop` ends a script and latches it off, `pause` holds it at its current line until `resume`, while a power toggle only pauses and auto-resumes.
 
 **Access via:** `get_component("run_control")`
 
@@ -20215,7 +22113,7 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 ##### `.variants(machine_id: str, slot: int = 0) → list[ScriptVariantRef]`
 
-Lists the saved variants available to one machine script, including its private Main and compatible shared variants. The optional slot is a zero-based script slot and defaults to 0. Results are snapshots; applying an id loads the latest saved code under that id.
+Lists the saved variants available to one machine script, including its private `Main` and compatible shared variants. The optional `slot` is a zero-based script slot and defaults to 0. Results are snapshots; applying an id loads the latest saved code under that id.
 
 *Parameters*
 
@@ -20231,13 +22129,13 @@ Lists the saved variants available to one machine script, including its private 
 | Exception | Condition |
 | --- | --- |
 | `ReferenceError` | The machine or an executable script in the requested slot does not exist. |
-| `TypeError` | slot must be a whole number. |
-| `ValueError` | slot must be zero or greater. |
-| `OverflowError` | slot is outside the supported integer range. |
+| `TypeError` | `slot` must be a whole number. |
+| `ValueError` | `slot` must be zero or greater. |
+| `OverflowError` | `slot` is outside the supported integer range. |
 
 ##### `.status(machine_id: str, slot: int = 0) → RunControlStatus`
 
-Inspect a machine script's execution state and assigned variant. The optional slot is a zero-based script slot and defaults to 0. Results are snapshots; call again for current information.
+Inspect a machine script's execution state and assigned variant. The optional `slot` is a zero-based script slot and defaults to 0. Results are snapshots; call again for current information.
 
 *Parameters*
 
@@ -20253,20 +22151,20 @@ Inspect a machine script's execution state and assigned variant. The optional sl
 | Exception | Condition |
 | --- | --- |
 | `ReferenceError` | The machine or an executable script in the requested slot does not exist. |
-| `TypeError` | slot must be a whole number. |
-| `ValueError` | slot must be zero or greater. |
-| `OverflowError` | slot is outside the supported integer range. |
+| `TypeError` | `slot` must be a whole number. |
+| `ValueError` | `slot` must be zero or greater. |
+| `OverflowError` | `slot` is outside the supported integer range. |
 
 ##### `.apply_variant(machine_id: str, variant_id: str, slot: int = 0) → ActionResult`
 
-Apply a saved variant to one machine script without starting it. The target must be fully built and its script must be stopped, completed, or errored. Running and paused scripts must be stopped first. Pending editor changes and unresolved conflicts block replacement. Main is preserved when switching away from it. Shared variants copy their current code into the target; later edits elsewhere do not automatically update it. The optional slot defaults to 0.
+Apply a saved variant to one machine script without starting it. The target must be fully built and its script must be stopped, completed, or errored. Running and paused scripts must be stopped first. Pending editor changes and unresolved conflicts block replacement. `Main` is preserved when switching away from it. Shared variants copy their current code into the target; later edits elsewhere do not automatically update it. The optional `slot` defaults to 0.
 
 *Parameters*
 
 | Name | Type | Description |
 | --- | --- | --- |
 | `machine_id` | `str` | Machine instance id |
-| `variant_id` | `str` | Exact id returned by run.variants() for a compatible target. |
+| `variant_id` | `str` | Exact id returned by `run.variants()` for a compatible target. |
 | `slot` | `int` | Zero-based script slot. Defaults to 0. Must be a nonnegative whole number. |
 
 - **Returns** `ActionResult`
@@ -20292,9 +22190,9 @@ Apply a saved variant to one machine script without starting it. The target must
 
 | Exception | Condition |
 | --- | --- |
-| `TypeError` | slot must be a whole number. |
-| `ValueError` | slot must be zero or greater. |
-| `OverflowError` | slot is outside the supported integer range. |
+| `TypeError` | `slot` must be a whole number. |
+| `ValueError` | `slot` must be zero or greater. |
+| `OverflowError` | `slot` is outside the supported integer range. |
 
 ##### `.is_running(machine_id: str) → bool`
 
@@ -20355,6 +22253,54 @@ Runs the named machine's script from the top, the same way the card's Run button
 | `"not_powered"` | rejection | The component is not powered. |
 | `"under_construction"` | transient | The target is still under construction. |
 
+##### `.pause(machine_id: str) → ActionResult`
+
+Pauses the named machine's running script where it is: `run.pause("rover_1")`. A paused script keeps its place and its setpoints, so a vehicle already driving finishes the move it was making. It stays paused through power cuts until `resume`, and pausing a machine whose power is off keeps its script paused when power returns. A script can pause its own machine.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `machine_id` | `str` | Machine instance id |
+
+- **Returns** `ActionResult`
+- **Result fields** `.status`, `.message`
+- **Success payload** None
+
+*Outcomes*
+
+| Status | Kind | Meaning |
+| --- | --- | --- |
+| `"ok"` | success | The machine's script is paused. |
+| `"already_paused"` | success | The machine's script was already paused. |
+| `"not_found"` | rejection | The target machine does not exist. |
+| `"no_script"` | rejection | The machine has no running or paused script. |
+
+##### `.resume(machine_id: str) → ActionResult`
+
+Continues the named machine's paused script from the line where it paused: `run.resume("rover_1")`, whether `pause` or the script window paused it. The machine must be powered and fully built. A save does not keep a script's place: after loading, a script that was paused when the game was saved stays paused, and resuming it starts again from its first line.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `machine_id` | `str` | Machine instance id |
+
+- **Returns** `ActionResult`
+- **Result fields** `.status`, `.message`
+- **Success payload** None
+
+*Outcomes*
+
+| Status | Kind | Meaning |
+| --- | --- | --- |
+| `"ok"` | success | The machine's script is running again. |
+| `"already_running"` | success | The machine's script was already running. |
+| `"not_found"` | rejection | The target machine does not exist. |
+| `"no_script"` | rejection | The machine has no paused or running script. |
+| `"not_powered"` | rejection | The machine is powered off. |
+| `"under_construction"` | rejection | The target machine is still under construction. |
+
 ```python
 run = get_component("run_control")
 
@@ -20377,7 +22323,7 @@ for variant in run.variants("o2gen_1"):
 
 ## Ship Computer
 
-Manages the hardware roster: deploy a machine, vehicle, or drone from Inventory into an outpost, remove one back to Inventory, decommission an emptied outpost, and rename anything you own. These are the Inventory page's Deploy button and the Computer's System tab, reached from a script. Every call needs Ship Computer research; the buttons themselves keep working before it.
+Manages the hardware roster: deploy a machine, vehicle, or drone from Inventory into an outpost, upgrade a deployed machine, remove one back to Inventory, decommission an emptied outpost, and rename anything you own. These are the Inventory page's Deploy and Upgrade buttons and the Computer's System tab, reached from a script. Every call needs Ship Computer research; the buttons themselves keep working before it.
 
 **Access via:** `get_component("computer")`
 
@@ -20428,6 +22374,38 @@ Deploy one unit of an inventory item into an outpost, defaulting to home. The ma
 | `"duplicate_outpost_machine"` | rejection | This outpost already has a machine of this type, and only one is allowed. |
 | `"missing_drone_station"` | rejection | The target outpost has no Drone Depot to assemble a drone at. |
 | `"drone_station_full"` | rejection | Every Drone Depot bay at the target outpost is occupied. |
+
+##### `.upgrade(item_id: str, machine: str | Component) → ActionResult`
+
+Upgrade a deployed machine with one item from Inventory. An upgrade pack raises the machine to the pack's tier. A larger deploy kit upgrades a smaller machine of the same family in place: the machine keeps its id, name, cargo, scripts, and connections, and its old kit returns to Inventory. The machine must be finished and part of an operational outpost, and a running machine's subnet must carry the larger kit's extra draw. These are the Inventory page's UPGRADE and UPGRADE EXISTING buttons, reached from a script.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `item_id` | `str` | Inventory item id of the upgrade pack, or of the larger kit that replaces a smaller machine in place. |
+| `machine` | `str \| Component` | Machine id, name, or component to upgrade. |
+
+- **Returns** `ActionResult`
+- **Result fields** `.status`, `.message`
+- **Success payload** None
+
+*Outcomes*
+
+| Status | Kind | Meaning |
+| --- | --- | --- |
+| `"ok"` | success | The operation completed successfully. |
+| `"locked"` | rejection | The required feature, recipe, or operation is locked. |
+| `"not_upgrade_item"` | rejection | The item is not an upgrade pack or a kit that upgrades a machine in place. |
+| `"not_found"` | rejection | The requested object, target, or record does not exist. |
+| `"under_construction"` | transient | The target is still under construction. |
+| `"not_at_outpost"` | rejection | The machine is not part of an operational outpost. |
+| `"item_not_in_inventory"` | rejection | Inventory does not contain the requested item. |
+| `"wrong_machine_type"` | rejection | The upgrade does not fit the machine's type. |
+| `"tier_too_high"` | rejection | The machine is already at or above the upgrade's tier. |
+| `"tier_not_ready"` | rejection | The machine is below the tier the upgrade applies to. |
+| `"not_enough_power"` | rejection | The available energy is below the operation's requirement. |
+| `"inventory_full"` | rejection | Inventory has no capacity for the result. |
 
 ##### `.undeploy(machine: str | Component) → ActionResult`
 
@@ -20581,7 +22559,7 @@ Fraction of the throttle's requested condensation completed on the last tick (**
 
 `True` when throttle is above zero and the current fluid state blocks condensation because `steam_in` is empty or `water_out` is full. This is derived immediately from both ports; use `status()` to distinguish the blockers.
 
-- **Returns** `bool`. `True` when steam is empty or the water buffer is full while throttle is open.
+- **Returns** `bool`. `True` when the condenser is fully built, powered, and has an open throttle, but steam is empty or the water buffer is full. `False` when the throttle is closed, power is unavailable, or construction is unfinished.
 
 ##### `.status() → str`
 
@@ -20616,6 +22594,31 @@ Set condensation from **0.0-1.0** (clamped). **0** idles with no conversion or v
 | --- | --- | --- |
 | `"ok"` | success | The operation completed successfully. |
 
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
 Read commands you send from the editor's **Commands** tab while this script runs. Identical on every scriptable machine, see the guide: Script Commands
@@ -20636,7 +22639,7 @@ Captures Steam from a thermal vent. If its chamber reaches 100%, every stored to
 ### How to obtain
 
 1. The recipe unlocks with the **Thermal Cap** research (Pressure 2.5).
-2. Fabricate a **Thermal Cap Kit** on a **Fabricator**: 2× Titanium Ingot and 2× Gas Pipe Segment.
+2. Fabricate **Thermal Cap Kit** on a **Fabricator**: 2× Titanium Ingot and 2× Gas Pipe Segment.
 3. Build it on a surveyed thermal vent with a Pioneer's Constructor.
 
 **Access via:** `self / get_component(id)`
@@ -20667,7 +22670,7 @@ Fluid output for the chamber's steam. This port may declare one destination with
 
 ##### `.vent() → ThermalVent`
 
-The `ThermalVent` this cap sits on. Field availability follows the sonar tier that last surveyed the vent: basic reveals phase, wide adds steam rates, deep adds cycle timing. Use `self.vent().current_phase()` (or the cap's own `phase()`) to know when steam is coming. See `ThermalVent`.
+The `ThermalVent` this cap sits on. Field availability follows the sonar tier that last surveyed the vent: `"basic"` reveals phase, `"wide"` adds steam rates, `"deep"` adds cycle timing. Use `self.vent().current_phase()` (or the cap's own `phase()`) to know when steam is coming. See `ThermalVent`.
 
 - **Returns** `ThermalVent`. The vent this cap sits on. Read `current_phase()` / `next_phase_in()` / rates off it, or use the cap's own `phase()` / `next_phase_in()`.
 
@@ -20716,7 +22719,7 @@ The current release-valve setting, `0.0` (sealed) to `1.0` (wide open). Read it 
 
 ##### `.set_throttle(t: float) → ActionResult` *(self only)*
 
-Open the cap's release valve from `0.0` to `1.0` (clamped). `0` seals the chamber so it fills; `1.0` releases steam across all reachable connected destinations as fast as chamber supply, destination headroom, and throughput allow. Your primary knob against overpressure, so call it every tick against `pressure()`. This script-owned setpoint resets to `0` when the script stops, ends, or errors. If no destination can accept enough and `pressure()` still climbs, use `set_relief(...)` to shed the surplus. `[self only]`
+Open the cap's release valve from `0.0` to `1.0` (clamped). `0` seals the chamber so it fills; `1.0` releases steam across all reachable connected destinations as fast as chamber supply, destination headroom, and throughput allow. Your primary knob against overpressure, so call it every tick against `pressure()`. This script-owned setpoint resets to `0` when the script stops, ends, or errors. If no destination can accept enough and `pressure()` still climbs, use `set_relief(...)` to shed the surplus. **self only**
 
 *Parameters*
 
@@ -20748,7 +22751,7 @@ Steam wasted to atmosphere through the relief valve this tick, in t/h. `0` when 
 
 ##### `.set_relief(t: float) → ActionResult` *(self only)*
 
-Open the relief valve from **0-1** to dump excess chamber steam into the atmosphere. Use it when connected consumers cannot keep up and `pressure()` is still climbing. `0` keeps all steam available for consumers. Values outside the range are clamped. Call this only from the Thermal Cap's own script.
+Open the relief valve from **0-1** to dump excess chamber steam into the atmosphere. Use it when connected consumers cannot keep up and `pressure()` is still climbing. `0` keeps all steam available for consumers. Values outside the range are clamped. It returns to **0** when the script stops, ends, or errors. Call this only from the Thermal Cap's own script.
 
 *Parameters*
 
@@ -20766,6 +22769,31 @@ Open the relief valve from **0-1** to dump excess chamber steam into the atmosph
 | --- | --- | --- |
 | `"ok"` | success | The operation completed successfully. |
 
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
 Read commands you send from the editor's **Commands** tab while this script runs. Identical on every scriptable machine, see the guide: Script Commands
@@ -20780,14 +22808,14 @@ Extracts water from a surveyed well at a throttle your script sets. Its Planet M
 | --- | --- |
 | Type | Fluids |
 | Built on | Water wells |
-| Power in | -4 W (draws from grid) |
+| Power in | Up to -4 W at full throttle (draws from grid) |
 | Produces | Water, buffer 10 t |
-| Output buffer | 20 units |
+| Output buffer | Units: 20 |
 
 ### How to obtain
 
 1. The recipe unlocks with the **Hydrology Survey** research (Pressure 18).
-2. Fabricate a **Water Pump** on a **Fabricator**: 2× Iron Ingot, 2× Glass, and 4× Liquid Pipe Segment.
+2. Fabricate **Water Pump** on a **Fabricator**: 2× Iron Ingot, 2× Glass, and 4× Liquid Pipe Segment.
 3. Build it on a surveyed water well with a Pioneer's Constructor.
 
 **Access via:** `self / get_component(id)`
@@ -20810,7 +22838,7 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 ##### `.output: PickupOutputSlot`
 
-`PickupOutputSlot` holding salt created as a water-pumping byproduct. This is separate from `water_out`, which carries water through Liquid Pipes. Read `count()`, `capacity()`, or `stacks()` to inspect it. A physically present Rover or Pioneer connects its own input and pulls salt; the Pump has no direct item-routing methods.
+`PickupOutputSlot` holding salt created as a water-pumping byproduct. This is separate from `water_out`, which carries water through Liquid Pipes. Read `count()`, `capacity()`, or `stacks()` to inspect it. A physically present Rover or Pioneer connects its own `input` and pulls salt; the Pump has no direct item-routing methods.
 
 - **Returns** `PickupOutputSlot`. Holds the discrete salt byproduct for a physically present Rover or Pioneer.
 
@@ -20818,7 +22846,7 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 Fluid output for water. This port may declare one destination with `self.water_out.connect("bio_caster_1")`; additional consumers may connect their own `water_in` ports to this Pump. Because the Pump is a field structure, every destination needs a completed Liquid Pipe route reaching the Pump and destination. `connected_to()` reports only this output port's declaration; `flow_rate()` reports total live delivery. The Pump stores nothing, so `level()` reads **0**. See `FluidPort`.
 
-- **Returns** `FluidPort`. Routes water to a connected target. Call `connect(...)` with the target's stable machine id or display name, then open `set_throttle(...)`. Completed liquid-pipe networks carry water between outposts.
+- **Returns** `FluidPort`. Routes water to a connected target. Call `connect(...)` with the target's stable machine id or display name, then call `set_throttle(...)` with a value above **0**. Completed liquid-pipe networks carry water between outposts.
 
 ### Methods
 
@@ -20865,6 +22893,31 @@ Set the pump's total output rate (**0-1**) across reachable connected destinatio
 | Status | Kind | Meaning |
 | --- | --- | --- |
 | `"ok"` | success | The operation completed successfully. |
+
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -20990,6 +23043,31 @@ How many distinct biome essences must be supplied this phase (**1-5**, equal to 
 
 - **Returns** `int`. The minimum distinct biome essences needed this phase (**1-5**). Extra balanced essences can raise output.
 
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
 Read commands you send from the editor's **Commands** tab while this script runs. Identical on every scriptable machine, see the guide: Script Commands
@@ -21004,7 +23082,7 @@ Queues harvest, plant, and treatment jobs across up to 24 other cells in a cente
 | --- | --- |
 | Type | Biosphere |
 | Power in | -60 W (draws from grid) |
-| Output buffer | 50,000 units |
+| Output buffer | Units: 50,000 |
 | Stockpile | 400 units (mixed) |
 
 ### How to obtain
@@ -21072,7 +23150,7 @@ Submit one harvest job for a covered sector. Submission is immediate; valid fiel
 
 | Exception | Condition |
 | --- | --- |
-| `ValueError` | The sector argument is not a valid field sector id. |
+| `ValueError` | The `sector` argument is not a valid field sector id. |
 
 ##### `.plant(sector: str, seed_id: str) → JobReceipt` *(self only)*
 
@@ -21103,7 +23181,7 @@ Submit one planting job with a specific species seed. Submission is immediate an
 
 | Exception | Condition |
 | --- | --- |
-| `ValueError` | The sector argument is not a valid field sector id. |
+| `ValueError` | The `sector` argument is not a valid field sector id. |
 
 ##### `.apply(sector: str, item_id: str) → JobReceipt` *(self only)*
 
@@ -21134,7 +23212,7 @@ Submit one Fertilizer Mk I/II/III or Growth Accelerant job. Submission is immedi
 
 | Exception | Condition |
 | --- | --- |
-| `ValueError` | The sector argument is not a valid field sector id. |
+| `ValueError` | The `sector` argument is not a valid field sector id. |
 
 ##### `.position() → str`
 
@@ -21153,7 +23231,7 @@ Read one sector inside this automator's service area as a `Cell` snapshot, cover
 | `sector` | `str` | One of the cells in the automator's service area. |
 
 - **Returns** `Cell | None`
-- **None means** `None` means this automator cannot address that sector: it is outside the service area, or not a valid field sector.
+- **`None` means** `None` means this automator cannot address that sector: it is outside the service area, or not a valid field sector.
 
 *Outcomes*
 
@@ -21179,7 +23257,7 @@ Exact executor state: `"not_placed"`, `"no_power"`, `"working"`, `"no_seed"`, `"
 Active FIFO head as a `CropJob`, including action, target, progress, and blocker. Returns `None` while idle.
 
 - **Returns** `CropJob | None`
-- **None means** `None` means the Crop Automator has no active job.
+- **`None` means** `None` means the Crop Automator has no active job.
 
 *Outcomes*
 
@@ -21218,7 +23296,7 @@ Consume the oldest terminal result. An empty inbox is reported without changing 
 | Status | Kind | Meaning |
 | --- | --- | --- |
 | `"ok"` | success | Job `.job_id` completed at `.sector`; the world mutation committed successfully. |
-| `"partial"` | partial | Job `.job_id` harvested `.sector` but the output bin only had room for `.collected` Forage; `.discarded` was discarded and the cell was cleared. |
+| `"partial"` | partial | Job `.job_id` harvested `.sector`, but the output bin could not hold all of it. Forage kept: `.collected`. Forage discarded: `.discarded`. The cell was cleared. |
 | `"empty"` | success | No completed Crop Automator result is waiting. |
 | `"out_of_range"` | rejection | The target left this Crop Automator's service area before execution. |
 | `"no_plant"` | rejection | The target sector held no plant when the job reached the executor. |
@@ -21239,7 +23317,7 @@ Cancel one active or pending job by id. Canceling active work discards only its 
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `job_id` | `int` | Job id returned by harvest(), plant(), or apply(). |
+| `job_id` | `int` | Job id returned by `harvest()`, `plant()`, or `apply()`. |
 
 - **Returns** `ActionResult`
 - **Result fields** `.status`, `.message`
@@ -21287,8 +23365,33 @@ Cancel the active job and every pending job. Completed results remain available 
 
 | Status | Kind | Meaning |
 | --- | --- | --- |
-| `"ok"` | success | The command affected `.count` entries or units. |
+| `"ok"` | success | Command completed. Affected entries or units: `.count`. |
 | `"no_op"` | success | The command affected no entries or units. |
+
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -21304,12 +23407,12 @@ Salts the four orthogonally adjacent field cells (directly above, below, left, a
 | --- | --- |
 | Type | Biosphere |
 | Power in | Variable (draws from grid) |
-| Input buffer | 50 units |
+| Input buffer | Units: 50 |
 
 ### How to obtain
 
 1. The recipe unlocks with the **Dispenser** research (Plants 300,000).
-2. Fabricate a **Dispenser Kit** on a **Fabricator**: 1× Machine Frame, 1× Control Unit, and 1× Circuit Panel.
+2. Fabricate **Dispenser Kit** on a **Fabricator**: 1× Machine Frame, 1× Control Unit, and 1× Circuit Panel.
 3. Deploy the kit on an empty field cell with a Harvester's `deploy()`.
 
 **Access via:** `self / get_component(id)`
@@ -21401,6 +23504,31 @@ Grid sector occupied by this dispenser, such as `"E14"`.
 
 - **Returns** `str`. The grid sector this dispenser occupies (e.g. `"E14"`).
 
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
 Read commands you send from the editor's **Commands** tab while this script runs. Identical on every scriptable machine, see the guide: Script Commands
@@ -21416,7 +23544,7 @@ Renders native life-form samples down into their biome's essence fluid. It only 
 | Type | Biosphere |
 | Power in | Variable (draws from grid) |
 | Produces | One biome-matched port: Frozen Essence, Coastal Essence, Geothermal Essence, Volcanic Essence, and Deep Essence, buffer 50 t |
-| Input buffer | 50 units |
+| Input buffer | Units: 50 |
 
 ### How to obtain
 
@@ -21493,6 +23621,31 @@ Returns the biome the host outpost sits in: `"frozen"`, `"coastal"`, `"geotherma
 - **Returns** `str | None`. The biome the outpost sits in, or `None` if the machine has no valid outpost. It determines which life-form items the Essence Liquifier accepts.
 - **Possible values** `"frozen"`, `"coastal"`, `"geothermal"`, `"volcanic"`, `"deep"`
 
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
 Read commands you send from the editor's **Commands** tab while this script runs. Identical on every scriptable machine, see the guide: Script Commands
@@ -21512,7 +23665,7 @@ Lights the four orthogonally adjacent field cells (directly above, below, left, 
 ### How to obtain
 
 1. The recipe unlocks with the **Grow Lamp** research (Plants 500,000).
-2. Fabricate a **Grow Lamp Kit** on a **Fabricator**: 1× Machine Frame, 2× Circuit Panel, and 2× Glass.
+2. Fabricate **Grow Lamp Kit** on a **Fabricator**: 1× Machine Frame, 2× Circuit Panel, and 2× Glass.
 3. Deploy the kit on an empty field cell with a Harvester's `deploy()`.
 
 **Access via:** `self / get_component(id)`
@@ -21577,12 +23730,12 @@ Command the lamp on or off. Power loss pauses the script but preserves this setp
 
 Exact operating state: `"not_placed"`, `"disabled"`, `"no_power"`, or `"active"`.
 
-- **Returns** `str`. `"not_placed"` after placement recovery, `"disabled"` when the script command is off, `"no_power"` when commanded on but unpowered, or `"active"` while lighting.
+- **Returns** `str`. `"not_placed"` when a repaired save cleared an invalid placement but kept the lamp, `"disabled"` when the script command is off, `"no_power"` when commanded on but unpowered, or `"active"` while lighting.
 - **Possible values** `"not_placed"`, `"disabled"`, `"no_power"`, `"active"`
 
 ##### `.tier() → int`
 
-Deployed tier (**1-4**). Mk I/II/III/IV provide **1×/2×/4×/8×** supported plant output and draw **5/25/100/500 W** while active.
+Deployed tier (**1-4**). Mk I/II/III/IV multiply the Forage output of covered plants that need light by **1×/2×/4×/8×** and draw **5/25/100/500 W** while active.
 
 - **Returns** `int`. The deployed tier (**1-4**). Higher tiers boost the output of plants they cover and draw far more power; tier up by fabricating and applying a Grow Lamp upgrade pack.
 
@@ -21592,6 +23745,31 @@ Grid sector occupied by this lamp, such as `"E14"`.
 
 - **Returns** `str`. The grid sector this lamp occupies (e.g. `"E14"`).
 
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
 Read commands you send from the editor's **Commands** tab while this script runs. Identical on every scriptable machine, see the guide: Script Commands
@@ -21600,7 +23778,9 @@ Read commands you send from the editor's **Commands** tab while this script runs
 
 ## Plant Terraformer
 
-The sole converter from harvested physical Forage to permanent Plants km². Load its input through ordinary timed item transfers; its high-capacity feeder handles 16 items per step at Mk I and 80 at Mk II. Each phase adds Water, Salt, Fertilizer, then Growth Accelerant. Mk I stops at the Fields threshold; Mk II carries the final two phases.
+The sole converter from harvested physical Forage to permanent Plants km². Load its input through ordinary timed item transfers; its high-capacity feeder handles 16 items per step at Mk I and 80 at Mk II. Each later phase adds one more input: Water, then Salt, then Fertilizer, then Growth Accelerant. Mk I stops at the Fields threshold; Mk II carries the final two phases.
+
+### Mk I
 
 | Field | Value |
 | --- | --- |
@@ -21610,10 +23790,17 @@ The sole converter from harvested physical Forage to permanent Plants km². Load
 | Stockpile | 1,243 units (mixed) |
 | Tiers | Mk II |
 
+### Mk II
+
+| Field | Value |
+| --- | --- |
+| Consumes | Water, buffer 330 t |
+| Stockpile | 6,654 units (mixed) |
+
 ### How to obtain
 
 1. The recipe unlocks with the **Plant Terraformer** research (Biomass 2,000).
-2. Fabricate a **Plant Terraformer Kit** on a **Fabricator**: 5× Machine Frame, 3× Control Unit, 5× Circuit Panel, 4× Liquid Pipe Segment, and 10 t Water.
+2. Fabricate **Plant Terraformer Kit** on a **Fabricator**: 5× Machine Frame, 3× Control Unit, 5× Circuit Panel, 4× Liquid Pipe Segment, and 10 t Water.
 3. Deploy it from your Inventory.
 
 **Access via:** `self`
@@ -21749,7 +23936,7 @@ Current cumulative material ids. Starts with `forage`, then adds `water`, `salt`
 
 ##### `.batch_requirements() → dict[str, int]`
 
-Exact amounts for the largest next batch allowed by this tier and phase. The dict uses `forage`, `water`, `salt`, `fertilizer_potency`, and `growth_accelerant` as needed. Salt and Growth Accelerant are whole-item counts, rounded up per batch. Fertilizer potency is a whole number. It does not shrink when onboard stock is short.
+Exact amounts for the largest next batch allowed by this tier and phase. The `dict` uses `forage`, `water`, `salt`, `fertilizer_potency`, and `growth_accelerant` as needed. Salt and Growth Accelerant are whole-item counts, rounded up per batch. Fertilizer potency is a whole number. The whole `dict` stays at the full next batch even when onboard stock is short; `batch_size()` reports what can load now.
 
 - **Returns** `dict[str, int]`. Material amounts for the largest next batch allowed by this tier and phase. Salt and Growth Accelerant are whole-item counts, rounded up per batch. Fertilizer is reported as whole `fertilizer_potency`.
 
@@ -21771,6 +23958,31 @@ Return one Fertilizer item's whole potency: **10** for Mk I, **30** for Mk II, o
 | --- | --- |
 | `ValueError` | The item id must identify Fertilizer Mk I, Mk II, or Mk III. |
 
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
 Read commands you send from the editor's **Commands** tab while this script runs. Identical on every scriptable machine, see the guide: Script Commands
@@ -21785,13 +23997,13 @@ An outpost processing building that combines three life-form samples into a viab
 | --- | --- |
 | Type | Biosphere |
 | Power in | Variable (draws from grid) |
-| Output buffer | 1 units |
+| Output buffer | Units: 1 |
 | Stockpile | 3 units (mixed) |
 
 ### How to obtain
 
 1. The recipe unlocks with the **Seed Maker** research (Biomass 500).
-2. Fabricate a **Seed Maker Kit** on a **Fabricator**: 2× Machine Frame, 1× Control Unit, 2× Circuit Panel, and 3 t Water.
+2. Fabricate **Seed Maker Kit** on a **Fabricator**: 2× Machine Frame, 1× Control Unit, 2× Circuit Panel, and 3 t Water.
 3. Deploy it from your Inventory.
 
 **Access via:** `self`
@@ -21822,7 +24034,7 @@ The outpost where this building is deployed. The returned `OutpostRef` includes 
 
 `InputSlot` for loading the Seed Maker's three-sample reaction chamber. The natural source is a local Drone Depot where biological drones unload; a local Warehouse, Storage Bin, or home Inventory is also valid. The chamber accepts exactly **1 t each of three distinct life forms** and cannot stockpile surplus material.
 
-- **Returns** `InputSlot`. The **3 t** reaction chamber. It accepts one unit each of three distinct life forms and rejects duplicates or a fourth sample. `combine()` reserves the trio while running. When idle, use `eject(...)` to recover a mistaken load or `flush()` to destroy it.
+- **Returns** `InputSlot`. The **3 t** reaction chamber. It accepts one unit each of three distinct life forms and rejects duplicates or a fourth sample. `combine()` reserves the trio while running. When idle, use `eject(...)` to recover a wrongly loaded sample, or `flush()` to destroy everything in the chamber.
 
 ##### `.output: OutputSlot`
 
@@ -21889,9 +24101,34 @@ Number of physical seeds waiting in the single-result bay: **0** or **1**.
 
 ##### `.recipes() → list[SeedRecipe]`
 
-List of `SeedRecipe` for every blend discovered so far, the same discover-once-kept-forever journal the Flora / Seed Recipes tab shows. Each carries `.tier`, the physical `.seed_id`, bare `.species`, `.blend`, `.requirements`, `.requirement`, and `.growth_time`. `.requirements` is the programmable form: every `PlantRequirement` has `.kind` and optional `.species`, so companion and antagonist entries identify the exact related plant. `.requirement` remains a compact string summary. Empty until your first hit; re-run a known `.blend` with `self.combine(...)` to reproduce that seed without re-sweeping.
+List of `SeedRecipe` for every blend discovered so far, the same discover-once-kept-forever journal the Flora / Seed Recipes tab shows. Each carries `.tier`, the physical `.seed_id`, bare `.species`, `.blend`, `.requirements`, `.requirement`, and `.growth_time`. `.requirements` is the programmable form: every `PlantRequirement` has `.kind` and optional `.species`, so `companion` and `antagonist` entries identify the exact related plant. `.requirement` remains a compact string summary. Empty until your first hit; re-run a known `.blend` with `self.combine(...)` to reproduce that seed without re-sweeping.
 
 - **Returns** `list[SeedRecipe]`. Every discovered recipe; empty before the first discovery. Use `self.combine(recipe.blend)` to reproduce its seed.
+
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -21913,7 +24150,7 @@ Waters the four orthogonally adjacent field cells (directly above, below, left, 
 ### How to obtain
 
 1. The recipe unlocks with the **Sprinkler** research (Plants 100,000).
-2. Fabricate a **Sprinkler Kit** on a **Fabricator**: 1× Machine Frame, 2× Liquid Pipe Segment, 1× Pressure Valve, and 2 t Water.
+2. Fabricate **Sprinkler Kit** on a **Fabricator**: 1× Machine Frame, 2× Liquid Pipe Segment, 1× Pressure Valve, and 2 t Water.
 3. Deploy the kit on an empty field cell with a Harvester's `deploy()`.
 
 **Access via:** `self / get_component(id)`
@@ -21995,7 +24232,7 @@ Fraction of the onboard water buffer currently filled (**0-1**). It drops while 
 
 ##### `.tier() → int`
 
-Deployed tier (**1-4**). Mk I/II/III/IV provide **1×/2×/4×/8×** supported plant output, draw **5/25/100/500 W**, and consume **2/4/8/16 t/h Water** while active.
+Deployed tier (**1-4**). Mk I/II/III/IV multiply the Forage output of covered plants that need water by **1×/2×/4×/8×**, draw **5/25/100/500 W**, and consume **2/4/8/16 t/h Water** while active.
 
 - **Returns** `int`. The deployed tier (**1-4**). Higher tiers boost the output of plants they cover and drink more water and power; tier up by fabricating and applying a Sprinkler upgrade pack.
 
@@ -22004,6 +24241,31 @@ Deployed tier (**1-4**). Mk I/II/III/IV provide **1×/2×/4×/8×** supported pl
 Grid sector occupied by this sprinkler, such as `"E14"`.
 
 - **Returns** `str`. The grid sector this sprinkler occupies (e.g. `"E14"`).
+
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
 
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
@@ -22058,7 +24320,7 @@ if item is not None:
 
 ## Weather Station
 
-A programmable local storm station and live receiver. It measures immutable local reports, hears event transmissions on broadcast and biome channels, and may publish to the Signal Board.
+A programmable local storm station and live receiver. It measures immutable local reports, hears event transmissions on `broadcast` and biome channels, and may publish to the Signal Board.
 
 | Field | Value |
 | --- | --- |
@@ -22102,15 +24364,15 @@ This station's programmable Weather display. `reveal()` publishes a transmission
 
 ##### `.signal_receiver: SignalReceiver`
 
-Live receiver. `transmissions()` returns only the raw copies audible to this powered station now and stores no history. Dust reception uses local biome channels; thunder reception broadcasts.
+Live receiver. `transmissions()` returns only the raw copies audible to this powered station now and stores no history. Dust reception uses local biome channels; thunder reception uses the `broadcast` channel.
 
-- **Returns** `SignalReceiver`. This station's live receiver. `transmissions()` exposes only what is audible now and stores no raw history. Dust-event channels are biome-specific; all thunder packets broadcast.
+- **Returns** `SignalReceiver`. This station's live receiver. `transmissions()` exposes only what is audible now and stores no raw history. Dust-event channels are biome-specific; all thunder packets use the `broadcast` channel.
 
 ### Methods
 
 ##### `.observe() → WeatherReport` *(self only)*
 
-Measure one immutable local report. The station refreshes at most once per world-clock hour; faster calls return the same report id. The report includes local coverage, active storm snapshots, and a local forecast reaching 8 world-clock hours ahead, or 24 once Weather Forecasting is researched. It never contains an aftermath coordinate.
+Measure one immutable local report. The station refreshes at most once per world-clock hour; faster calls return the same report id. The report includes local coverage, active storm snapshots, and a local forecast reaching 8 world-clock hours ahead, or 24 once Weather Forecasting is researched. It never reveals where a storm's hidden aftermath deposit lies.
 
 - **Returns** `WeatherReport`. An immutable report from this station's local coverage. Repeated calls inside one observation hour return the same report. Raises `RuntimeError` when the station is unfinished or unpowered.
 
@@ -22132,6 +24394,31 @@ Return this station's bounded strike history. Each `WeatherStrike` includes its 
 
 - **Returns** `list[WeatherStrike]`. Lightning strikes observed by this station, oldest first.
 
+##### `.set_status(message: str, level: str = "info") → None` *(self only)*
+
+Show a status message for this machine's current script run. Use `self.set_status(message, "info")`. The same reporting capability is available as `set_status()` in every script. Messages follow the current execution, independently of machine state and game warnings.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `message` | `str` | Non-empty plain text, at most 240 characters. Null characters are not accepted. |
+| `level` | `str` | Presentation severity: `info`, `warn`, or `error`. Defaults to `info`. |
+
+- **Returns** `None`. `None`.
+
+##### `.clear_status() → None` *(self only)*
+
+Clear the current script run's status message. Clearing an absent message has no effect. Does not wait or change machine behaviour.
+
+- **Returns** `None`. `None`.
+
+##### `.get_status_report() → ScriptStatusReport | None`
+
+Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
+- **Returns** `ScriptStatusReport | None`. Read this machine's script status report from any script. Returns `None` when it has no report. The returned snapshot includes `message`, `level`, `active`, and `run_id`.
+
 ##### `.peek_command() · .next_command() · .command_count() · .clear_commands()` *(self only)*
 
 Read commands you send from the editor's **Commands** tab while this script runs. Identical on every scriptable machine, see the guide: Script Commands
@@ -22141,6 +24428,837 @@ Read commands you send from the editor's **Commands** tab while this script runs
 ## Production Tiers
 
 Every manufacturing and transformation recipe arranged by dependency depth. Smelter foundations begin at Tier 0. Every other recipe is at least Tier 1 and sits one tier above its deepest manufactured input; recipes that consume only source materials therefore enter at Tier 1. Discovered Seed Maker and Bio Lab recipes join the graph without exposing undiscovered combinations or specimens.
+
+*Database / Recipes*
+
+## Fabricator Recipes
+
+The Fabricator assembles components from refined stock, with several inputs per blueprint and some recipes producing byproducts. Select with `fabricator.set_recipe`. Most blueprints arrive as contractor order rewards, each card below names its order.
+
+##### Fabricate Smelter Mk II Upgrade Pack `craft_smelter_pack_mk2` *(Unlocked)*
+
+2× Machine Frame, 2× Control Unit, 2× Pressure Valve, and 2 t Water → 1× Smelter Mk II Upgrade Pack
+Blueprint unlocks with the **Industrial Machinery Mk II** research.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 1 h, Mk II: 0.5 h, Mk III: 0.25 h |
+| Power | Mk I: 60 W, Mk II: 90 W, Mk III: 180 W |
+| Production tier | T3 |
+
+##### Fabricate Fabricator Mk II Upgrade Pack `craft_fabricator_pack_mk2` *(Unlocked)*
+
+2× Machine Frame, 2× Control Unit, 4× Circuit Panel, and 2 t Water → 1× Fabricator Mk II Upgrade Pack
+Blueprint unlocks with the **Industrial Machinery Mk II** research.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 1.1 h, Mk II: 0.55 h, Mk III: 0.28 h |
+| Power | Mk I: 65 W, Mk II: 97.5 W, Mk III: 195 W |
+| Production tier | T3 |
+
+##### Fabricate Oil Pump Mk II Upgrade Pack `craft_oil_pump_pack_mk2` *(Unlocked)*
+
+2× Machine Frame, 1× Control Unit, 3× Pressure Valve, 2× Cobalt Ingot, and 2 t Water → 1× Oil Pump Mk II Upgrade Pack
+Blueprint unlocks with the **Advanced Oil Extraction** research.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 1 h, Mk II: 0.5 h, Mk III: 0.25 h |
+| Power | Mk I: 60 W, Mk II: 90 W, Mk III: 180 W |
+| Production tier | T3 |
+
+##### Fabricate Smelter Mk III Upgrade Pack `craft_smelter_pack_mk3` *(Not yet unlocked)*
+
+6× Machine Frame, 4× Control Unit, 2× Rare Earth Core, 4× Pressure Valve, and 4 t Water → 1× Smelter Mk III Upgrade Pack
+Blueprint unlocks with the **Industrial Machinery Mk III** research.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 1.5 h, Mk II: 0.75 h, Mk III: 0.38 h |
+| Power | Mk I: 90 W, Mk II: 135 W, Mk III: 270 W |
+| Production tier | T3 |
+
+##### Fabricate Fabricator Mk III Upgrade Pack `craft_fabricator_pack_mk3` *(Not yet unlocked)*
+
+4× Machine Frame, 4× Control Unit, 6× Circuit Panel, 3× Rare Earth Core, and 4 t Water → 1× Fabricator Mk III Upgrade Pack
+Blueprint unlocks with the **Industrial Machinery Mk III** research.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 1.6 h, Mk II: 0.8 h, Mk III: 0.4 h |
+| Power | Mk I: 95 W, Mk II: 142.5 W, Mk III: 285 W |
+| Production tier | T3 |
+
+##### Iron → Gas Pipe Segment `craft_gas_pipe_segment` *(Unlocked)*
+
+2× Iron Ingot → 1× Gas Pipe Segment
+Blueprint unlocks by completing the order **Helios, Iron Production**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.1 h, Mk II: 0.05 h, Mk III: 0.03 h |
+| Power | Mk I: 25 W, Mk II: 37.5 W, Mk III: 75 W |
+| Production tier | T1 |
+
+##### Iron + Silicon → Liquid Pipe Segment `craft_liquid_pipe_segment` *(Unlocked)*
+
+1× Iron Ingot and 1× Silicon → 1× Liquid Pipe Segment
+Blueprint unlocks by completing the order **Spire, Silicon Stock**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.12 h, Mk II: 0.06 h, Mk III: 0.03 h |
+| Power | Mk I: 25 W, Mk II: 37.5 W, Mk III: 75 W |
+| Production tier | T1 |
+
+##### Iron + Titanium → Power Line Segment `craft_power_line_segment` *(Unlocked)*
+
+1× Iron Ingot and 1× Titanium Ingot → 1× Power Line Segment
+Blueprint unlocks by completing the order **Vestibule, Utility Conduit Stock**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.14 h, Mk II: 0.07 h, Mk III: 0.04 h |
+| Power | Mk I: 25 W, Mk II: 37.5 W, Mk III: 75 W |
+| Production tier | T1 |
+
+##### Gas Segments + Valve → Gas Bridge `craft_gas_pipe_bridge` *(Unlocked)*
+
+2× Gas Pipe Segment and 1× Pressure Valve → 1× Gas Pipe Bridge
+Blueprint unlocks by completing the order **Helios, Iron Production**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.18 h, Mk II: 0.09 h, Mk III: 0.05 h |
+| Power | Mk I: 25 W, Mk II: 37.5 W, Mk III: 75 W |
+| Production tier | T2 |
+
+##### Liquid Segments + Valve → Liquid Bridge `craft_liquid_pipe_bridge` *(Unlocked)*
+
+2× Liquid Pipe Segment and 1× Pressure Valve → 1× Liquid Pipe Bridge
+Blueprint unlocks by completing the order **Spire, Silicon Stock**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.2 h, Mk II: 0.1 h, Mk III: 0.05 h |
+| Power | Mk I: 25 W, Mk II: 37.5 W, Mk III: 75 W |
+| Production tier | T2 |
+
+##### Power Segments + Circuit → Power Bridge `craft_power_line_bridge` *(Unlocked)*
+
+2× Power Line Segment and 1× Circuit Panel → 1× Power Line Bridge
+Blueprint unlocks by completing the order **Vestibule, Utility Conduit Stock**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.22 h, Mk II: 0.11 h, Mk III: 0.06 h |
+| Power | Mk I: 25 W, Mk II: 37.5 W, Mk III: 75 W |
+| Production tier | T2 |
+
+##### Iron + Glass → Pressure Valve `craft_pressure_valve` *(Unlocked)*
+
+1× Iron Ingot and 1× Glass → 1× Pressure Valve
+Blueprint unlocks by completing the order **Spire, Cobalt Run**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.12 h, Mk II: 0.06 h, Mk III: 0.03 h |
+| Power | Mk I: 25 W, Mk II: 37.5 W, Mk III: 75 W |
+| Production tier | T1 |
+
+##### Iron Ingot + Titanium Ingot → Machine Frame `craft_machine_frame` *(Unlocked)*
+
+3× Iron Ingot, 1× Titanium Ingot, and 2 t Water → 1× Machine Frame
+Blueprint unlocks by completing the order **Helios, Battery Order**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.22 h, Mk II: 0.11 h, Mk III: 0.06 h |
+| Power | Mk I: 35 W, Mk II: 52.5 W, Mk III: 105 W |
+| Production tier | T1 |
+
+##### Iron + Glass → Circuit Panel `craft_circuit_panel` *(Unlocked)*
+
+1× Iron Ingot, 2× Glass, and 1 t Water → 1× Circuit Panel
+Blueprint unlocks by completing the order **Spire, Optical Glass**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.18 h, Mk II: 0.09 h, Mk III: 0.05 h |
+| Power | Mk I: 30 W, Mk II: 45 W, Mk III: 90 W |
+| Production tier | T1 |
+
+##### Circuit Panel + Titanium Ingot + Glass → Control Unit `craft_control_unit` *(Unlocked)*
+
+1× Circuit Panel, 1× Titanium Ingot, 1× Glass, and 2 t Water → 1× Control Unit
+Blueprint unlocks by completing the order **Spire, Circuit Order**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.3 h, Mk II: 0.15 h, Mk III: 0.08 h |
+| Power | Mk I: 40 W, Mk II: 60 W, Mk III: 120 W |
+| Production tier | T2 |
+
+##### Cobalt Ingot + Iron Ingot + Glass → Battery Cell `craft_battery_cell` *(Unlocked)*
+
+1× Cobalt Ingot, 1× Iron Ingot, 1× Glass, and 1 t Water → 1× Battery Cell
+Blueprint unlocks by completing the order **Helios, Titanium Run**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.22 h, Mk II: 0.11 h, Mk III: 0.06 h |
+| Power | Mk I: 35 W, Mk II: 52.5 W, Mk III: 105 W |
+| Production tier | T1 |
+
+##### Titanium Ingot + Gas Pipe Segments → Thermal Cap Kit `craft_thermal_cap_kit` *(Unlocked)*
+
+2× Titanium Ingot and 2× Gas Pipe Segment → 1× Thermal Cap Kit
+Blueprint unlocks with the **Thermal Cap** research.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.28 h, Mk II: 0.14 h, Mk III: 0.07 h |
+| Power | Mk I: 38 W, Mk II: 57 W, Mk III: 114 W |
+| Production tier | T2 |
+
+##### Titanium Ingot + Cobalt Ingot + Rare Earth Core → Turbine Rotor `craft_turbine_rotor` *(Unlocked)*
+
+2× Titanium Ingot, 1× Cobalt Ingot, 1× Rare Earth Core, and 4 t Steam → 1× Turbine Rotor
+Blueprint unlocks by completing the order **Helios, Thermal Cap Kit Order**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.34 h, Mk II: 0.17 h, Mk III: 0.09 h |
+| Power | Mk I: 42 W, Mk II: 63 W, Mk III: 126 W |
+| Production tier | T1 |
+
+##### Iron + Titanium + Glass → Tank Lining `craft_tank_lining` *(Unlocked)*
+
+2× Iron Ingot, 1× Titanium Ingot, 1× Glass, and 2 t Water → 1× Tank Lining
+Blueprint unlocks by completing the order **Helios, Bulk Iron Run**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.22 h, Mk II: 0.11 h, Mk III: 0.06 h |
+| Power | Mk I: 38 W, Mk II: 57 W, Mk III: 114 W |
+| Production tier | T1 |
+
+##### Iron + Glass + Liquid Pipe Segment → Water Pump `craft_water_pump` *(Unlocked)*
+
+2× Iron Ingot, 2× Glass, and 4× Liquid Pipe Segment → 1× Water Pump
+Blueprint unlocks with the **Hydrology Survey** research.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.3 h, Mk II: 0.15 h, Mk III: 0.08 h |
+| Power | Mk I: 35 W, Mk II: 52.5 W, Mk III: 105 W |
+| Production tier | T2 |
+
+##### Iron + Titanium + Valve + Panel → Oil Pump `craft_oil_pump` *(Unlocked)*
+
+2× Iron Ingot, 1× Titanium Ingot, 1× Pressure Valve, and 1× Circuit Panel → 1× Oil Pump
+Blueprint unlocks with the **Petroleum Survey** research.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.38 h, Mk II: 0.19 h, Mk III: 0.1 h |
+| Power | Mk I: 40 W, Mk II: 60 W, Mk III: 120 W |
+| Production tier | T2 |
+
+##### Iron + Oil → Lubricant + Tar `craft_lubricant` *(Unlocked)*
+
+1× Iron Ingot and 3 t Oil → 1× Lubricant and + byproduct 1× Tar
+Blueprint unlocks by completing the order **Vestibule, Liquid Pipe Order**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.12 h, Mk II: 0.06 h, Mk III: 0.03 h |
+| Power | Mk I: 30 W, Mk II: 45 W, Mk III: 90 W |
+| Production tier | T1 |
+
+##### Glass + Oil → Plastic + Tar `craft_plastic` *(Unlocked)*
+
+1× Glass and 4 t Oil → 1× Plastic and + byproduct 1× Tar
+Blueprint unlocks by completing the order **Spire, Magnetic Stator Build**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.14 h, Mk II: 0.07 h, Mk III: 0.04 h |
+| Power | Mk I: 32 W, Mk II: 48 W, Mk III: 96 W |
+| Production tier | T1 |
+
+##### Cobalt + Oil → Rubber + Tar `craft_rubber` *(Unlocked)*
+
+1× Cobalt Ingot and 2 t Oil → 1× Rubber and + byproduct 1× Tar
+Blueprint unlocks by completing the order **Vestibule, Pipe Network Run**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.12 h, Mk II: 0.06 h, Mk III: 0.03 h |
+| Power | Mk I: 28 W, Mk II: 42 W, Mk III: 84 W |
+| Production tier | T1 |
+
+##### Heavy Oil Cracking: Oil → Tar `craft_tar` *(Unlocked)*
+
+5 t Oil → 2× Tar
+Blueprint unlocks by completing the order **Vestibule, Polymer Stockpile**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.15 h, Mk II: 0.08 h, Mk III: 0.04 h |
+| Power | Mk I: 32 W, Mk II: 48 W, Mk III: 96 W |
+| Production tier | T1 |
+
+##### Plastic + Forage + Water → Reinforced Biopolymer `craft_reinforced_biopolymer` *(Not yet unlocked)*
+
+2× Plastic, 6× Plant Forage, and 2 t Water → 4× Reinforced Biopolymer
+Blueprint unlocks with the **Advanced Biopolymers** research.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.28 h, Mk II: 0.14 h, Mk III: 0.07 h |
+| Power | Mk I: 40 W, Mk II: 60 W, Mk III: 120 W |
+| Production tier | T2 |
+
+##### Reinforced Biopolymer + Forage + Water → Bio Enrichment Compound `craft_enrichment_compound` *(Not yet unlocked)*
+
+1× Reinforced Biopolymer, 6× Plant Forage, and 2 t Water → 4× Bio Enrichment Compound
+Blueprint unlocks with the **Enrichment Chemistry** research.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.32 h, Mk II: 0.16 h, Mk III: 0.08 h |
+| Power | Mk I: 45 W, Mk II: 67.5 W, Mk III: 135 W |
+| Production tier | T3 |
+
+##### Frame + Control + Gas Pipe Segments + Liquid Pipe Segments → Drone Depot Kit `craft_drone_station_kit` *(Unlocked)*
+
+2× Machine Frame, 1× Control Unit, 2× Gas Pipe Segment, 2× Liquid Pipe Segment, and 3 t Water → 1× Drone Depot Kit
+Blueprint unlocks by completing the order **Helios, Frame Order**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.5 h, Mk II: 0.25 h, Mk III: 0.13 h |
+| Power | Mk I: 45 W, Mk II: 67.5 W, Mk III: 135 W |
+| Production tier | T3 |
+
+##### Frame + Control + Panel → Drone Depot Kit (Medium) `craft_drone_station_kit_medium` *(Unlocked)*
+
+4× Machine Frame, 2× Control Unit, 2× Circuit Panel, and 4 t Water → 1× Drone Depot Kit (Medium)
+Blueprint unlocks by completing the order **Helios, Mid-Cargo Order**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.65 h, Mk II: 0.33 h, Mk III: 0.16 h |
+| Power | Mk I: 50 W, Mk II: 75 W, Mk III: 150 W |
+| Production tier | T3 |
+
+##### Frame + Control + Panel → Drone Depot Kit (Large) `craft_drone_station_kit_large` *(Unlocked)*
+
+8× Machine Frame, 3× Control Unit, 4× Circuit Panel, and 6 t Water → 1× Drone Depot Kit (Large)
+Blueprint unlocks by completing the order **Helios, Drone Hub Stockpile**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.85 h, Mk II: 0.43 h, Mk III: 0.21 h |
+| Power | Mk I: 55 W, Mk II: 82.5 W, Mk III: 165 W |
+| Production tier | T3 |
+
+##### Frame + Control + Panel + Cell + Liquid Pipe Segment → Drone Service Station Kit `craft_drone_service_station_kit` *(Unlocked)*
+
+2× Machine Frame, 1× Control Unit, 2× Circuit Panel, 1× Battery Cell, and 1× Liquid Pipe Segment → 1× Drone Service Station Kit
+Blueprint unlocks by completing the order **Spire, Drone Power Trial**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.5 h, Mk II: 0.25 h, Mk III: 0.13 h |
+| Power | Mk I: 45 W, Mk II: 67.5 W, Mk III: 135 W |
+| Production tier | T3 |
+
+##### Frame + Control + Panel → Mining Drill Kit `craft_mining_drill_kit` *(Unlocked)*
+
+3× Machine Frame, 1× Control Unit, 1× Circuit Panel, and 2 t Water → 1× Mining Drill Kit
+Blueprint unlocks by completing the order **Helios, Cargo Pod Run**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.45 h, Mk II: 0.23 h, Mk III: 0.11 h |
+| Power | Mk I: 45 W, Mk II: 67.5 W, Mk III: 135 W |
+| Production tier | T3 |
+
+##### Frame + Control + Panel + Rotor → Industrial Mining Drill Kit `craft_mining_drill_industrial_kit` *(Unlocked)*
+
+5× Machine Frame, 2× Control Unit, 2× Circuit Panel, 1× Turbine Rotor, and 3 t Water → 1× Industrial Mining Drill Kit
+Blueprint unlocks by completing the order **Helios, Mining Drill Kit Build**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.65 h, Mk II: 0.33 h, Mk III: 0.16 h |
+| Power | Mk I: 52 W, Mk II: 78 W, Mk III: 156 W |
+| Production tier | T3 |
+
+##### Frame + Control + Panel + Rotors → Heavy Mining Drill Kit `craft_mining_drill_heavy_kit` *(Unlocked)*
+
+8× Machine Frame, 3× Control Unit, 4× Circuit Panel, 2× Turbine Rotor, and 4 t Water → 1× Heavy Mining Drill Kit
+Blueprint unlocks by completing the order **Helios, Tether Project**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.85 h, Mk II: 0.43 h, Mk III: 0.21 h |
+| Power | Mk I: 58 W, Mk II: 87 W, Mk III: 174 W |
+| Production tier | T3 |
+
+##### Rare Earth Core + Titanium Ingot + Control → Drone (Small) `craft_drone_small` *(Unlocked)*
+
+1× Rare Earth Core, 1× Titanium Ingot, 1× Control Unit, and 2 t Water → 1× Drone (Small)
+Blueprint unlocks by completing the order **Helios, Rotor Run**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.55 h, Mk II: 0.28 h, Mk III: 0.14 h |
+| Power | Mk I: 45 W, Mk II: 67.5 W, Mk III: 135 W |
+| Production tier | T3 |
+
+##### Rare Earth Core + Titanium Ingot + Control → Drone (Medium) `craft_drone_medium` *(Unlocked)*
+
+2× Rare Earth Core, 2× Titanium Ingot, 1× Control Unit, and 3 t Water → 1× Drone (Medium)
+Blueprint unlocks by completing the order **Helios, Mid-Drone Build**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.75 h, Mk II: 0.38 h, Mk III: 0.19 h |
+| Power | Mk I: 50 W, Mk II: 75 W, Mk III: 150 W |
+| Production tier | T3 |
+
+##### Rare Earth Core + Titanium Ingot + Control → Drone (Large) `craft_drone_large` *(Unlocked)*
+
+3× Rare Earth Core, 3× Titanium Ingot, 2× Control Unit, and 4 t Water → 1× Drone (Large)
+Blueprint unlocks by completing the order **Helios, Heavy Drone Build**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 1 h, Mk II: 0.5 h, Mk III: 0.25 h |
+| Power | Mk I: 55 W, Mk II: 82.5 W, Mk III: 165 W |
+| Production tier | T3 |
+
+##### Rare Earth Core + Rotor → Electric Thruster `craft_electric_thruster` *(Unlocked)*
+
+2× Rare Earth Core, 1× Turbine Rotor, and 2 t Steam → 1× Electric Thruster
+Blueprint unlocks by completing the order **Spire, Rare Earth Order**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.55 h, Mk II: 0.28 h, Mk III: 0.14 h |
+| Power | Mk I: 45 W, Mk II: 67.5 W, Mk III: 135 W |
+| Production tier | T2 |
+
+##### Rare Earth Core + Control + Lubricant + Rubber → Heli Thruster `craft_heli_thruster` *(Not yet unlocked)*
+
+2× Rare Earth Core, 1× Control Unit, 2× Lubricant, 1× Rubber, and 2 t Water → 1× Heli Thruster
+Blueprint unlocks by completing the order **Vestibule, Refueling Pad Order**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.65 h, Mk II: 0.33 h, Mk III: 0.16 h |
+| Power | Mk I: 50 W, Mk II: 75 W, Mk III: 150 W |
+| Production tier | T3 |
+
+##### Titanium + Glass → Cargo Pod (Small) `craft_cargo_pod_small` *(Unlocked)*
+
+1× Titanium Ingot, 1× Glass, and 1 t Steam → 1× Cargo Pod (Small)
+Blueprint unlocks by completing the order **Helios, Pilot Drone Fleet Order**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.2 h, Mk II: 0.1 h, Mk III: 0.05 h |
+| Power | Mk I: 35 W, Mk II: 52.5 W, Mk III: 105 W |
+| Production tier | T1 |
+
+##### Titanium + Glass + Panel → Cargo Pod (Medium) `craft_cargo_pod_medium` *(Unlocked)*
+
+2× Titanium Ingot, 1× Glass, 1× Circuit Panel, and 2 t Steam → 1× Cargo Pod (Medium)
+Blueprint unlocks by completing the order **Helios, Mid-Cargo Build**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.3 h, Mk II: 0.15 h, Mk III: 0.08 h |
+| Power | Mk I: 40 W, Mk II: 60 W, Mk III: 120 W |
+| Production tier | T2 |
+
+##### Titanium + Glass + Panel → Cargo Pod (Large) `craft_cargo_pod_large` *(Unlocked)*
+
+3× Titanium Ingot, 2× Glass, 1× Circuit Panel, and 3 t Steam → 1× Cargo Pod (Large)
+Blueprint unlocks by completing the order **Helios, Cargo Megaorder**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.42 h, Mk II: 0.21 h, Mk III: 0.11 h |
+| Power | Mk I: 45 W, Mk II: 67.5 W, Mk III: 135 W |
+| Production tier | T2 |
+
+##### Titanium Ingot + Glass + Cell → Battery Pack `craft_battery_pack` *(Unlocked)*
+
+1× Titanium Ingot, 1× Glass, and 1× Battery Cell → 1× Battery Pack
+Blueprint unlocks by completing the order **Spire, Pressure Hardware**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.18 h, Mk II: 0.09 h, Mk III: 0.05 h |
+| Power | Mk I: 32 W, Mk II: 48 W, Mk III: 96 W |
+| Production tier | T2 |
+
+##### Titanium Ingot + Lubricant + Rubber → Oil Tank (Small) `craft_oil_tank_small` *(Not yet unlocked)*
+
+1× Titanium Ingot, 1× Lubricant, 1× Rubber, and 1 t Water → 1× Oil Tank (Small)
+Blueprint unlocks by completing the order **Vestibule, Heli Thruster Order**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.22 h, Mk II: 0.11 h, Mk III: 0.06 h |
+| Power | Mk I: 35 W, Mk II: 52.5 W, Mk III: 105 W |
+| Production tier | T2 |
+
+##### Titanium Ingot + Lubricant + Rubber + Lining → Oil Tank (Medium) `craft_oil_tank_medium` *(Not yet unlocked)*
+
+2× Titanium Ingot, 1× Lubricant, 1× Rubber, 1× Tank Lining, and 2 t Water → 1× Oil Tank (Medium)
+Blueprint unlocks by completing the order **Vestibule, Oil Tank Order**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.32 h, Mk II: 0.16 h, Mk III: 0.08 h |
+| Power | Mk I: 40 W, Mk II: 60 W, Mk III: 120 W |
+| Production tier | T2 |
+
+##### Titanium Ingot + Lubricant + Rubber + Tank Lining → Oil Tank (Large) `craft_oil_tank_large` *(Not yet unlocked)*
+
+3× Titanium Ingot, 2× Lubricant, 1× Rubber, 2× Tank Lining, and 3 t Water → 1× Oil Tank (Large)
+Blueprint unlocks by completing the order **Vestibule, Mid Tank Order**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.45 h, Mk II: 0.23 h, Mk III: 0.11 h |
+| Power | Mk I: 45 W, Mk II: 67.5 W, Mk III: 135 W |
+| Production tier | T2 |
+
+##### Pipes + Valves + Rare Earth Core + Titanium Ingot + Tar → Coolant Loop `craft_coolant_loop` *(Unlocked)*
+
+4× Liquid Pipe Segment, 2× Pressure Valve, 1× Rare Earth Core, 2× Titanium Ingot, 2× Tar, and 4 t Water → 1× Coolant Loop
+Blueprint unlocks by completing the order **Spire, Neutronium Order**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.75 h, Mk II: 0.38 h, Mk III: 0.19 h |
+| Power | Mk I: 50 W, Mk II: 75 W, Mk III: 150 W |
+| Production tier | T2 |
+
+##### Neutronium Bar + Cells + Controls + Rare Earth Core + Tar → Neutron Capacitor `craft_neutron_capacitor` *(Unlocked)*
+
+1× Neutronium Bar, 2× Battery Cell, 2× Control Unit, 1× Rare Earth Core, 1× Tar, 4 t Water, and 4 t Steam → 1× Neutron Capacitor
+Blueprint unlocks by completing the order **Spire, Cobalt Stockpile**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 1.2 h, Mk II: 0.6 h, Mk III: 0.3 h |
+| Power | Mk I: 70 W, Mk II: 105 W, Mk III: 210 W |
+| Production tier | T3 |
+
+##### Frame + Control + Panel → Seed Maker Kit `craft_seed_maker_kit` *(Unlocked)*
+
+2× Machine Frame, 1× Control Unit, 2× Circuit Panel, and 3 t Water → 1× Seed Maker Kit
+Blueprint unlocks with the **Seed Maker** research.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.5 h, Mk II: 0.25 h, Mk III: 0.13 h |
+| Power | Mk I: 45 W, Mk II: 67.5 W, Mk III: 135 W |
+| Production tier | T3 |
+
+##### Frames + Controls + Panels + Liquid Pipe Segments → Plant Terraformer Kit `craft_plant_terraformer_kit` *(Unlocked)*
+
+5× Machine Frame, 3× Control Unit, 5× Circuit Panel, 4× Liquid Pipe Segment, and 10 t Water → 1× Plant Terraformer Kit
+Blueprint unlocks with the **Plant Terraformer** research.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 1.25 h, Mk II: 0.63 h, Mk III: 0.31 h |
+| Power | Mk I: 80 W, Mk II: 120 W, Mk III: 240 W |
+| Production tier | T3 |
+
+##### Frame + Panel + Glass → Grow Lamp Kit `craft_grow_lamp_kit` *(Not yet unlocked)*
+
+1× Machine Frame, 2× Circuit Panel, and 2× Glass → 1× Grow Lamp Kit
+Blueprint unlocks with the **Grow Lamp** research.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.35 h, Mk II: 0.18 h, Mk III: 0.09 h |
+| Power | Mk I: 35 W, Mk II: 52.5 W, Mk III: 105 W |
+| Production tier | T2 |
+
+##### Frame + Pipes + Valve → Sprinkler Kit `craft_sprinkler_kit` *(Not yet unlocked)*
+
+1× Machine Frame, 2× Liquid Pipe Segment, 1× Pressure Valve, and 2 t Water → 1× Sprinkler Kit
+Blueprint unlocks with the **Sprinkler** research.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.38 h, Mk II: 0.19 h, Mk III: 0.1 h |
+| Power | Mk I: 38 W, Mk II: 57 W, Mk III: 114 W |
+| Production tier | T2 |
+
+##### Frame + Control + Panel → Dispenser Kit `craft_dispenser_kit` *(Not yet unlocked)*
+
+1× Machine Frame, 1× Control Unit, and 1× Circuit Panel → 1× Dispenser Kit
+Blueprint unlocks with the **Dispenser** research.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.4 h, Mk II: 0.2 h, Mk III: 0.1 h |
+| Power | Mk I: 40 W, Mk II: 60 W, Mk III: 120 W |
+| Production tier | T3 |
+
+##### Frame + Iron + Panel → Waste Processor Kit `craft_garbage_disposal_kit` *(Unlocked)*
+
+2× Machine Frame, 4× Iron Ingot, and 1× Circuit Panel → 1× Waste Processor Kit
+Blueprint unlocks with the **Waste Processing** research.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.4 h, Mk II: 0.2 h, Mk III: 0.1 h |
+| Power | Mk I: 40 W, Mk II: 60 W, Mk III: 120 W |
+| Production tier | T2 |
+
+##### Titanium + Gas Pipe Segments → Exotic Gas Cap Kit `craft_exotic_gas_cap_kit` *(Not yet unlocked)*
+
+2× Titanium Ingot and 2× Gas Pipe Segment → 1× Exotic Gas Cap Kit
+Blueprint unlocks with the **Exotic Fluids** research.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.32 h, Mk II: 0.16 h, Mk III: 0.08 h |
+| Power | Mk I: 40 W, Mk II: 60 W, Mk III: 120 W |
+| Production tier | T2 |
+
+##### Titanium + Liquid Pipe Segments + Valve → Exotic Spring Tap Kit `craft_exotic_spring_tap_kit` *(Not yet unlocked)*
+
+2× Titanium Ingot, 2× Liquid Pipe Segment, and 1× Pressure Valve → 1× Exotic Spring Tap Kit
+Blueprint unlocks with the **Exotic Fluids** research.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.34 h, Mk II: 0.17 h, Mk III: 0.09 h |
+| Power | Mk I: 42 W, Mk II: 63 W, Mk III: 126 W |
+| Production tier | T2 |
+
+##### Tar + Glass → Fertilizer `craft_fertilizer` *(Unlocked)*
+
+1× Tar, 1× Glass, and 2 t Water → 2× Fertilizer
+Blueprint unlocks by completing the Bio Order **Soil Enrichment Assay**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.18 h, Mk II: 0.09 h, Mk III: 0.05 h |
+| Power | Mk I: 32 W, Mk II: 48 W, Mk III: 96 W |
+| Production tier | T2 |
+
+##### Tar + Glass + Panel → Fertilizer Mk II `craft_fertilizer_mk2` *(Unlocked)*
+
+2× Tar, 2× Glass, 1× Circuit Panel, and 3 t Water → 2× Fertilizer Mk II
+Blueprint unlocks by completing the Bio Order **Hydrothermal Fragment Manifest**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.3 h, Mk II: 0.15 h, Mk III: 0.08 h |
+| Power | Mk I: 40 W, Mk II: 60 W, Mk III: 120 W |
+| Production tier | T2 |
+
+##### Tar + Glass + Capacitor + Rare Earth Core → Fertilizer Mk III `craft_fertilizer_mk3` *(Unlocked)*
+
+3× Tar, 3× Glass, 1× Neutron Capacitor, 2× Rare Earth Core, and 4 t Water → 2× Fertilizer Mk III
+Blueprint unlocks by completing the Bio Order **Deep-Trench Capstone**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.55 h, Mk II: 0.28 h, Mk III: 0.14 h |
+| Power | Mk I: 52 W, Mk II: 78 W, Mk III: 156 W |
+| Production tier | T4 |
+
+##### Plastic + Rare Earth Core → Growth Accelerant `craft_growth_accelerant` *(Not yet unlocked)*
+
+1× Plastic, 1× Rare Earth Core, and 2 t Water → 2× Growth Accelerant
+Blueprint unlocks by completing the Bio Order **Volcanic Grand Compendium**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.28 h, Mk II: 0.14 h, Mk III: 0.07 h |
+| Power | Mk I: 38 W, Mk II: 57 W, Mk III: 114 W |
+| Production tier | T2 |
+
+##### Capacitor + Controls + Rare Earth Core + Coolant Loop → Yield Amplifier `craft_yield_amplifier` *(Unlocked)*
+
+1× Neutron Capacitor, 2× Control Unit, 2× Rare Earth Core, 1× Coolant Loop, and 4 t Water → 1× Yield Amplifier
+Blueprint unlocks by completing the order **Spire, Neutron Capacitor Order**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 1 h, Mk II: 0.5 h, Mk III: 0.25 h |
+| Power | Mk I: 65 W, Mk II: 97.5 W, Mk III: 195 W |
+| Production tier | T4 |
+
+##### Controls + Panels + Rare Earth Core + Valves → Plant Terraformer Pack Mk II `craft_plant_terraformer_pack_mk2` *(Not yet unlocked)*
+
+4× Control Unit, 6× Circuit Panel, 3× Rare Earth Core, 4× Pressure Valve, and 6 t Water → 1× Plant Terraformer Mk II Upgrade Pack
+Blueprint unlocks with the **Plant Terraformer Mk II** research.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 1.5 h, Mk II: 0.75 h, Mk III: 0.38 h |
+| Power | Mk I: 90 W, Mk II: 135 W, Mk III: 270 W |
+| Production tier | T3 |
+
+##### Panel + Glass + Rare Earth Core → Grow Lamp Pack Mk II `craft_grow_lamp_pack_mk2` *(Unlocked)*
+
+3× Circuit Panel, 4× Glass, and 1× Rare Earth Core → 1× Grow Lamp Mk II Upgrade Pack
+Blueprint unlocks by completing the order **Spire, Optics Stockpile**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.45 h, Mk II: 0.23 h, Mk III: 0.11 h |
+| Power | Mk I: 42 W, Mk II: 63 W, Mk III: 126 W |
+| Production tier | T2 |
+
+##### Capacitor + Rare Earth Core + Controls → Grow Lamp Pack Mk III `craft_grow_lamp_pack_mk3` *(Unlocked)*
+
+1× Neutron Capacitor, 3× Rare Earth Core, 2× Control Unit, and 3 t Water → 1× Grow Lamp Mk III Upgrade Pack
+Blueprint unlocks by completing the order **Spire, Capacitor Bulk Order**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.75 h, Mk II: 0.38 h, Mk III: 0.19 h |
+| Power | Mk I: 55 W, Mk II: 82.5 W, Mk III: 165 W |
+| Production tier | T4 |
+
+##### Plastic + Coolant Loop + Valves → Sprinkler Pack Mk II `craft_sprinkler_pack_mk2` *(Unlocked)*
+
+4× Plastic, 1× Coolant Loop, and 2× Pressure Valve → 1× Sprinkler Mk II Upgrade Pack
+Blueprint unlocks by completing the order **Spire, Polymer Megastock**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.5 h, Mk II: 0.25 h, Mk III: 0.13 h |
+| Power | Mk I: 44 W, Mk II: 66 W, Mk III: 132 W |
+| Production tier | T3 |
+
+##### Controls + Panels + Coolant Loop → Sprinkler Pack Mk III `craft_sprinkler_pack_mk3` *(Unlocked)*
+
+2× Control Unit, 4× Circuit Panel, 2× Coolant Loop, and 4 t Water → 1× Sprinkler Mk III Upgrade Pack
+Blueprint unlocks by completing the order **Spire, Avionics Megastock**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.85 h, Mk II: 0.43 h, Mk III: 0.21 h |
+| Power | Mk I: 58 W, Mk II: 87 W, Mk III: 174 W |
+| Production tier | T3 |
+
+##### Frames + Controls + Panels + Valves → Feed Maker Pack Mk II `craft_feed_maker_pack_mk2` *(Not yet unlocked)*
+
+2× Machine Frame, 2× Control Unit, 4× Circuit Panel, 2× Pressure Valve, and 4 t Water → 1× Feed Maker Mk II Upgrade Pack
+Blueprint unlocks with the **Feed Maker Mk II** research.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 1 h, Mk II: 0.5 h, Mk III: 0.25 h |
+| Power | Mk I: 60 W, Mk II: 90 W, Mk III: 180 W |
+| Production tier | T3 |
+
+##### Capacitors + Rare Earth Core + Controls + Coolant Loop → Habitat Pack Mk II `craft_habitat_pack_mk2` *(Not yet unlocked)*
+
+2× Neutron Capacitor, 3× Rare Earth Core, 4× Control Unit, 3× Coolant Loop, and 6 t Water → 1× Habitat Mk II Upgrade Pack
+Blueprint unlocks with the **Habitat Engineering Mk II** research.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 1.4 h, Mk II: 0.7 h, Mk III: 0.35 h |
+| Power | Mk I: 110 W, Mk II: 165 W, Mk III: 330 W |
+| Production tier | T4 |
+
+##### Lead Plate `craft_lead_plate` *(Unlocked)*
+
+2× Lead Ingot → 1× Lead Plate
+Blueprint unlocks by completing the order **Helios, Lead Consignment**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.2 h, Mk II: 0.1 h, Mk III: 0.05 h |
+| Power | Mk I: 30 W, Mk II: 45 W, Mk III: 90 W |
+| Production tier | T1 |
+
+##### Oxygen Upgrade Pack Mk IV `craft_oxygen_upgrade_pack_mk4` *(Not yet unlocked)*
+
+4× Lead Plate, 2× Machine Frame, 3× Circuit Panel, and 2× Cobalt Ingot → 1× Oxygen Upgrade Pack Mk IV
+Blueprint unlocks with the **Oxygen Generator Mk IV** research.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 2 h, Mk II: 1 h, Mk III: 0.5 h |
+| Power | Mk I: 220 W, Mk II: 330 W, Mk III: 660 W |
+| Production tier | T2 |
+
+##### Heat Upgrade Pack Mk IV `craft_heat_upgrade_pack_mk4` *(Not yet unlocked)*
+
+4× Lead Plate, 2× Machine Frame, 3× Circuit Panel, and 2× Cobalt Ingot → 1× Heat Upgrade Pack Mk IV
+Blueprint unlocks with the **Heat Generator Mk IV** research.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 2 h, Mk II: 1 h, Mk III: 0.5 h |
+| Power | Mk I: 220 W, Mk II: 330 W, Mk III: 660 W |
+| Production tier | T2 |
+
+##### Pressure Upgrade Pack Mk IV `craft_pressure_upgrade_pack_mk4` *(Not yet unlocked)*
+
+4× Lead Plate, 2× Machine Frame, 3× Circuit Panel, and 2× Cobalt Ingot → 1× Pressure Upgrade Pack Mk IV
+Blueprint unlocks with the **Pressure Generator Mk IV** research.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 2 h, Mk II: 1 h, Mk III: 0.5 h |
+| Power | Mk I: 220 W, Mk II: 330 W, Mk III: 660 W |
+| Production tier | T2 |
+
+##### Lead Cask `craft_lead_cask` *(Unlocked)*
+
+3× Lead Plate and 1× Machine Frame → 1× Lead Cask
+Blueprint unlocks by completing the order **Helios, Plate Order**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.6 h, Mk II: 0.3 h, Mk III: 0.15 h |
+| Power | Mk I: 36 W, Mk II: 54 W, Mk III: 108 W |
+| Production tier | T2 |
+
+##### Shield Plating `craft_shield_plating` *(Not yet unlocked)*
+
+4× Lead Plate and 1× Machine Frame → 1× Shield Plating
+Blueprint unlocks by completing the order **Vestibule, Shielded Transport Trial**.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 0.8 h, Mk II: 0.4 h, Mk III: 0.2 h |
+| Power | Mk I: 36 W, Mk II: 54 W, Mk III: 108 W |
+| Production tier | T2 |
+
+##### Lightning Rod `craft_lightning_rod_kit` *(Unlocked)*
+
+1× Machine Frame, 4× Battery Cell, and 2× Circuit Panel → 1× Lightning Rod
+Blueprint unlocks with the **Lightning Rods** research.
+
+| Field | Value |
+| --- | --- |
+| Craft time | Mk I: 1 h, Mk II: 0.5 h, Mk III: 0.25 h |
+| Power | Mk I: 40 W, Mk II: 60 W, Mk III: 120 W |
+| Production tier | T2 |
 
 *Database / Recipes*
 
@@ -22155,8 +25273,8 @@ Available from the start.
 
 | Field | Value |
 | --- | --- |
-| Craft time | 0.08 h |
-| Power | 20 W |
+| Craft time | Mk I: 0.08 h, Mk II: 0.04 h, Mk III: 0.02 h |
+| Power | Mk I: 20 W, Mk II: 30 W, Mk III: 60 W |
 | Production tier | T0 |
 
 ##### Silicon → Glass `smelt_glass` *(Unlocked)*
@@ -22166,8 +25284,8 @@ Blueprint unlocks by completing the order **Spire, Silicon Bootstrap**.
 
 | Field | Value |
 | --- | --- |
-| Craft time | 0.08 h |
-| Power | 20 W |
+| Craft time | Mk I: 0.08 h, Mk II: 0.04 h, Mk III: 0.02 h |
+| Power | Mk I: 20 W, Mk II: 30 W, Mk III: 60 W |
 | Production tier | T0 |
 
 ##### Titanium → Titanium Ingot `smelt_titanium_ingot` *(Unlocked)*
@@ -22177,829 +25295,53 @@ Blueprint unlocks by completing the order **Helios, Iron Bootstrap**.
 
 | Field | Value |
 | --- | --- |
-| Craft time | 0.1 h |
-| Power | 28 W |
+| Craft time | Mk I: 0.1 h, Mk II: 0.05 h, Mk III: 0.03 h |
+| Power | Mk I: 28 W, Mk II: 42 W, Mk III: 84 W |
 | Production tier | T0 |
 
-##### Cobalt → Cobalt Ingot `smelt_cobalt_ingot` *(Not yet unlocked)*
+##### Cobalt → Cobalt Ingot `smelt_cobalt_ingot` *(Unlocked)*
 
 1× Cobalt → 1× Cobalt Ingot
 Blueprint unlocks by completing the order **Spire, Avionics Run**.
 
 | Field | Value |
 | --- | --- |
-| Craft time | 0.1 h |
-| Power | 28 W |
+| Craft time | Mk I: 0.1 h, Mk II: 0.05 h, Mk III: 0.03 h |
+| Power | Mk I: 28 W, Mk II: 42 W, Mk III: 84 W |
 | Production tier | T0 |
 
-##### Rare Earth → Rare Earth Core `smelt_rare_earth_core` *(Not yet unlocked)*
+##### Rare Earth → Rare Earth Core `smelt_rare_earth_core` *(Unlocked)*
 
 1× Rare Earth → 1× Rare Earth Core
 Blueprint unlocks by completing the order **Spire, Control Run**.
 
 | Field | Value |
 | --- | --- |
-| Craft time | 0.14 h |
-| Power | 35 W |
+| Craft time | Mk I: 0.14 h, Mk II: 0.07 h, Mk III: 0.04 h |
+| Power | Mk I: 35 W, Mk II: 52.5 W, Mk III: 105 W |
 | Production tier | T0 |
 
-##### Neutronium → Neutronium Bar `smelt_neutronium_bar` *(Not yet unlocked)*
+##### Neutronium → Neutronium Bar `smelt_neutronium_bar` *(Unlocked)*
 
 1× Neutronium → 1× Neutronium Bar
 Blueprint unlocks by completing the order **Spire, Polymer Optics Run**.
 
 | Field | Value |
 | --- | --- |
-| Craft time | 0.2 h |
-| Power | 45 W |
+| Craft time | Mk I: 0.2 h, Mk II: 0.1 h, Mk III: 0.05 h |
+| Power | Mk I: 45 W, Mk II: 67.5 W, Mk III: 135 W |
 | Production tier | T0 |
 
-##### Lead Ore → Lead Ingot `smelt_lead_ingot` *(Not yet unlocked)*
+##### Lead Ore → Lead Ingot `smelt_lead_ingot` *(Unlocked)*
 
 1× Lead Ore → 1× Lead Ingot
 Blueprint unlocks by completing the order **Helios, Lead Survey Stock**.
 
 | Field | Value |
 | --- | --- |
-| Craft time | 0.1 h |
-| Power | 22 W |
+| Craft time | Mk I: 0.1 h, Mk II: 0.05 h, Mk III: 0.03 h |
+| Power | Mk I: 22 W, Mk II: 33 W, Mk III: 66 W |
 | Production tier | T0 |
-
-*Database / Recipes*
-
-## Fabricator Recipes
-
-The Fabricator assembles components from refined stock, with several inputs per blueprint and some recipes producing byproducts. Select with `fabricator.set_recipe`. Most blueprints arrive as contractor order rewards, each card below names its order.
-
-##### Iron → Gas Pipe Segment `craft_gas_pipe_segment` *(Unlocked)*
-
-2× Iron Ingot → 1× Gas Pipe Segment
-Blueprint unlocks by completing the order **Helios, Iron Production**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.1 h |
-| Power | 25 W |
-| Production tier | T1 |
-
-##### Iron + Silicon → Liquid Pipe Segment `craft_liquid_pipe_segment` *(Unlocked)*
-
-1× Iron Ingot and 1× Silicon → 1× Liquid Pipe Segment
-Blueprint unlocks by completing the order **Spire, Silicon Stock**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.12 h |
-| Power | 25 W |
-| Production tier | T1 |
-
-##### Iron + Titanium → Power Line Segment `craft_power_line_segment` *(Unlocked)*
-
-1× Iron Ingot and 1× Titanium Ingot → 1× Power Line Segment
-Blueprint unlocks by completing the order **Vestibule, Utility Conduit Stock**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.14 h |
-| Power | 25 W |
-| Production tier | T1 |
-
-##### Gas Segments + Valve → Gas Bridge `craft_gas_pipe_bridge` *(Unlocked)*
-
-2× Gas Pipe Segment and 1× Pressure Valve → 1× Gas Pipe Bridge
-Blueprint unlocks by completing the order **Helios, Iron Production**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.18 h |
-| Power | 25 W |
-| Production tier | T2 |
-
-##### Liquid Segments + Valve → Liquid Bridge `craft_liquid_pipe_bridge` *(Unlocked)*
-
-2× Liquid Pipe Segment and 1× Pressure Valve → 1× Liquid Pipe Bridge
-Blueprint unlocks by completing the order **Spire, Silicon Stock**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.2 h |
-| Power | 25 W |
-| Production tier | T2 |
-
-##### Power Segments + Circuit → Power Bridge `craft_power_line_bridge` *(Unlocked)*
-
-2× Power Line Segment and 1× Circuit Panel → 1× Power Line Bridge
-Blueprint unlocks by completing the order **Vestibule, Utility Conduit Stock**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.22 h |
-| Power | 25 W |
-| Production tier | T2 |
-
-##### Iron + Glass → Pressure Valve `craft_pressure_valve` *(Not yet unlocked)*
-
-1× Iron Ingot and 1× Glass → 1× Pressure Valve
-Blueprint unlocks by completing the order **Spire, Cobalt Run**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.12 h |
-| Power | 25 W |
-| Production tier | T1 |
-
-##### Iron + Titanium → Machine Frame `craft_machine_frame` *(Not yet unlocked)*
-
-3× Iron Ingot, 1× Titanium Ingot, and 2 t Water → 1× Machine Frame
-Blueprint unlocks by completing the order **Helios, Battery Order**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.22 h |
-| Power | 35 W |
-| Production tier | T1 |
-
-##### Iron + Glass → Circuit Panel `craft_circuit_panel` *(Unlocked)*
-
-1× Iron Ingot, 2× Glass, and 1 t Water → 1× Circuit Panel
-Blueprint unlocks by completing the order **Spire, Optical Glass**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.18 h |
-| Power | 30 W |
-| Production tier | T1 |
-
-##### Panel + Titanium + Glass → Control Unit `craft_control_unit` *(Not yet unlocked)*
-
-1× Circuit Panel, 1× Titanium Ingot, 1× Glass, and 2 t Water → 1× Control Unit
-Blueprint unlocks by completing the order **Spire, Circuit Order**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.3 h |
-| Power | 40 W |
-| Production tier | T2 |
-
-##### Cobalt + Iron + Glass → Battery Cell `craft_battery_cell` *(Unlocked)*
-
-1× Cobalt Ingot, 1× Iron Ingot, 1× Glass, and 1 t Water → 1× Battery Cell
-Blueprint unlocks by completing the order **Helios, Titanium Run**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.22 h |
-| Power | 35 W |
-| Production tier | T1 |
-
-##### Titanium + Pipes → Thermal Cap Kit `craft_thermal_cap_kit` *(Unlocked)*
-
-2× Titanium Ingot and 2× Gas Pipe Segment → 1× Thermal Cap Kit
-Blueprint unlocks with the **Thermal Cap** research.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.28 h |
-| Power | 38 W |
-| Production tier | T2 |
-
-##### Titanium + Cobalt + Rare Earth → Turbine Rotor `craft_turbine_rotor` *(Not yet unlocked)*
-
-2× Titanium Ingot, 1× Cobalt Ingot, 1× Rare Earth Core, and 4 t Steam → 1× Turbine Rotor
-Blueprint unlocks by completing the order **Helios, Cap Kit Order**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.34 h |
-| Power | 42 W |
-| Production tier | T1 |
-
-##### Iron + Titanium + Glass → Tank Lining `craft_tank_lining` *(Not yet unlocked)*
-
-2× Iron Ingot, 1× Titanium Ingot, 1× Glass, and 2 t Water → 1× Tank Lining
-Blueprint unlocks by completing the order **Helios, Bulk Iron Run**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.22 h |
-| Power | 38 W |
-| Production tier | T1 |
-
-##### Iron + Glass + Liquid Pipe Segment → Water Pump `craft_water_pump` *(Not yet unlocked)*
-
-2× Iron Ingot, 2× Glass, and 4× Liquid Pipe Segment → 1× Water Pump
-Blueprint unlocks with the **Hydrology Survey** research.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.3 h |
-| Power | 35 W |
-| Production tier | T2 |
-
-##### Iron + Titanium + Valve + Panel → Oil Pump `craft_oil_pump` *(Not yet unlocked)*
-
-2× Iron Ingot, 1× Titanium Ingot, 1× Pressure Valve, and 1× Circuit Panel → 1× Oil Pump
-Blueprint unlocks with the **Petroleum Survey** research.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.38 h |
-| Power | 40 W |
-| Production tier | T2 |
-
-##### Iron + Oil → Lubricant + Tar `craft_lubricant` *(Not yet unlocked)*
-
-1× Iron Ingot and 3 t Oil → 1× Lubricant and + byproduct 1× Tar
-Blueprint unlocks by completing the order **Vestibule, Liquid Pipe Order**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.12 h |
-| Power | 30 W |
-| Production tier | T1 |
-
-##### Glass + Oil → Plastic + Tar `craft_plastic` *(Not yet unlocked)*
-
-1× Glass and 4 t Oil → 1× Plastic and + byproduct 1× Tar
-Blueprint unlocks by completing the order **Spire, Magnetic Stator Build**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.14 h |
-| Power | 32 W |
-| Production tier | T1 |
-
-##### Cobalt + Oil → Rubber + Tar `craft_rubber` *(Not yet unlocked)*
-
-1× Cobalt Ingot and 2 t Oil → 1× Rubber and + byproduct 1× Tar
-Blueprint unlocks by completing the order **Vestibule, Pipe Network Run**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.12 h |
-| Power | 28 W |
-| Production tier | T1 |
-
-##### Heavy Oil Cracking: Oil → Tar `craft_tar` *(Not yet unlocked)*
-
-5 t Oil → 2× Tar
-Blueprint unlocks by completing the order **Vestibule, Polymer Stockpile**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.15 h |
-| Power | 32 W |
-| Production tier | T1 |
-
-##### Plastic + Forage + Water → Reinforced Biopolymer `craft_reinforced_biopolymer` *(Not yet unlocked)*
-
-2× Plastic, 6× Plant Forage, and 2 t Water → 4× Reinforced Biopolymer
-Blueprint unlocks with the **Advanced Biopolymers** research.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.28 h |
-| Power | 40 W |
-| Production tier | T2 |
-
-##### Biopolymer + Forage + Water → Enrichment Compound `craft_enrichment_compound` *(Not yet unlocked)*
-
-1× Reinforced Biopolymer, 6× Plant Forage, and 2 t Water → 4× Enrichment Compound
-Blueprint unlocks with the **Enrichment Chemistry** research.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.32 h |
-| Power | 45 W |
-| Production tier | T3 |
-
-##### Frame + Control + Gas Pipe Segments + Liquid Pipe Segments → Drone Depot Kit `craft_drone_station_kit` *(Not yet unlocked)*
-
-2× Machine Frame, 1× Control Unit, 2× Gas Pipe Segment, 2× Liquid Pipe Segment, and 3 t Water → 1× Drone Depot Kit
-Blueprint unlocks by completing the order **Helios, Frame Order**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.5 h |
-| Power | 45 W |
-| Production tier | T3 |
-
-##### Frame + Control + Panel → Drone Depot Kit (Medium) `craft_drone_station_kit_medium` *(Not yet unlocked)*
-
-4× Machine Frame, 2× Control Unit, 2× Circuit Panel, and 4 t Water → 1× Drone Depot Kit (Medium)
-Blueprint unlocks by completing the order **Helios, Mid-Cargo Order**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.65 h |
-| Power | 50 W |
-| Production tier | T3 |
-
-##### Frame + Control + Panel → Drone Depot Kit (Large) `craft_drone_station_kit_large` *(Not yet unlocked)*
-
-8× Machine Frame, 3× Control Unit, 4× Circuit Panel, and 6 t Water → 1× Drone Depot Kit (Large)
-Blueprint unlocks by completing the order **Helios, Drone Hub Stockpile**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.85 h |
-| Power | 55 W |
-| Production tier | T3 |
-
-##### Frame + Control + Panel + Cell + Liquid Pipe Segment → Drone Service Station Kit `craft_drone_service_station_kit` *(Not yet unlocked)*
-
-2× Machine Frame, 1× Control Unit, 2× Circuit Panel, 1× Battery Cell, and 1× Liquid Pipe Segment → 1× Drone Service Station Kit
-Blueprint unlocks by completing the order **Spire, Drone Power Trial**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.5 h |
-| Power | 45 W |
-| Production tier | T3 |
-
-##### Frame + Control + Panel → Mining Drill Kit `craft_mining_drill_kit` *(Not yet unlocked)*
-
-3× Machine Frame, 1× Control Unit, 1× Circuit Panel, and 2 t Water → 1× Mining Drill Kit
-Blueprint unlocks by completing the order **Helios, Cargo Pod Run**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.45 h |
-| Power | 45 W |
-| Production tier | T3 |
-
-##### Frame + Control + Panel + Rotor → Industrial Mining Drill Kit `craft_mining_drill_industrial_kit` *(Not yet unlocked)*
-
-5× Machine Frame, 2× Control Unit, 2× Circuit Panel, 1× Turbine Rotor, and 3 t Water → 1× Industrial Mining Drill Kit
-Blueprint unlocks by completing the order **Helios, Heavy Drill Build**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.65 h |
-| Power | 52 W |
-| Production tier | T3 |
-
-##### Frame + Control + Panel + Rotors → Heavy Mining Drill Kit `craft_mining_drill_heavy_kit` *(Not yet unlocked)*
-
-8× Machine Frame, 3× Control Unit, 4× Circuit Panel, 2× Turbine Rotor, and 4 t Water → 1× Heavy Mining Drill Kit
-Blueprint unlocks by completing the order **Helios, Tether Project**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.85 h |
-| Power | 58 W |
-| Production tier | T3 |
-
-##### Rare Earth + Titanium + Control → Drone (Small) `craft_drone_small` *(Not yet unlocked)*
-
-1× Rare Earth Core, 1× Titanium Ingot, 1× Control Unit, and 2 t Water → 1× Drone (Small)
-Blueprint unlocks by completing the order **Helios, Rotor Run**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.55 h |
-| Power | 45 W |
-| Production tier | T3 |
-
-##### Rare Earth + Titanium + Control → Drone (Medium) `craft_drone_medium` *(Not yet unlocked)*
-
-2× Rare Earth Core, 2× Titanium Ingot, 1× Control Unit, and 3 t Water → 1× Drone (Medium)
-Blueprint unlocks by completing the order **Helios, Mid-Drone Build**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.75 h |
-| Power | 50 W |
-| Production tier | T3 |
-
-##### Rare Earth + Titanium + Control → Drone (Large) `craft_drone_large` *(Not yet unlocked)*
-
-3× Rare Earth Core, 3× Titanium Ingot, 2× Control Unit, and 4 t Water → 1× Drone (Large)
-Blueprint unlocks by completing the order **Helios, Heavy Drone Build**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 1 h |
-| Power | 55 W |
-| Production tier | T3 |
-
-##### Rare Earth + Rotor → Electric Thruster `craft_electric_thruster` *(Not yet unlocked)*
-
-2× Rare Earth Core, 1× Turbine Rotor, and 2 t Steam → 1× Electric Thruster
-Blueprint unlocks by completing the order **Spire, Rare Earth Order**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.55 h |
-| Power | 45 W |
-| Production tier | T2 |
-
-##### Rare Earth + Control + Lubricant + Rubber → Heli Thruster `craft_heli_thruster` *(Not yet unlocked)*
-
-2× Rare Earth Core, 1× Control Unit, 2× Lubricant, 1× Rubber, and 2 t Water → 1× Heli Thruster
-Blueprint unlocks by completing the order **Vestibule, Refueling Pad Order**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.65 h |
-| Power | 50 W |
-| Production tier | T3 |
-
-##### Titanium + Glass → Cargo Pod (Small) `craft_cargo_pod_small` *(Not yet unlocked)*
-
-1× Titanium Ingot, 1× Glass, and 1 t Steam → 1× Cargo Pod (Small)
-Blueprint unlocks by completing the order **Helios, Drone Fleet Order**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.2 h |
-| Power | 35 W |
-| Production tier | T1 |
-
-##### Titanium + Glass + Panel → Cargo Pod (Medium) `craft_cargo_pod_medium` *(Not yet unlocked)*
-
-2× Titanium Ingot, 1× Glass, 1× Circuit Panel, and 2 t Steam → 1× Cargo Pod (Medium)
-Blueprint unlocks by completing the order **Helios, Mid-Cargo Build**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.3 h |
-| Power | 40 W |
-| Production tier | T2 |
-
-##### Titanium + Glass + Panel → Cargo Pod (Large) `craft_cargo_pod_large` *(Not yet unlocked)*
-
-3× Titanium Ingot, 2× Glass, 1× Circuit Panel, and 3 t Steam → 1× Cargo Pod (Large)
-Blueprint unlocks by completing the order **Helios, Cargo Megaorder**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.42 h |
-| Power | 45 W |
-| Production tier | T2 |
-
-##### Titanium + Glass + Cell → Battery Pack `craft_battery_pack` *(Not yet unlocked)*
-
-1× Titanium Ingot, 1× Glass, and 1× Battery Cell → 1× Battery Pack
-Blueprint unlocks by completing the order **Spire, Pressure Hardware**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.18 h |
-| Power | 32 W |
-| Production tier | T2 |
-
-##### Titanium + Lubricant + Rubber → Oil Tank (Small) `craft_oil_tank_small` *(Not yet unlocked)*
-
-1× Titanium Ingot, 1× Lubricant, 1× Rubber, and 1 t Water → 1× Oil Tank (Small)
-Blueprint unlocks by completing the order **Vestibule, Heli Thruster Order**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.22 h |
-| Power | 35 W |
-| Production tier | T2 |
-
-##### Titanium + Lubricant + Rubber + Lining → Oil Tank (Medium) `craft_oil_tank_medium` *(Not yet unlocked)*
-
-2× Titanium Ingot, 1× Lubricant, 1× Rubber, 1× Tank Lining, and 2 t Water → 1× Oil Tank (Medium)
-Blueprint unlocks by completing the order **Vestibule, Oil Tank Order**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.32 h |
-| Power | 40 W |
-| Production tier | T2 |
-
-##### Titanium + Lubricant + Rubber + Lining → Oil Tank (Large) `craft_oil_tank_large` *(Not yet unlocked)*
-
-3× Titanium Ingot, 2× Lubricant, 1× Rubber, 2× Tank Lining, and 3 t Water → 1× Oil Tank (Large)
-Blueprint unlocks by completing the order **Vestibule, Mid Tank Order**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.45 h |
-| Power | 45 W |
-| Production tier | T2 |
-
-##### Pipes + Valves + Rare Earth + Titanium + Tar → Coolant Loop `craft_coolant_loop` *(Not yet unlocked)*
-
-4× Liquid Pipe Segment, 2× Pressure Valve, 1× Rare Earth Core, 2× Titanium Ingot, 2× Tar, and 4 t Water → 1× Coolant Loop
-Blueprint unlocks by completing the order **Spire, Neutronium Order**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.75 h |
-| Power | 50 W |
-| Production tier | T2 |
-
-##### Neutronium + Cells + Controls + Rare Earth + Tar → Neutron Capacitor `craft_neutron_capacitor` *(Not yet unlocked)*
-
-1× Neutronium Bar, 2× Battery Cell, 2× Control Unit, 1× Rare Earth Core, 1× Tar, 4 t Water, and 4 t Steam → 1× Neutron Capacitor
-Blueprint unlocks by completing the order **Spire, Cobalt Stockpile**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 1.2 h |
-| Power | 70 W |
-| Production tier | T3 |
-
-##### Frame + Control + Panel → Seed Maker Kit `craft_seed_maker_kit` *(Not yet unlocked)*
-
-2× Machine Frame, 1× Control Unit, 2× Circuit Panel, and 3 t Water → 1× Seed Maker Kit
-Blueprint unlocks with the **Seed Maker** research.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.5 h |
-| Power | 45 W |
-| Production tier | T3 |
-
-##### Frames + Controls + Panels + Liquid Pipe Segments → Plant Terraformer Kit `craft_plant_terraformer_kit` *(Not yet unlocked)*
-
-5× Machine Frame, 3× Control Unit, 5× Circuit Panel, 4× Liquid Pipe Segment, and 10 t Water → 1× Plant Terraformer Kit
-Blueprint unlocks with the **Plant Terraformer** research.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 1.25 h |
-| Power | 80 W |
-| Production tier | T3 |
-
-##### Frame + Panel + Glass → Grow Lamp Kit `craft_grow_lamp_kit` *(Not yet unlocked)*
-
-1× Machine Frame, 2× Circuit Panel, and 2× Glass → 1× Grow Lamp Kit
-Blueprint unlocks with the **Grow Lamp** research.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.35 h |
-| Power | 35 W |
-| Production tier | T2 |
-
-##### Frame + Pipes + Valve → Sprinkler Kit `craft_sprinkler_kit` *(Not yet unlocked)*
-
-1× Machine Frame, 2× Liquid Pipe Segment, 1× Pressure Valve, and 2 t Water → 1× Sprinkler Kit
-Blueprint unlocks with the **Sprinkler** research.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.38 h |
-| Power | 38 W |
-| Production tier | T2 |
-
-##### Frame + Control + Panel → Dispenser Kit `craft_dispenser_kit` *(Not yet unlocked)*
-
-1× Machine Frame, 1× Control Unit, and 1× Circuit Panel → 1× Dispenser Kit
-Blueprint unlocks with the **Dispenser** research.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.4 h |
-| Power | 40 W |
-| Production tier | T3 |
-
-##### Frame + Iron + Panel → Waste Processor Kit `craft_garbage_disposal_kit` *(Not yet unlocked)*
-
-2× Machine Frame, 4× Iron Ingot, and 1× Circuit Panel → 1× Waste Processor Kit
-Blueprint unlocks with the **Waste Processing** research.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.4 h |
-| Power | 40 W |
-| Production tier | T2 |
-
-##### Titanium + Gas Pipe Segments → Exotic Gas Cap Kit `craft_exotic_gas_cap_kit` *(Not yet unlocked)*
-
-2× Titanium Ingot and 2× Gas Pipe Segment → 1× Exotic Gas Cap Kit
-Blueprint unlocks with the **Exotic Husbandry** research.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.32 h |
-| Power | 40 W |
-| Production tier | T2 |
-
-##### Titanium + Liquid Pipe Segments + Valve → Exotic Spring Tap Kit `craft_exotic_spring_tap_kit` *(Not yet unlocked)*
-
-2× Titanium Ingot, 2× Liquid Pipe Segment, and 1× Pressure Valve → 1× Exotic Spring Tap Kit
-Blueprint unlocks with the **Exotic Husbandry** research.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.34 h |
-| Power | 42 W |
-| Production tier | T2 |
-
-##### Tar + Glass → Fertilizer `craft_fertilizer` *(Unlocked)*
-
-1× Tar, 1× Glass, and 2 t Water → 2× Fertilizer
-Blueprint unlocks by completing the Bio Order **Soil Enrichment Assay**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.18 h |
-| Power | 32 W |
-| Production tier | T2 |
-
-##### Tar + Glass + Panel → Fertilizer Mk II `craft_fertilizer_mk2` *(Not yet unlocked)*
-
-2× Tar, 2× Glass, 1× Circuit Panel, and 3 t Water → 2× Fertilizer Mk II
-Blueprint unlocks by completing the Bio Order **Hydrothermal Fragment Manifest**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.3 h |
-| Power | 40 W |
-| Production tier | T2 |
-
-##### Tar + Glass + Capacitor + Rare Earth → Fertilizer Mk III `craft_fertilizer_mk3` *(Not yet unlocked)*
-
-3× Tar, 3× Glass, 1× Neutron Capacitor, 2× Rare Earth Core, and 4 t Water → 2× Fertilizer Mk III
-Blueprint unlocks by completing the Bio Order **Deep-Trench Capstone**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.55 h |
-| Power | 52 W |
-| Production tier | T4 |
-
-##### Plastic + Rare Earth → Growth Accelerant `craft_growth_accelerant` *(Not yet unlocked)*
-
-1× Plastic, 1× Rare Earth Core, and 2 t Water → 2× Growth Accelerant
-Blueprint unlocks by completing the Bio Order **Volcanic Grand Compendium**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.28 h |
-| Power | 38 W |
-| Production tier | T2 |
-
-##### Capacitor + Controls + Rare Earth + Coolant → Yield Amplifier `craft_yield_amplifier` *(Not yet unlocked)*
-
-1× Neutron Capacitor, 2× Control Unit, 2× Rare Earth Core, 1× Coolant Loop, and 4 t Water → 1× Yield Amplifier
-Blueprint unlocks by completing the order **Spire, Neutron Capacitor Order**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 1 h |
-| Power | 65 W |
-| Production tier | T4 |
-
-##### Controls + Panels + Rare Earth + Valves → Plant Terraformer Pack Mk II `craft_plant_terraformer_pack_mk2` *(Not yet unlocked)*
-
-4× Control Unit, 6× Circuit Panel, 3× Rare Earth Core, 4× Pressure Valve, and 6 t Water → 1× Plant Terraformer Mk II Upgrade Pack
-Blueprint unlocks with the **Plant Terraformer Mk II** research.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 1.5 h |
-| Power | 90 W |
-| Production tier | T3 |
-
-##### Panel + Glass + Rare Earth → Grow Lamp Pack Mk II `craft_grow_lamp_pack_mk2` *(Not yet unlocked)*
-
-3× Circuit Panel, 4× Glass, and 1× Rare Earth Core → 1× Grow Lamp Mk II Upgrade Pack
-Blueprint unlocks by completing the order **Spire, Optics Stockpile**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.45 h |
-| Power | 42 W |
-| Production tier | T2 |
-
-##### Capacitor + Rare Earth + Controls → Grow Lamp Pack Mk III `craft_grow_lamp_pack_mk3` *(Not yet unlocked)*
-
-1× Neutron Capacitor, 3× Rare Earth Core, 2× Control Unit, and 3 t Water → 1× Grow Lamp Mk III Upgrade Pack
-Blueprint unlocks by completing the order **Spire, Capacitor Bulk Order**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.75 h |
-| Power | 55 W |
-| Production tier | T4 |
-
-##### Plastic + Coolant + Valves → Sprinkler Pack Mk II `craft_sprinkler_pack_mk2` *(Not yet unlocked)*
-
-4× Plastic, 1× Coolant Loop, and 2× Pressure Valve → 1× Sprinkler Mk II Upgrade Pack
-Blueprint unlocks by completing the order **Spire, Polymer Megastock**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.5 h |
-| Power | 44 W |
-| Production tier | T3 |
-
-##### Controls + Panels + Coolant → Sprinkler Pack Mk III `craft_sprinkler_pack_mk3` *(Not yet unlocked)*
-
-2× Control Unit, 4× Circuit Panel, 2× Coolant Loop, and 4 t Water → 1× Sprinkler Mk III Upgrade Pack
-Blueprint unlocks by completing the order **Spire, Avionics Megastock**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.85 h |
-| Power | 58 W |
-| Production tier | T3 |
-
-##### Frames + Controls + Panels + Valves → Feed Maker Pack Mk II `craft_feed_maker_pack_mk2` *(Not yet unlocked)*
-
-2× Machine Frame, 2× Control Unit, 4× Circuit Panel, 2× Pressure Valve, and 4 t Water → 1× Feed Maker Mk II Upgrade Pack
-Blueprint unlocks with the **Feed Maker Mk II** research.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 1 h |
-| Power | 60 W |
-| Production tier | T3 |
-
-##### Capacitors + Rare Earth + Controls + Coolant → Habitat Pack Mk II `craft_habitat_pack_mk2` *(Not yet unlocked)*
-
-2× Neutron Capacitor, 3× Rare Earth Core, 4× Control Unit, 3× Coolant Loop, and 6 t Water → 1× Habitat Mk II Upgrade Pack
-Blueprint unlocks with the **Habitat Engineering Mk II** research.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 1.4 h |
-| Power | 110 W |
-| Production tier | T4 |
-
-##### Lead Plate `craft_lead_plate` *(Not yet unlocked)*
-
-2× Lead Ingot → 1× Lead Plate
-Blueprint unlocks by completing the order **Helios, Lead Consignment**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.2 h |
-| Power | 30 W |
-| Production tier | T1 |
-
-##### Oxygen Upgrade Pack Mk IV `craft_oxygen_upgrade_pack_mk4` *(Not yet unlocked)*
-
-4× Lead Plate, 2× Machine Frame, 3× Circuit Panel, and 2× Cobalt Ingot → 1× Oxygen Upgrade Pack Mk IV
-Blueprint unlocks with the **Oxygen Generator Mk IV** research.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 2 h |
-| Power | 220 W |
-| Production tier | T2 |
-
-##### Heat Upgrade Pack Mk IV `craft_heat_upgrade_pack_mk4` *(Not yet unlocked)*
-
-4× Lead Plate, 2× Machine Frame, 3× Circuit Panel, and 2× Cobalt Ingot → 1× Heat Upgrade Pack Mk IV
-Blueprint unlocks with the **Heat Generator Mk IV** research.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 2 h |
-| Power | 220 W |
-| Production tier | T2 |
-
-##### Pressure Upgrade Pack Mk IV `craft_pressure_upgrade_pack_mk4` *(Not yet unlocked)*
-
-4× Lead Plate, 2× Machine Frame, 3× Circuit Panel, and 2× Cobalt Ingot → 1× Pressure Upgrade Pack Mk IV
-Blueprint unlocks with the **Pressure Generator Mk IV** research.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 2 h |
-| Power | 220 W |
-| Production tier | T2 |
-
-##### Lead Cask `craft_lead_cask` *(Not yet unlocked)*
-
-3× Lead Plate and 1× Machine Frame → 1× Lead Cask
-Blueprint unlocks by completing the order **Helios, Plate Order**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.6 h |
-| Power | 36 W |
-| Production tier | T2 |
-
-##### Shield Plating `craft_shield_plating` *(Not yet unlocked)*
-
-4× Lead Plate and 1× Machine Frame → 1× Shield Plating
-Blueprint unlocks by completing the order **Vestibule, Shielded Transport Trial**.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 0.8 h |
-| Power | 36 W |
-| Production tier | T2 |
-
-##### Lightning Rod `craft_lightning_rod_kit` *(Not yet unlocked)*
-
-1× Machine Frame, 4× Battery Cell, and 2× Circuit Panel → 1× Lightning Rod
-Blueprint unlocks with the **Lightning Rods** research.
-
-| Field | Value |
-| --- | --- |
-| Craft time | 1 h |
-| Power | 40 W |
-| Production tier | T2 |
 
 *Database / Recipes*
 
@@ -23014,52 +25356,52 @@ Blueprint unlocks by completing the Bio Order **Reef Fragment Survey**.
 
 | Field | Value |
 | --- | --- |
-| Craft time | 0.3 h |
-| Power | 30 W |
+| Craft time | Mk I: 0.3 h, Mk II: 0.2 h |
+| Power | Mk I: 30 W, Mk II: 60 W |
 | Production tier | T1 |
 
-##### Forage + Lava Algae + Cave Moss → Magmatic Annelid Feed `craft_feed_magmatic_annelid` *(Not yet unlocked)*
+##### Forage + Lava Algae + Cave Moss → Magmatic Annelid Feed `craft_feed_magmatic_annelid` *(Unlocked)*
 
 100× Plant Forage, 1× Lava Algae, and 1× Cave Moss → 20× Magmatic Annelid Feed
 Blueprint unlocks by completing the Bio Order **Basalt Tissue Sample**.
 
 | Field | Value |
 | --- | --- |
-| Craft time | 0.3 h |
-| Power | 30 W |
+| Craft time | Mk I: 0.3 h, Mk II: 0.2 h |
+| Power | Mk I: 30 W, Mk II: 60 W |
 | Production tier | T1 |
 
-##### Forage + Cave Fungus + Frost Fungus + Coral Fungus → Mycelial Husk Feed `craft_feed_mycelial_husk` *(Not yet unlocked)*
+##### Forage + Cave Fungus + Frost Fungus + Coral Fungus → Mycelial Husk Feed `craft_feed_mycelial_husk` *(Unlocked)*
 
 100× Plant Forage, 1× Cave Fungus, 1× Frost Fungus, and 1× Coral Fungus → 20× Mycelial Husk Feed
 Blueprint unlocks by completing the Bio Order **Trench Specimen Panel**.
 
 | Field | Value |
 | --- | --- |
-| Craft time | 0.34 h |
-| Power | 32 W |
+| Craft time | Mk I: 0.34 h, Mk II: 0.23 h |
+| Power | Mk I: 32 W, Mk II: 64 W |
 | Production tier | T1 |
 
-##### Forage + Magma Crust + Stone Mat → Mantle Strider Feed `craft_feed_mantle_strider` *(Not yet unlocked)*
+##### Forage + Magma Crust + Stone Mat → Mantle Strider Feed `craft_feed_mantle_strider` *(Unlocked)*
 
 100× Plant Forage, 1× Magma Crust, and 1× Stone Mat → 20× Mantle Strider Feed
 Blueprint unlocks by completing the Bio Order **Obsidian Tissue Lot**.
 
 | Field | Value |
 | --- | --- |
-| Craft time | 0.34 h |
-| Power | 32 W |
+| Craft time | Mk I: 0.34 h, Mk II: 0.23 h |
+| Power | Mk I: 32 W, Mk II: 64 W |
 | Production tier | T1 |
 
-##### Forage + Heat Lichen + Frost Lichen → Glasswing Mantis Feed `craft_feed_glasswing_mantis` *(Not yet unlocked)*
+##### Forage + Heat Lichen + Frost Lichen → Glasswing Mantis Feed `craft_feed_glasswing_mantis` *(Unlocked)*
 
 100× Plant Forage, 1× Heat Lichen, and 1× Frost Lichen → 20× Glasswing Mantis Feed
 Blueprint unlocks by completing the Bio Order **Thermal Bio Compendium**.
 
 | Field | Value |
 | --- | --- |
-| Craft time | 0.34 h |
-| Power | 32 W |
+| Craft time | Mk I: 0.34 h, Mk II: 0.23 h |
+| Power | Mk I: 32 W, Mk II: 64 W |
 | Production tier | T1 |
 
 ##### Forage + Cold Spores + Hot Spores → Veil Mantle Feed `craft_feed_veil_mantle` *(Unlocked)*
@@ -23069,30 +25411,30 @@ Blueprint unlocks by completing the Bio Order **Veil Mantle Diet Survey**.
 
 | Field | Value |
 | --- | --- |
-| Craft time | 0.34 h |
-| Power | 32 W |
+| Craft time | Mk I: 0.34 h, Mk II: 0.23 h |
+| Power | Mk I: 32 W, Mk II: 64 W |
 | Production tier | T1 |
 
-##### Forage + Stone Lichen + Salt Crust → Vault Crab Feed `craft_feed_vault_crab` *(Not yet unlocked)*
+##### Forage + Stone Lichen + Salt Crust → Vault Crab Feed `craft_feed_vault_crab` *(Unlocked)*
 
 100× Plant Forage, 1× Stone Lichen, and 1× Salt Crust → 20× Vault Crab Feed
 Blueprint unlocks by completing the Bio Order **Cold-Seep Assay**.
 
 | Field | Value |
 | --- | --- |
-| Craft time | 0.4 h |
-| Power | 35 W |
+| Craft time | Mk I: 0.4 h, Mk II: 0.27 h |
+| Power | Mk I: 35 W, Mk II: 70 W |
 | Production tier | T1 |
 
-##### Forage + Brine Plankton + Deep Algae + Tide Moss → Tidal Cephalopod Feed `craft_feed_tidal_cephalopod` *(Not yet unlocked)*
+##### Forage + Brine Plankton + Deep Algae + Tide Moss → Tidal Cephalopod Feed `craft_feed_tidal_cephalopod` *(Unlocked)*
 
 100× Plant Forage, 1× Brine Plankton, 1× Deep Algae, and 1× Tide Moss → 20× Tidal Cephalopod Feed
 Blueprint unlocks by completing the Bio Order **Lagoon Specimen Study**.
 
 | Field | Value |
 | --- | --- |
-| Craft time | 0.4 h |
-| Power | 35 W |
+| Craft time | Mk I: 0.4 h, Mk II: 0.27 h |
+| Power | Mk I: 35 W, Mk II: 70 W |
 | Production tier | T1 |
 
 ##### Forage + Ice Crust + Ash Spores → Bone Walker Feed `craft_feed_bone_walker` *(Unlocked)*
@@ -23102,63 +25444,63 @@ Blueprint unlocks by completing the Bio Order **Bone Walker Forage Index**.
 
 | Field | Value |
 | --- | --- |
-| Craft time | 0.4 h |
-| Power | 35 W |
+| Craft time | Mk I: 0.4 h, Mk II: 0.27 h |
+| Power | Mk I: 35 W, Mk II: 70 W |
 | Production tier | T1 |
 
-##### Forage + Vent Algae + Steam Moss + Sea Algae → Vent Drifter Feed `craft_feed_vent_drifter` *(Not yet unlocked)*
+##### Forage + Vent Algae + Steam Moss + Sea Algae → Vent Drifter Feed `craft_feed_vent_drifter` *(Unlocked)*
 
 100× Plant Forage, 1× Vent Algae, 1× Steam Moss, and 1× Sea Algae → 20× Vent Drifter Feed
 Blueprint unlocks by completing the Bio Order **Caldera-Rim Catalog**.
 
 | Field | Value |
 | --- | --- |
-| Craft time | 0.4 h |
-| Power | 35 W |
+| Craft time | Mk I: 0.4 h, Mk II: 0.27 h |
+| Power | Mk I: 35 W, Mk II: 70 W |
 | Production tier | T1 |
 
-##### Forage + Hot Spores + Crystal Spores → Hive Sentinel Feed `craft_feed_hive_sentinel` *(Not yet unlocked)*
+##### Forage + Hot Spores + Crystal Spores → Hive Sentinel Feed `craft_feed_hive_sentinel` *(Unlocked)*
 
 100× Plant Forage, 1× Hot Spores, and 1× Crystal Spores → 20× Hive Sentinel Feed
 Blueprint unlocks by completing the Bio Order **Mud-Pot Fragment Batch**.
 
 | Field | Value |
 | --- | --- |
-| Craft time | 0.4 h |
-| Power | 35 W |
+| Craft time | Mk I: 0.4 h, Mk II: 0.27 h |
+| Power | Mk I: 35 W, Mk II: 70 W |
 | Production tier | T1 |
 
-##### Forage + Cave Moss + Heat Crust → Hollow Choir Feed `craft_feed_hollow_choir` *(Not yet unlocked)*
+##### Forage + Cave Moss + Heat Crust → Hollow Choir Feed `craft_feed_hollow_choir` *(Unlocked)*
 
 100× Plant Forage, 1× Cave Moss, and 1× Heat Crust → 20× Hollow Choir Feed
 Blueprint unlocks by completing the Bio Order **Subduction Specimen Cache**.
 
 | Field | Value |
 | --- | --- |
-| Craft time | 0.4 h |
-| Power | 35 W |
+| Craft time | Mk I: 0.4 h, Mk II: 0.27 h |
+| Power | Mk I: 35 W, Mk II: 70 W |
 | Production tier | T1 |
 
-##### Forage + Shore Lichen + Crystal Spores + Vent Fungus → Ferric Sea-Lily Feed `craft_feed_ferric_sea_lily` *(Not yet unlocked)*
+##### Forage + Shore Lichen + Crystal Spores + Vent Fungus → Ferric Sea-Lily Feed `craft_feed_ferric_sea_lily` *(Unlocked)*
 
 100× Plant Forage, 1× Shore Lichen, 1× Crystal Spores, and 1× Vent Fungus → 20× Ferric Sea-Lily Feed
 Blueprint unlocks by completing the Bio Order **Shoal Specimen Cache**.
 
 | Field | Value |
 | --- | --- |
-| Craft time | 0.4 h |
-| Power | 35 W |
+| Craft time | Mk I: 0.4 h, Mk II: 0.27 h |
+| Power | Mk I: 35 W, Mk II: 70 W |
 | Production tier | T1 |
 
-##### Forage + Stone Mat + Cinder Lichen → Crustal Echo Feed `craft_feed_crustal_echo` *(Not yet unlocked)*
+##### Forage + Stone Mat + Cinder Lichen → Crustal Echo Feed `craft_feed_crustal_echo` *(Unlocked)*
 
 100× Plant Forage, 1× Stone Mat, and 1× Cinder Lichen → 20× Crustal Echo Feed
 Blueprint unlocks by completing the Bio Order **Pelagic Bio Survey**.
 
 | Field | Value |
 | --- | --- |
-| Craft time | 0.4 h |
-| Power | 35 W |
+| Craft time | Mk I: 0.4 h, Mk II: 0.27 h |
+| Power | Mk I: 35 W, Mk II: 70 W |
 | Production tier | T1 |
 
 ##### Forage + Ice Algae + Frost Lichen + Vent Algae + Black Fungus → Glacial Wyrm Feed `craft_feed_glacial_wyrm` *(Unlocked)*
@@ -23168,8 +25510,8 @@ Blueprint unlocks by completing the Bio Order **Glacial Wyrm Husbandry Dossier**
 
 | Field | Value |
 | --- | --- |
-| Craft time | 0.5 h |
-| Power | 42 W |
+| Craft time | Mk I: 0.5 h, Mk II: 0.33 h |
+| Power | Mk I: 42 W, Mk II: 84 W |
 | Production tier | T1 |
 
 ##### Forage + Sulfur Moss + Cinder Lichen + Cold Spores + Stone Lichen → Spire Drake Feed `craft_feed_spire_drake` *(Not yet unlocked)*
@@ -23179,8 +25521,8 @@ Blueprint unlocks by completing the Bio Order **Volcanic Fragment Manifest**.
 
 | Field | Value |
 | --- | --- |
-| Craft time | 0.5 h |
-| Power | 42 W |
+| Craft time | Mk I: 0.5 h, Mk II: 0.33 h |
+| Power | Mk I: 42 W, Mk II: 84 W |
 | Production tier | T1 |
 
 *Database / Recipes*
@@ -23211,7 +25553,7 @@ Blueprint unlocks by completing the Bio Order **Cryofluid Refinement Protocol**.
 | Power | 30 W |
 | Production tier | T2 |
 
-##### Raw Chlorine + Tar → Chlorine `refine_chlorine` *(Not yet unlocked)*
+##### Raw Chlorine + Tar → Chlorine `refine_chlorine` *(Unlocked)*
 
 5× Tar and 4 t Raw Chlorine → 4 t Chlorine
 Blueprint unlocks by completing the Bio Order **Geothermal Grand Compendium**.
@@ -23222,7 +25564,7 @@ Blueprint unlocks by completing the Bio Order **Geothermal Grand Compendium**.
 | Power | 48 W |
 | Production tier | T2 |
 
-##### Raw Quicksilver + Tar → Quicksilver `refine_quicksilver` *(Not yet unlocked)*
+##### Raw Quicksilver + Tar → Quicksilver `refine_quicksilver` *(Unlocked)*
 
 5× Tar and 4 t Raw Quicksilver → 4 t Quicksilver
 Blueprint unlocks by completing the Bio Order **Abyssal Grand Compendium**.
@@ -23237,7 +25579,7 @@ Blueprint unlocks by completing the Bio Order **Abyssal Grand Compendium**.
 
 ## Fuel Assembler Recipes
 
-The Fuel Assembler makes Fuel Rods and Nuclear Batteries from Raw Uranium and lead plates. Uranium enters from a Lead Cask; Fuel Rods leave through the hot lane, while Nuclear Batteries use ordinary product storage.
+The Fuel Assembler makes Fuel Rods and Nuclear Batteries from Raw Uranium and lead plates. Uranium enters from a Lead Cask; Fuel Rods leave through the shielded lane, while Nuclear Batteries use ordinary product storage.
 
 ##### Fuel Rod `craft_fuel_rod` *(Not yet unlocked)*
 
@@ -23250,7 +25592,7 @@ Blueprint unlocks by completing the order **Vestibule, Hot Freight Proof**.
 | Power | 1,800 W |
 | Production tier | T2 |
 
-##### Nuclear Battery `craft_nuclear_battery` *(Not yet unlocked)*
+##### Nuclear Battery `craft_nuclear_battery` *(Unlocked)*
 
 4× Raw Uranium and 3× Lead Plate → 1× Nuclear Battery
 Blueprint unlocks by completing the order **Helios, Reactor Vessel Chain**.
@@ -23396,7 +25738,7 @@ Upgrades a deployed Heat Generator to Mk II: 4.7× output and 5× power draw.
 
 ##### Pressure Generator Mk II Upgrade Pack `pressure_upgrade_pack_mk2`
 
-Upgrades a deployed Pressure Generator to Mk II: 5× output and 5× power draw.
+Upgrades a deployed Pressure Generator to Mk II: 25× output and 5× power draw.
 
 | Field | Value |
 | --- | --- |
@@ -23426,7 +25768,7 @@ Upgrades a Heat Generator to Mk III: **208×** Mk I output, **20×** Mk I power,
 
 ##### Pressure Generator Mk III Upgrade Pack `pressure_upgrade_pack_mk3`
 
-Upgrades a Pressure Generator to Mk III: **200×** Mk I output, **20×** Mk I power, and **5 t/h Water** use. Without Water it falls back to Mk II output (**5×**).
+Upgrades a Pressure Generator to Mk III: **200×** Mk I output, **20×** Mk I power, and **5 t/h Water** use. Without Water it falls back to Mk II output (**25×**).
 
 | Field | Value |
 | --- | --- |
@@ -23440,7 +25782,6 @@ Upgrades one Oxygen Generator to Mk IV: **500× Mk I output** and **100× Mk I p
 
 | Field | Value |
 | --- | --- |
-| Sells for | 180,000 cr |
 | Produced by | Oxygen Upgrade Pack Mk IV |
 | Component docs | Oxygen Generator |
 
@@ -23450,7 +25791,6 @@ Upgrades one Heat Generator to Mk IV: **515× Mk I output** and **100× Mk I pow
 
 | Field | Value |
 | --- | --- |
-| Sells for | 180,000 cr |
 | Produced by | Heat Upgrade Pack Mk IV |
 | Component docs | Heat Generator |
 
@@ -23460,7 +25800,6 @@ Upgrades one Pressure Generator to Mk IV: **500× Mk I output** and **100× Mk I
 
 | Field | Value |
 | --- | --- |
-| Sells for | 180,000 cr |
 | Produced by | Pressure Upgrade Pack Mk IV |
 | Component docs | Pressure Generator |
 
@@ -23570,7 +25909,6 @@ Deploys a Crop Automator that harvests, plants, and treats crops across up to 24
 
 | Field | Value |
 | --- | --- |
-| Sells for | 30,000 cr |
 | Shop price | 30,000 cr |
 | Deploys | Crop Automator |
 
@@ -23652,7 +25990,7 @@ Turns raw exotic feedstock and tar into creature-grade gas or liquid. Deploys to
 
 ##### Feed Maker Mk II Upgrade Pack `feed_maker_pack_mk2`
 
-Crafted at the Fabricator. Use Upgrade in Inventory to upgrade one deployed Feed Maker: **1.5× crafting and input Auto Feeder speed**, with **2× operating power**.
+Crafted at the Fabricator. Use Upgrade in Inventory to upgrade one deployed Feed Maker: **1.5× crafting speed and 1.5× Auto Feeder speed into its input**, with **2× operating power**.
 
 | Field | Value |
 | --- | --- |
@@ -23665,7 +26003,7 @@ Upgrades a deployed Habitat to Mk II: **2x carrying capacity** and **144-168 W**
 
 | Field | Value |
 | --- | --- |
-| Produced by | Capacitors + Rare Earth + Controls + Coolant → Habitat Pack Mk II |
+| Produced by | Capacitors + Rare Earth Core + Controls + Coolant Loop → Habitat Pack Mk II |
 | Component docs | Habitat |
 
 ##### Plant Terraformer Mk II Upgrade Pack `plant_terraformer_upgrade_pack_mk2`
@@ -23674,7 +26012,7 @@ Upgrades a deployed Plant Terraformer to Mk II: **2,200 Forage/h** conversion th
 
 | Field | Value |
 | --- | --- |
-| Produced by | Controls + Panels + Rare Earth + Valves → Plant Terraformer Pack Mk II |
+| Produced by | Controls + Panels + Rare Earth Core + Valves → Plant Terraformer Pack Mk II |
 | Component docs | Plant Terraformer |
 
 ##### Grow Lamp Upgrade Pack Mk IV `grow_lamp_upgrade_pack_mk4`
@@ -23732,6 +26070,25 @@ Starter expedition chassis with an integrated **100 Wh** battery and **10-unit**
 | Sells for | 2,000 cr |
 | Shop price | 2,000 cr |
 
+##### Battery Charger `battery_charger`
+
+Charges loose **Portable Batteries (50 Wh)** and **Heavy Portable Batteries (100 Wh)** from the local grid. Mk I has **4 shared slots**, **1 charging bay**, and a **30 W** budget. Place at Base or a founded outpost. Park a Pioneer in its service area for a timed battery exchange. Charging is script-controlled; idle draw is 0 W.
+
+| Field | Value |
+| --- | --- |
+| Sells for | 1,500 cr |
+| Shop price | 1,500 cr |
+
+##### Battery Charger Mk II Upgrade Pack `battery_charger_upgrade_pack_mk2`
+
+Expands one Battery Charger to **8 shared slots**, **2 charging bays**, and **60 W** total. One active battery receives 60 W; two share 30 W each before overcrowding. Preserves the building, stored cells, jobs, connections, and scripts.
+
+| Field | Value |
+| --- | --- |
+| Sells for | 2,500 cr |
+| Shop price | 2,500 cr |
+| Component docs | Battery Charger |
+
 ##### Vehicle Charging Station `charging_station`
 
 Grid-powered vehicle charger with **1 bay** and a **30 W** charging budget. Upgrade packs add bays and increase pooled charging speed.
@@ -23756,8 +26113,8 @@ Founds a new outpost that hosts machines and links utility networks. Additional 
 
 | Field | Value |
 | --- | --- |
-| Sells for | 15,000 cr |
-| Shop price | 15,000 cr |
+| Starting sale value | 15,000 cr |
+| Starting shop price | 15,000 cr |
 
 ##### Drone Depot Kit `drone_station_kit`
 
@@ -23807,7 +26164,7 @@ Deploys a Mining Drill that cuts deposits up to hardness 1, producing **25 t/h**
 | Field | Value |
 | --- | --- |
 | Produced by | Frame + Control + Panel → Mining Drill Kit |
-| Requested by | Helios, Drill Deployment Order and Helios, Heavy Drill Build |
+| Requested by | Helios, Drill Deployment Order and Helios, Mining Drill Kit Build |
 | Deploys | Mining Drill |
 
 ##### Industrial Mining Drill Kit `mining_drill_industrial_kit`
@@ -23837,8 +26194,8 @@ Small aerial cargo-drone chassis.
 
 | Field | Value |
 | --- | --- |
-| Produced by | Rare Earth + Titanium + Control → Drone (Small) |
-| Requested by | Helios, Drone Fleet Order, Helios, Mid-Drone Build, and Helios, Drone Fleet Order |
+| Produced by | Rare Earth Core + Titanium Ingot + Control → Drone (Small) |
+| Requested by | Helios, Pilot Drone Fleet Order, Helios, Mid-Drone Build, and Helios, Continental Drone Fleet Order |
 | Deploys | Drone |
 
 ##### Drone (Medium) `drone_medium`
@@ -23847,8 +26204,8 @@ Mid-size aerial cargo-drone chassis.
 
 | Field | Value |
 | --- | --- |
-| Produced by | Rare Earth + Titanium + Control → Drone (Medium) |
-| Requested by | Helios, Heavy Drone Build and Helios, Drone Fleet Order |
+| Produced by | Rare Earth Core + Titanium Ingot + Control → Drone (Medium) |
+| Requested by | Helios, Heavy Drone Build and Helios, Continental Drone Fleet Order |
 | Deploys | Drone |
 
 ##### Drone (Large) `drone_large`
@@ -23857,7 +26214,7 @@ Heavy industrial cargo-drone chassis.
 
 | Field | Value |
 | --- | --- |
-| Produced by | Rare Earth + Titanium + Control → Drone (Large) |
+| Produced by | Rare Earth Core + Titanium Ingot + Control → Drone (Large) |
 | Deploys | Drone |
 
 ##### Lead Cask `lead_cask`
@@ -23880,8 +26237,8 @@ Ships Earth Orders at a base rate of **25 units/h**. Additional docks cost more;
 
 | Field | Value |
 | --- | --- |
-| Sells for | 5,000 cr |
-| Shop price | 5,000 cr |
+| Starting sale value | 5,000 cr |
+| Starting shop price | 5,000 cr |
 
 *Database / Equipment*
 
@@ -23936,6 +26293,51 @@ High-bay depot with 15 material-locked slots and 30,000 units of total storage.
 | Shop price | 60,000 cr |
 | Component docs | Large Warehouse |
 
+##### Smelter Mk II Upgrade Pack `smelter_upgrade_pack_mk2`
+
+Manufactured replacement assemblies for one Smelter Mk II.
+
+| Field | Value |
+| --- | --- |
+| Produced by | Fabricate Smelter Mk II Upgrade Pack |
+| Component docs | Smelter |
+
+##### Fabricator Mk II Upgrade Pack `fabricator_upgrade_pack_mk2`
+
+Manufactured replacement assemblies for one Fabricator Mk II.
+
+| Field | Value |
+| --- | --- |
+| Produced by | Fabricate Fabricator Mk II Upgrade Pack |
+| Component docs | Fabricator |
+
+##### Oil Pump Mk II Upgrade Pack `oil_pump_upgrade_pack_mk2`
+
+Manufactured replacement assemblies for one Oil Pump Mk II.
+
+| Field | Value |
+| --- | --- |
+| Produced by | Fabricate Oil Pump Mk II Upgrade Pack |
+| Component docs | Oil Pump |
+
+##### Smelter Mk III Upgrade Pack `smelter_upgrade_pack_mk3`
+
+Manufactured replacement assemblies for one Smelter Mk III.
+
+| Field | Value |
+| --- | --- |
+| Produced by | Fabricate Smelter Mk III Upgrade Pack |
+| Component docs | Smelter |
+
+##### Fabricator Mk III Upgrade Pack `fabricator_upgrade_pack_mk3`
+
+Manufactured replacement assemblies for one Fabricator Mk III.
+
+| Field | Value |
+| --- | --- |
+| Produced by | Fabricate Fabricator Mk III Upgrade Pack |
+| Component docs | Fabricator |
+
 ##### Fuel Assembler `fuel_assembler`
 
 Nuclear workbench that presses Raw Uranium and lead plates into Fuel Rods or Nuclear Batteries.
@@ -23988,7 +26390,7 @@ High-performance drivetrain for a Pioneer's universal slot. One Sport Nav gives 
 | Shop price | 1,200 cr |
 | Component docs | Nav Module |
 
-##### Wide Sonar `sonar_module_wide`
+##### Extended Sonar `sonar_module_wide`
 
 Pioneer universal-slot sonar: 180 m point sweeps, minerals up to hardness 3, wider survey detail.
 
@@ -24134,7 +26536,7 @@ Electric drone propulsion: **300 m/h** and **5 Wh/h** at full throttle. Burn ris
 
 | Field | Value |
 | --- | --- |
-| Produced by | Rare Earth + Rotor → Electric Thruster |
+| Produced by | Rare Earth Core + Rotor → Electric Thruster |
 | Requested by | Spire, Thruster Order and Spire, Propulsion Control Run |
 
 ##### Heli Thruster `heli_thruster`
@@ -24143,7 +26545,7 @@ Oil-fueled drone propulsion: **900 m/h** and **5 t/h Oil** at full throttle. Bur
 
 | Field | Value |
 | --- | --- |
-| Produced by | Rare Earth + Control + Lubricant + Rubber → Heli Thruster |
+| Produced by | Rare Earth Core + Control + Lubricant + Rubber → Heli Thruster |
 | Requested by | Vestibule, Heli Thruster Order, Vestibule, Heavy Tank Order, Vestibule, Heli Fleet Order, and Vestibule, Heli Thruster Megastock |
 
 ##### Cargo Pod (Small) `cargo_pod_small`
@@ -24179,7 +26581,7 @@ Drone cargo hold carrying **500 units**. Heavy haulage, best on a chassis with s
 
 | Field | Value |
 | --- | --- |
-| Produced by | Titanium + Glass + Cell → Battery Pack |
+| Produced by | Titanium Ingot + Glass + Cell → Battery Pack |
 | Requested by | Spire, Drone Power Trial and Vestibule, Power Reserve Order |
 
 ##### Oil Tank (Small) `oil_tank_small`
@@ -24188,7 +26590,7 @@ Heli drone fuel tank holding **30 t** of oil. Short-range work close to a refuel
 
 | Field | Value |
 | --- | --- |
-| Produced by | Titanium + Lubricant + Rubber → Oil Tank (Small) |
+| Produced by | Titanium Ingot + Lubricant + Rubber → Oil Tank (Small) |
 | Requested by | Vestibule, Oil Tank Order |
 
 ##### Oil Tank (Medium) `oil_tank_medium`
@@ -24197,7 +26599,7 @@ Heli drone fuel tank holding **75 t** of oil, for routes that leave the outpost 
 
 | Field | Value |
 | --- | --- |
-| Produced by | Titanium + Lubricant + Rubber + Lining → Oil Tank (Medium) |
+| Produced by | Titanium Ingot + Lubricant + Rubber + Lining → Oil Tank (Medium) |
 | Requested by | Vestibule, Mid Tank Order |
 
 ##### Oil Tank (Large) `oil_tank_large`
@@ -24206,12 +26608,22 @@ Heli drone fuel tank holding **150 t** of oil. Long-haul range at the cost of a 
 
 | Field | Value |
 | --- | --- |
-| Produced by | Titanium + Lubricant + Rubber + Lining → Oil Tank (Large) |
+| Produced by | Titanium Ingot + Lubricant + Rubber + Tank Lining → Oil Tank (Large) |
 | Requested by | Vestibule, Heavy Tank Order, Vestibule, Refueling Network Expansion, Vestibule, Heli Fleet Order, Vestibule, Tether Tank Run, Vestibule, Power Reserve Order, and Vestibule, Tether Megahaul |
+
+##### Seismic Sonar `sonar_module_seismic`
+
+Pioneer universal-slot sonar for ordinary Deep Sonar surveys and deep oil prospecting beneath inert formations. Scan formations to identify potential deep oil, then survey those contacts to confirm Oil Wells. Previously surveyed inert formations can still conceal reservoirs.
+
+| Field | Value |
+| --- | --- |
+| Sells for | 7,500 cr |
+| Shop price | 7,500 cr |
+| Component docs | Sonar Module |
 
 ##### Shield Plating `shield_plating`
 
-Lead drone armor for exposure-free Raw Uranium collection and hot-cargo loading from Lead Casks. Heavy: **halves every Cargo Pod's capacity** and raises fuel burn **1.5x**.
+Lead drone armor for exposure-free Raw Uranium collection and radioactive-cargo loading from Lead Casks. Heavy: **halves every Cargo Pod's capacity** and multiplies fuel burn by **1.5**.
 
 | Field | Value |
 | --- | --- |
@@ -24287,7 +26699,6 @@ Deploys an Exotic Gas Cap that collects gas from an exotic vent.
 
 | Field | Value |
 | --- | --- |
-| Sells for | 1,200 cr |
 | Produced by | Titanium + Gas Pipe Segments → Exotic Gas Cap Kit |
 | Deploys | Exotic Gas Cap |
 
@@ -24297,7 +26708,6 @@ Deploys an Exotic Spring Tap that collects liquid from an exotic spring.
 
 | Field | Value |
 | --- | --- |
-| Sells for | 1,200 cr |
 | Produced by | Titanium + Liquid Pipe Segments + Valve → Exotic Spring Tap Kit |
 | Deploys | Exotic Spring Tap |
 
@@ -24310,74 +26720,81 @@ Raw ore mined from surveyed mineral sites. Hardness (**H1** to **H4**) gates whi
 ##### Iron Ore `iron_ore`
 
 Common structural ore from the inner mineral sites. The backbone of early industry: nearly every frame, segment, and machine part starts as iron.
+Time per unit with each drill module that can cut it, on a standard site. Rich sites dig 2× faster and pure sites 3× faster. Field Mining Drills don't use these times.
 
 | Field | Value |
 | --- | --- |
 | Hardness | H1 |
-| Dig time | 15 min per unit |
+| Dig time | Drill Module: 15 min per unit, Industrial Drill: 11.25 min per unit, Heavy Drill: 9 min per unit |
 | Used in | Iron Ore → Iron Ingot |
 | Requested by | Spire, Raw Iron Intake |
 
 ##### Silicon `silicon`
 
 Glassmaking ore abundant across the inner rings. Smelts into `glass` for panels, housings, and electronics.
+Time per unit with each drill module that can cut it, on a standard site. Rich sites dig 2× faster and pure sites 3× faster. Field Mining Drills don't use these times.
 
 | Field | Value |
 | --- | --- |
 | Hardness | H1 |
-| Dig time | 15 min per unit |
+| Dig time | Drill Module: 15 min per unit, Industrial Drill: 11.25 min per unit, Heavy Drill: 9 min per unit |
 | Used in | Silicon → Glass and Iron + Silicon → Liquid Pipe Segment |
 | Requested by | Spire, Silicon Stock, Spire, Silicon Bootstrap, and Spire, Silicon Megahaul |
 
 ##### Titanium `titanium`
 
 Light, strong mid-ring ore. Smelts into `titanium_ingot` for rotors, thrusters, and high-stress parts.
+Time per unit with each drill module that can cut it, on a standard site. Rich sites dig 2× faster and pure sites 3× faster. Field Mining Drills don't use these times.
 
 | Field | Value |
 | --- | --- |
 | Hardness | H2 |
-| Dig time | 20 min per unit |
+| Dig time | Industrial Drill: 15 min per unit, Heavy Drill: 12 min per unit |
 | Used in | Titanium → Titanium Ingot |
 | Requested by | Spire, Titanium Consignment |
 
 ##### Cobalt `cobalt`
 
 Battery-chemistry ore from the mid rings. Smelts into `cobalt_ingot`, the heart of every battery cell.
+Time per unit with each drill module that can cut it, on a standard site. Rich sites dig 2× faster and pure sites 3× faster. Field Mining Drills don't use these times.
 
 | Field | Value |
 | --- | --- |
 | Hardness | H2 |
-| Dig time | 20 min per unit |
+| Dig time | Industrial Drill: 15 min per unit, Heavy Drill: 12 min per unit |
 | Used in | Cobalt → Cobalt Ingot |
 
 ##### Rare Earth `rare_earth`
 
 Scarce magnetic ore from the outer rings. Smelts into `rare_earth_core` for control electronics and precision drives.
+Time per unit with each drill module that can cut it, on a standard site. Rich sites dig 2× faster and pure sites 3× faster. Field Mining Drills don't use these times.
 
 | Field | Value |
 | --- | --- |
 | Hardness | H3 |
-| Dig time | 25 min per unit |
+| Dig time | Industrial Drill: 18.75 min per unit, Heavy Drill: 15 min per unit |
 | Used in | Rare Earth → Rare Earth Core |
 
 ##### Neutronium `neutronium`
 
 The hardest known ore on the planet, found far from base. Smelts into `neutronium_bar` for capacitors and deep-tier hardware.
+Time per unit with each drill module that can cut it, on a standard site. Rich sites dig 2× faster and pure sites 3× faster. Field Mining Drills don't use these times.
 
 | Field | Value |
 | --- | --- |
 | Hardness | H4 |
-| Dig time | 30 min per unit |
+| Dig time | Heavy Drill: 18 min per unit |
 | Used in | Neutronium → Neutronium Bar |
 
 ##### Lead Ore `lead_ore`
 
 Dense, soft ore from mineral sites. Smelts into `lead_ingot`, the base of all radiation shielding.
+Time per unit with each drill module that can cut it, on a standard site. Rich sites dig 2× faster and pure sites 3× faster. Field Mining Drills don't use these times.
 
 | Field | Value |
 | --- | --- |
 | Hardness | H2 |
-| Dig time | 18 min per unit |
+| Dig time | Industrial Drill: 13.5 min per unit, Heavy Drill: 10.8 min per unit |
 | Used in | Lead Ore → Lead Ingot |
 
 *Database / Items*
@@ -24393,7 +26810,7 @@ Smelted iron stock. The universal structural input: frames, segments, valves, an
 | Field | Value |
 | --- | --- |
 | Produced by | Iron Ore → Iron Ingot |
-| Used in | Iron → Gas Pipe Segment, Iron + Silicon → Liquid Pipe Segment, Iron + Titanium → Power Line Segment, Iron + Glass → Pressure Valve, Iron + Titanium → Machine Frame, Iron + Glass → Circuit Panel, Cobalt + Iron + Glass → Battery Cell, Iron + Titanium + Glass → Tank Lining, Iron + Glass + Liquid Pipe Segment → Water Pump, Iron + Titanium + Valve + Panel → Oil Pump, Iron + Oil → Lubricant + Tar, and Frame + Iron + Panel → Waste Processor Kit |
+| Used in | Iron → Gas Pipe Segment, Iron + Silicon → Liquid Pipe Segment, Iron + Titanium → Power Line Segment, Iron + Glass → Pressure Valve, Iron Ingot + Titanium Ingot → Machine Frame, Iron + Glass → Circuit Panel, Cobalt Ingot + Iron Ingot + Glass → Battery Cell, Iron + Titanium + Glass → Tank Lining, Iron + Glass + Liquid Pipe Segment → Water Pump, Iron + Titanium + Valve + Panel → Oil Pump, Iron + Oil → Lubricant + Tar, and Frame + Iron + Panel → Waste Processor Kit |
 | Requested by | Helios, Iron Bootstrap, Helios, Iron Production, Helios, Mixed Alloy Order, Helios, Battery Order, Helios, Bulk Iron Run, Helios, Bulk Frame Run, Vestibule, Utility Conduit Stock, and Helios, Lead Survey Stock |
 
 ##### Glass `glass`
@@ -24403,7 +26820,7 @@ Smelted silicon sheet stock for panels, housings, and optics.
 | Field | Value |
 | --- | --- |
 | Produced by | Silicon → Glass |
-| Used in | Iron + Glass → Pressure Valve, Iron + Glass → Circuit Panel, Panel + Titanium + Glass → Control Unit, Cobalt + Iron + Glass → Battery Cell, Iron + Titanium + Glass → Tank Lining, Iron + Glass + Liquid Pipe Segment → Water Pump, Glass + Oil → Plastic + Tar, Titanium + Glass → Cargo Pod (Small), Titanium + Glass + Panel → Cargo Pod (Medium), Titanium + Glass + Panel → Cargo Pod (Large), Titanium + Glass + Cell → Battery Pack, Frame + Panel + Glass → Grow Lamp Kit, Tar + Glass → Fertilizer, Tar + Glass + Panel → Fertilizer Mk II, Tar + Glass + Capacitor + Rare Earth → Fertilizer Mk III, and Panel + Glass + Rare Earth → Grow Lamp Pack Mk II |
+| Used in | Iron + Glass → Pressure Valve, Iron + Glass → Circuit Panel, Circuit Panel + Titanium Ingot + Glass → Control Unit, Cobalt Ingot + Iron Ingot + Glass → Battery Cell, Iron + Titanium + Glass → Tank Lining, Iron + Glass + Liquid Pipe Segment → Water Pump, Glass + Oil → Plastic + Tar, Titanium + Glass → Cargo Pod (Small), Titanium + Glass + Panel → Cargo Pod (Medium), Titanium + Glass + Panel → Cargo Pod (Large), Titanium Ingot + Glass + Cell → Battery Pack, Frame + Panel + Glass → Grow Lamp Kit, Tar + Glass → Fertilizer, Tar + Glass + Panel → Fertilizer Mk II, Tar + Glass + Capacitor + Rare Earth Core → Fertilizer Mk III, and Panel + Glass + Rare Earth Core → Grow Lamp Pack Mk II |
 | Requested by | Spire, Optical Glass, Spire, Pressure Hardware, Spire, Optics Stockpile, and Spire, Silicon Megahaul |
 
 ##### Titanium Ingot `titanium_ingot`
@@ -24413,7 +26830,7 @@ High-strength, lightweight stock for rotors, thrusters, and pressure hardware.
 | Field | Value |
 | --- | --- |
 | Produced by | Titanium → Titanium Ingot |
-| Used in | Iron + Titanium → Power Line Segment, Iron + Titanium → Machine Frame, Panel + Titanium + Glass → Control Unit, Titanium + Pipes → Thermal Cap Kit, Titanium + Cobalt + Rare Earth → Turbine Rotor, Iron + Titanium + Glass → Tank Lining, Iron + Titanium + Valve + Panel → Oil Pump, Rare Earth + Titanium + Control → Drone (Small), Rare Earth + Titanium + Control → Drone (Medium), Rare Earth + Titanium + Control → Drone (Large), Titanium + Glass → Cargo Pod (Small), Titanium + Glass + Panel → Cargo Pod (Medium), Titanium + Glass + Panel → Cargo Pod (Large), Titanium + Glass + Cell → Battery Pack, Titanium + Lubricant + Rubber → Oil Tank (Small), Titanium + Lubricant + Rubber + Lining → Oil Tank (Medium), Titanium + Lubricant + Rubber + Lining → Oil Tank (Large), Pipes + Valves + Rare Earth + Titanium + Tar → Coolant Loop, Titanium + Gas Pipe Segments → Exotic Gas Cap Kit, and Titanium + Liquid Pipe Segments + Valve → Exotic Spring Tap Kit |
+| Used in | Iron + Titanium → Power Line Segment, Iron Ingot + Titanium Ingot → Machine Frame, Circuit Panel + Titanium Ingot + Glass → Control Unit, Titanium Ingot + Gas Pipe Segments → Thermal Cap Kit, Titanium Ingot + Cobalt Ingot + Rare Earth Core → Turbine Rotor, Iron + Titanium + Glass → Tank Lining, Iron + Titanium + Valve + Panel → Oil Pump, Rare Earth Core + Titanium Ingot + Control → Drone (Small), Rare Earth Core + Titanium Ingot + Control → Drone (Medium), Rare Earth Core + Titanium Ingot + Control → Drone (Large), Titanium + Glass → Cargo Pod (Small), Titanium + Glass + Panel → Cargo Pod (Medium), Titanium + Glass + Panel → Cargo Pod (Large), Titanium Ingot + Glass + Cell → Battery Pack, Titanium Ingot + Lubricant + Rubber → Oil Tank (Small), Titanium Ingot + Lubricant + Rubber + Lining → Oil Tank (Medium), Titanium Ingot + Lubricant + Rubber + Tank Lining → Oil Tank (Large), Pipes + Valves + Rare Earth Core + Titanium Ingot + Tar → Coolant Loop, Titanium + Gas Pipe Segments → Exotic Gas Cap Kit, and Titanium + Liquid Pipe Segments + Valve → Exotic Spring Tap Kit |
 | Requested by | Helios, Titanium Run, Helios, Mixed Alloy Order, and Helios, Lead Survey Stock |
 
 ##### Cobalt Ingot `cobalt_ingot`
@@ -24423,7 +26840,7 @@ Battery-grade stock. Every `battery_cell` is built around it.
 | Field | Value |
 | --- | --- |
 | Produced by | Cobalt → Cobalt Ingot |
-| Used in | Cobalt + Iron + Glass → Battery Cell, Titanium + Cobalt + Rare Earth → Turbine Rotor, Cobalt + Oil → Rubber + Tar, Oxygen Upgrade Pack Mk IV, Heat Upgrade Pack Mk IV, and Pressure Upgrade Pack Mk IV |
+| Used in | Fabricate Oil Pump Mk II Upgrade Pack, Cobalt Ingot + Iron Ingot + Glass → Battery Cell, Titanium Ingot + Cobalt Ingot + Rare Earth Core → Turbine Rotor, Cobalt + Oil → Rubber + Tar, Oxygen Upgrade Pack Mk IV, Heat Upgrade Pack Mk IV, and Pressure Upgrade Pack Mk IV |
 | Requested by | Spire, Cobalt Run, Spire, Magnetic Stator Build, and Spire, Cobalt Stockpile |
 
 ##### Rare Earth Core `rare_earth_core`
@@ -24433,7 +26850,7 @@ Precision magnetic core stock for control units and advanced electronics.
 | Field | Value |
 | --- | --- |
 | Produced by | Rare Earth → Rare Earth Core |
-| Used in | Titanium + Cobalt + Rare Earth → Turbine Rotor, Rare Earth + Titanium + Control → Drone (Small), Rare Earth + Titanium + Control → Drone (Medium), Rare Earth + Titanium + Control → Drone (Large), Rare Earth + Rotor → Electric Thruster, Rare Earth + Control + Lubricant + Rubber → Heli Thruster, Pipes + Valves + Rare Earth + Titanium + Tar → Coolant Loop, Neutronium + Cells + Controls + Rare Earth + Tar → Neutron Capacitor, Tar + Glass + Capacitor + Rare Earth → Fertilizer Mk III, Plastic + Rare Earth → Growth Accelerant, Capacitor + Controls + Rare Earth + Coolant → Yield Amplifier, Controls + Panels + Rare Earth + Valves → Plant Terraformer Pack Mk II, Panel + Glass + Rare Earth → Grow Lamp Pack Mk II, Capacitor + Rare Earth + Controls → Grow Lamp Pack Mk III, and Capacitors + Rare Earth + Controls + Coolant → Habitat Pack Mk II |
+| Used in | Fabricate Smelter Mk III Upgrade Pack, Fabricate Fabricator Mk III Upgrade Pack, Titanium Ingot + Cobalt Ingot + Rare Earth Core → Turbine Rotor, Rare Earth Core + Titanium Ingot + Control → Drone (Small), Rare Earth Core + Titanium Ingot + Control → Drone (Medium), Rare Earth Core + Titanium Ingot + Control → Drone (Large), Rare Earth Core + Rotor → Electric Thruster, Rare Earth Core + Control + Lubricant + Rubber → Heli Thruster, Pipes + Valves + Rare Earth Core + Titanium Ingot + Tar → Coolant Loop, Neutronium Bar + Cells + Controls + Rare Earth Core + Tar → Neutron Capacitor, Tar + Glass + Capacitor + Rare Earth Core → Fertilizer Mk III, Plastic + Rare Earth Core → Growth Accelerant, Capacitor + Controls + Rare Earth Core + Coolant Loop → Yield Amplifier, Controls + Panels + Rare Earth Core + Valves → Plant Terraformer Pack Mk II, Panel + Glass + Rare Earth Core → Grow Lamp Pack Mk II, Capacitor + Rare Earth Core + Controls → Grow Lamp Pack Mk III, and Capacitors + Rare Earth Core + Controls + Coolant Loop → Habitat Pack Mk II |
 | Requested by | Spire, Rare Earth Order, Spire, Drone Power Trial, and Spire, Capacitor Bulk Order |
 
 ##### Neutronium Bar `neutronium_bar`
@@ -24443,7 +26860,7 @@ Ultra-dense bar stock for neutron capacitors and advanced hardware.
 | Field | Value |
 | --- | --- |
 | Produced by | Neutronium → Neutronium Bar |
-| Used in | Neutronium + Cells + Controls + Rare Earth + Tar → Neutron Capacitor |
+| Used in | Neutronium Bar + Cells + Controls + Rare Earth Core + Tar → Neutron Capacitor |
 | Requested by | Spire, Neutronium Order and Spire, Neutronium Megastock |
 
 ##### Lead Ingot `lead_ingot`
@@ -24468,9 +26885,8 @@ A 10 m run of gas pipe. A Pioneer's Constructor consumes one per planned segment
 
 | Field | Value |
 | --- | --- |
-| Sells for | 20 cr |
 | Produced by | Iron → Gas Pipe Segment |
-| Used in | Gas Segments + Valve → Gas Bridge, Titanium + Pipes → Thermal Cap Kit, Frame + Control + Gas Pipe Segments + Liquid Pipe Segments → Drone Depot Kit, and Titanium + Gas Pipe Segments → Exotic Gas Cap Kit |
+| Used in | Gas Segments + Valve → Gas Bridge, Titanium Ingot + Gas Pipe Segments → Thermal Cap Kit, Frame + Control + Gas Pipe Segments + Liquid Pipe Segments → Drone Depot Kit, and Titanium + Gas Pipe Segments → Exotic Gas Cap Kit |
 | Requested by | Vestibule, Gas Pipe Order, Vestibule, Pipe Network Run, and Vestibule, Pipe Order |
 
 ##### Liquid Pipe Segment `liquid_pipe_segment`
@@ -24479,9 +26895,8 @@ A 10 m run of liquid pipe. A Pioneer's Constructor consumes one per planned segm
 
 | Field | Value |
 | --- | --- |
-| Sells for | 20 cr |
 | Produced by | Iron + Silicon → Liquid Pipe Segment |
-| Used in | Liquid Segments + Valve → Liquid Bridge, Iron + Glass + Liquid Pipe Segment → Water Pump, Frame + Control + Gas Pipe Segments + Liquid Pipe Segments → Drone Depot Kit, Frame + Control + Panel + Cell + Liquid Pipe Segment → Drone Service Station Kit, Pipes + Valves + Rare Earth + Titanium + Tar → Coolant Loop, Frames + Controls + Panels + Liquid Pipe Segments → Plant Terraformer Kit, Frame + Pipes + Valve → Sprinkler Kit, and Titanium + Liquid Pipe Segments + Valve → Exotic Spring Tap Kit |
+| Used in | Liquid Segments + Valve → Liquid Bridge, Iron + Glass + Liquid Pipe Segment → Water Pump, Frame + Control + Gas Pipe Segments + Liquid Pipe Segments → Drone Depot Kit, Frame + Control + Panel + Cell + Liquid Pipe Segment → Drone Service Station Kit, Pipes + Valves + Rare Earth Core + Titanium Ingot + Tar → Coolant Loop, Frames + Controls + Panels + Liquid Pipe Segments → Plant Terraformer Kit, Frame + Pipes + Valve → Sprinkler Kit, and Titanium + Liquid Pipe Segments + Valve → Exotic Spring Tap Kit |
 | Requested by | Vestibule, Liquid Pipe Order, Vestibule, Pressure Network Trial, Vestibule, Pipe Network Run, Vestibule, Pipe Order, Vestibule, Pipe & Lubricant Order, Vestibule, Refueling Hardware Build, and Vestibule, Continental Pipe Build |
 
 ##### Power Line Segment `power_line_segment`
@@ -24490,7 +26905,6 @@ A 10 m run of power line. A Pioneer's Constructor consumes one per planned segme
 
 | Field | Value |
 | --- | --- |
-| Sells for | 20 cr |
 | Produced by | Iron + Titanium → Power Line Segment |
 | Used in | Power Segments + Circuit → Power Bridge |
 
@@ -24525,7 +26939,7 @@ Machined flow-control valve used across pumps, tanks, and atmospheric hardware.
 | Field | Value |
 | --- | --- |
 | Produced by | Iron + Glass → Pressure Valve |
-| Used in | Gas Segments + Valve → Gas Bridge, Liquid Segments + Valve → Liquid Bridge, Iron + Titanium + Valve + Panel → Oil Pump, Pipes + Valves + Rare Earth + Titanium + Tar → Coolant Loop, Frame + Pipes + Valve → Sprinkler Kit, Titanium + Liquid Pipe Segments + Valve → Exotic Spring Tap Kit, Controls + Panels + Rare Earth + Valves → Plant Terraformer Pack Mk II, Plastic + Coolant + Valves → Sprinkler Pack Mk II, and Frames + Controls + Panels + Valves → Feed Maker Pack Mk II |
+| Used in | Fabricate Smelter Mk II Upgrade Pack, Fabricate Oil Pump Mk II Upgrade Pack, Fabricate Smelter Mk III Upgrade Pack, Gas Segments + Valve → Gas Bridge, Liquid Segments + Valve → Liquid Bridge, Iron + Titanium + Valve + Panel → Oil Pump, Pipes + Valves + Rare Earth Core + Titanium Ingot + Tar → Coolant Loop, Frame + Pipes + Valve → Sprinkler Kit, Titanium + Liquid Pipe Segments + Valve → Exotic Spring Tap Kit, Controls + Panels + Rare Earth Core + Valves → Plant Terraformer Pack Mk II, Plastic + Coolant Loop + Valves → Sprinkler Pack Mk II, and Frames + Controls + Panels + Valves → Feed Maker Pack Mk II |
 | Requested by | Spire, Pressure Hardware and Vestibule, Pressure Network Trial |
 
 ##### Machine Frame `machine_frame`
@@ -24534,8 +26948,8 @@ Standard structural chassis most mid-tier machines are assembled on.
 
 | Field | Value |
 | --- | --- |
-| Produced by | Iron + Titanium → Machine Frame |
-| Used in | Frame + Control + Gas Pipe Segments + Liquid Pipe Segments → Drone Depot Kit, Frame + Control + Panel → Drone Depot Kit (Medium), Frame + Control + Panel → Drone Depot Kit (Large), Frame + Control + Panel + Cell + Liquid Pipe Segment → Drone Service Station Kit, Frame + Control + Panel → Mining Drill Kit, Frame + Control + Panel + Rotor → Industrial Mining Drill Kit, Frame + Control + Panel + Rotors → Heavy Mining Drill Kit, Frame + Control + Panel → Seed Maker Kit, Frames + Controls + Panels + Liquid Pipe Segments → Plant Terraformer Kit, Frame + Panel + Glass → Grow Lamp Kit, Frame + Pipes + Valve → Sprinkler Kit, Frame + Control + Panel → Dispenser Kit, Frame + Iron + Panel → Waste Processor Kit, Frames + Controls + Panels + Valves → Feed Maker Pack Mk II, Oxygen Upgrade Pack Mk IV, Heat Upgrade Pack Mk IV, Pressure Upgrade Pack Mk IV, Lead Cask, Shield Plating, and Lightning Rod |
+| Produced by | Iron Ingot + Titanium Ingot → Machine Frame |
+| Used in | Fabricate Smelter Mk II Upgrade Pack, Fabricate Fabricator Mk II Upgrade Pack, Fabricate Oil Pump Mk II Upgrade Pack, Fabricate Smelter Mk III Upgrade Pack, Fabricate Fabricator Mk III Upgrade Pack, Frame + Control + Gas Pipe Segments + Liquid Pipe Segments → Drone Depot Kit, Frame + Control + Panel → Drone Depot Kit (Medium), Frame + Control + Panel → Drone Depot Kit (Large), Frame + Control + Panel + Cell + Liquid Pipe Segment → Drone Service Station Kit, Frame + Control + Panel → Mining Drill Kit, Frame + Control + Panel + Rotor → Industrial Mining Drill Kit, Frame + Control + Panel + Rotors → Heavy Mining Drill Kit, Frame + Control + Panel → Seed Maker Kit, Frames + Controls + Panels + Liquid Pipe Segments → Plant Terraformer Kit, Frame + Panel + Glass → Grow Lamp Kit, Frame + Pipes + Valve → Sprinkler Kit, Frame + Control + Panel → Dispenser Kit, Frame + Iron + Panel → Waste Processor Kit, Frames + Controls + Panels + Valves → Feed Maker Pack Mk II, Oxygen Upgrade Pack Mk IV, Heat Upgrade Pack Mk IV, Pressure Upgrade Pack Mk IV, Lead Cask, Shield Plating, and Lightning Rod |
 | Requested by | Helios, Frame Order, Helios, Bulk Iron Run, Helios, Reservoir Build, Helios, Cargo Pod Run, Helios, Bulk Frame Run, and Helios, Reactor Vessel Chain |
 
 ##### Circuit Panel `circuit_panel`
@@ -24545,7 +26959,7 @@ Printed control circuitry for machine logic and instrumentation.
 | Field | Value |
 | --- | --- |
 | Produced by | Iron + Glass → Circuit Panel |
-| Used in | Power Segments + Circuit → Power Bridge, Panel + Titanium + Glass → Control Unit, Iron + Titanium + Valve + Panel → Oil Pump, Frame + Control + Panel → Drone Depot Kit (Medium), Frame + Control + Panel → Drone Depot Kit (Large), Frame + Control + Panel + Cell + Liquid Pipe Segment → Drone Service Station Kit, Frame + Control + Panel → Mining Drill Kit, Frame + Control + Panel + Rotor → Industrial Mining Drill Kit, Frame + Control + Panel + Rotors → Heavy Mining Drill Kit, Titanium + Glass + Panel → Cargo Pod (Medium), Titanium + Glass + Panel → Cargo Pod (Large), Frame + Control + Panel → Seed Maker Kit, Frames + Controls + Panels + Liquid Pipe Segments → Plant Terraformer Kit, Frame + Panel + Glass → Grow Lamp Kit, Frame + Control + Panel → Dispenser Kit, Frame + Iron + Panel → Waste Processor Kit, Tar + Glass + Panel → Fertilizer Mk II, Controls + Panels + Rare Earth + Valves → Plant Terraformer Pack Mk II, Panel + Glass + Rare Earth → Grow Lamp Pack Mk II, Controls + Panels + Coolant → Sprinkler Pack Mk III, Frames + Controls + Panels + Valves → Feed Maker Pack Mk II, Oxygen Upgrade Pack Mk IV, Heat Upgrade Pack Mk IV, Pressure Upgrade Pack Mk IV, and Lightning Rod |
+| Used in | Fabricate Fabricator Mk II Upgrade Pack, Fabricate Fabricator Mk III Upgrade Pack, Power Segments + Circuit → Power Bridge, Circuit Panel + Titanium Ingot + Glass → Control Unit, Iron + Titanium + Valve + Panel → Oil Pump, Frame + Control + Panel → Drone Depot Kit (Medium), Frame + Control + Panel → Drone Depot Kit (Large), Frame + Control + Panel + Cell + Liquid Pipe Segment → Drone Service Station Kit, Frame + Control + Panel → Mining Drill Kit, Frame + Control + Panel + Rotor → Industrial Mining Drill Kit, Frame + Control + Panel + Rotors → Heavy Mining Drill Kit, Titanium + Glass + Panel → Cargo Pod (Medium), Titanium + Glass + Panel → Cargo Pod (Large), Frame + Control + Panel → Seed Maker Kit, Frames + Controls + Panels + Liquid Pipe Segments → Plant Terraformer Kit, Frame + Panel + Glass → Grow Lamp Kit, Frame + Control + Panel → Dispenser Kit, Frame + Iron + Panel → Waste Processor Kit, Tar + Glass + Panel → Fertilizer Mk II, Controls + Panels + Rare Earth Core + Valves → Plant Terraformer Pack Mk II, Panel + Glass + Rare Earth Core → Grow Lamp Pack Mk II, Controls + Panels + Coolant Loop → Sprinkler Pack Mk III, Frames + Controls + Panels + Valves → Feed Maker Pack Mk II, Oxygen Upgrade Pack Mk IV, Heat Upgrade Pack Mk IV, Pressure Upgrade Pack Mk IV, and Lightning Rod |
 | Requested by | Spire, Circuit Order, Spire, Avionics Run, Spire, Avionics Megabuild, Spire, Polymer Optics Run, Spire, Optics Stockpile, and Spire, Avionics Megastock |
 
 ##### Control Unit `control_unit`
@@ -24554,8 +26968,8 @@ Sealed processing module that drives advanced machines and vehicles.
 
 | Field | Value |
 | --- | --- |
-| Produced by | Panel + Titanium + Glass → Control Unit |
-| Used in | Frame + Control + Gas Pipe Segments + Liquid Pipe Segments → Drone Depot Kit, Frame + Control + Panel → Drone Depot Kit (Medium), Frame + Control + Panel → Drone Depot Kit (Large), Frame + Control + Panel + Cell + Liquid Pipe Segment → Drone Service Station Kit, Frame + Control + Panel → Mining Drill Kit, Frame + Control + Panel + Rotor → Industrial Mining Drill Kit, Frame + Control + Panel + Rotors → Heavy Mining Drill Kit, Rare Earth + Titanium + Control → Drone (Small), Rare Earth + Titanium + Control → Drone (Medium), Rare Earth + Titanium + Control → Drone (Large), Rare Earth + Control + Lubricant + Rubber → Heli Thruster, Neutronium + Cells + Controls + Rare Earth + Tar → Neutron Capacitor, Frame + Control + Panel → Seed Maker Kit, Frames + Controls + Panels + Liquid Pipe Segments → Plant Terraformer Kit, Frame + Control + Panel → Dispenser Kit, Capacitor + Controls + Rare Earth + Coolant → Yield Amplifier, Controls + Panels + Rare Earth + Valves → Plant Terraformer Pack Mk II, Capacitor + Rare Earth + Controls → Grow Lamp Pack Mk III, Controls + Panels + Coolant → Sprinkler Pack Mk III, Frames + Controls + Panels + Valves → Feed Maker Pack Mk II, and Capacitors + Rare Earth + Controls + Coolant → Habitat Pack Mk II |
+| Produced by | Circuit Panel + Titanium Ingot + Glass → Control Unit |
+| Used in | Fabricate Smelter Mk II Upgrade Pack, Fabricate Fabricator Mk II Upgrade Pack, Fabricate Oil Pump Mk II Upgrade Pack, Fabricate Smelter Mk III Upgrade Pack, Fabricate Fabricator Mk III Upgrade Pack, Frame + Control + Gas Pipe Segments + Liquid Pipe Segments → Drone Depot Kit, Frame + Control + Panel → Drone Depot Kit (Medium), Frame + Control + Panel → Drone Depot Kit (Large), Frame + Control + Panel + Cell + Liquid Pipe Segment → Drone Service Station Kit, Frame + Control + Panel → Mining Drill Kit, Frame + Control + Panel + Rotor → Industrial Mining Drill Kit, Frame + Control + Panel + Rotors → Heavy Mining Drill Kit, Rare Earth Core + Titanium Ingot + Control → Drone (Small), Rare Earth Core + Titanium Ingot + Control → Drone (Medium), Rare Earth Core + Titanium Ingot + Control → Drone (Large), Rare Earth Core + Control + Lubricant + Rubber → Heli Thruster, Neutronium Bar + Cells + Controls + Rare Earth Core + Tar → Neutron Capacitor, Frame + Control + Panel → Seed Maker Kit, Frames + Controls + Panels + Liquid Pipe Segments → Plant Terraformer Kit, Frame + Control + Panel → Dispenser Kit, Capacitor + Controls + Rare Earth Core + Coolant Loop → Yield Amplifier, Controls + Panels + Rare Earth Core + Valves → Plant Terraformer Pack Mk II, Capacitor + Rare Earth Core + Controls → Grow Lamp Pack Mk III, Controls + Panels + Coolant Loop → Sprinkler Pack Mk III, Frames + Controls + Panels + Valves → Feed Maker Pack Mk II, and Capacitors + Rare Earth Core + Controls + Coolant Loop → Habitat Pack Mk II |
 | Requested by | Spire, Avionics Run, Spire, Control Run, Spire, Avionics Megabuild, Spire, Magnetic Stator Build, Spire, Propulsion Control Run, Spire, Neutron Capacitor Order, and Spire, Avionics Megastock |
 
 ##### Battery Cell `battery_cell`
@@ -24564,8 +26978,8 @@ Cobalt-chemistry storage cell, the building block of battery packs and grid stor
 
 | Field | Value |
 | --- | --- |
-| Produced by | Cobalt + Iron + Glass → Battery Cell |
-| Used in | Frame + Control + Panel + Cell + Liquid Pipe Segment → Drone Service Station Kit, Titanium + Glass + Cell → Battery Pack, Neutronium + Cells + Controls + Rare Earth + Tar → Neutron Capacitor, and Lightning Rod |
+| Produced by | Cobalt Ingot + Iron Ingot + Glass → Battery Cell |
+| Used in | Frame + Control + Panel + Cell + Liquid Pipe Segment → Drone Service Station Kit, Titanium Ingot + Glass + Cell → Battery Pack, Neutronium Bar + Cells + Controls + Rare Earth Core + Tar → Neutron Capacitor, and Lightning Rod |
 | Requested by | Helios, Battery Order, Helios, Drone Chassis Build, and Helios, Mid-Cargo Build |
 
 ##### Thermal Cap Kit `thermal_cap_kit`
@@ -24574,9 +26988,8 @@ Constructor-deployed kit that caps a surveyed thermal vent with a `thermal_cap` 
 
 | Field | Value |
 | --- | --- |
-| Sells for | 800 cr |
-| Produced by | Titanium + Pipes → Thermal Cap Kit |
-| Requested by | Helios, Cap Kit Order |
+| Produced by | Titanium Ingot + Gas Pipe Segments → Thermal Cap Kit |
+| Requested by | Helios, Thermal Cap Kit Order |
 | Deploys | Thermal Cap |
 
 ##### Turbine Rotor `turbine_rotor`
@@ -24585,8 +26998,8 @@ Precision-balanced titanium rotor for steam turbines.
 
 | Field | Value |
 | --- | --- |
-| Produced by | Titanium + Cobalt + Rare Earth → Turbine Rotor |
-| Used in | Frame + Control + Panel + Rotor → Industrial Mining Drill Kit, Frame + Control + Panel + Rotors → Heavy Mining Drill Kit, and Rare Earth + Rotor → Electric Thruster |
+| Produced by | Titanium Ingot + Cobalt Ingot + Rare Earth Core → Turbine Rotor |
+| Used in | Frame + Control + Panel + Rotor → Industrial Mining Drill Kit, Frame + Control + Panel + Rotors → Heavy Mining Drill Kit, and Rare Earth Core + Rotor → Electric Thruster |
 | Requested by | Helios, Rotor Run |
 
 ##### Tank Lining `tank_lining`
@@ -24596,7 +27009,7 @@ Corrosion-proof lining for gas and liquid tanks.
 | Field | Value |
 | --- | --- |
 | Produced by | Iron + Titanium + Glass → Tank Lining |
-| Used in | Titanium + Lubricant + Rubber + Lining → Oil Tank (Medium) and Titanium + Lubricant + Rubber + Lining → Oil Tank (Large) |
+| Used in | Titanium Ingot + Lubricant + Rubber + Lining → Oil Tank (Medium) and Titanium Ingot + Lubricant + Rubber + Tank Lining → Oil Tank (Large) |
 | Requested by | Helios, Drone Chassis Build, Helios, Reservoir Build, and Helios, Mid-Cargo Build |
 
 ##### Lubricant `lubricant`
@@ -24606,7 +27019,7 @@ Refined oil derivative that keeps drives and rotors running smoothly.
 | Field | Value |
 | --- | --- |
 | Produced by | Iron + Oil → Lubricant + Tar |
-| Used in | Rare Earth + Control + Lubricant + Rubber → Heli Thruster, Titanium + Lubricant + Rubber → Oil Tank (Small), Titanium + Lubricant + Rubber + Lining → Oil Tank (Medium), and Titanium + Lubricant + Rubber + Lining → Oil Tank (Large) |
+| Used in | Rare Earth Core + Control + Lubricant + Rubber → Heli Thruster, Titanium Ingot + Lubricant + Rubber → Oil Tank (Small), Titanium Ingot + Lubricant + Rubber + Lining → Oil Tank (Medium), and Titanium Ingot + Lubricant + Rubber + Tank Lining → Oil Tank (Large) |
 | Requested by | Vestibule, Polymer Stockpile, Vestibule, Bulk Polymer Run, Vestibule, Polymer Run, Vestibule, Pipe & Lubricant Order, Vestibule, Refueling Hardware Build, Vestibule, Polymer Bulk Order, Vestibule, Polymer Megaorder, Vestibule, Tether Megahaul, and Vestibule, Shielded Transport Trial |
 
 ##### Plastic `plastic`
@@ -24616,7 +27029,7 @@ Oil-derived polymer stock for housings and insulation.
 | Field | Value |
 | --- | --- |
 | Produced by | Glass + Oil → Plastic + Tar |
-| Used in | Plastic + Forage + Water → Reinforced Biopolymer, Plastic + Rare Earth → Growth Accelerant, and Plastic + Coolant + Valves → Sprinkler Pack Mk II |
+| Used in | Plastic + Forage + Water → Reinforced Biopolymer, Plastic + Rare Earth Core → Growth Accelerant, and Plastic + Coolant Loop + Valves → Sprinkler Pack Mk II |
 | Requested by | Spire, Polymer Optics Run, Spire, Polymer Megastock, and Spire, Polymer Megaorder |
 
 ##### Rubber `rubber`
@@ -24626,7 +27039,7 @@ Flexible oil-derived stock for gaskets and seals.
 | Field | Value |
 | --- | --- |
 | Produced by | Cobalt + Oil → Rubber + Tar |
-| Used in | Rare Earth + Control + Lubricant + Rubber → Heli Thruster, Titanium + Lubricant + Rubber → Oil Tank (Small), Titanium + Lubricant + Rubber + Lining → Oil Tank (Medium), and Titanium + Lubricant + Rubber + Lining → Oil Tank (Large) |
+| Used in | Rare Earth Core + Control + Lubricant + Rubber → Heli Thruster, Titanium Ingot + Lubricant + Rubber → Oil Tank (Small), Titanium Ingot + Lubricant + Rubber + Lining → Oil Tank (Medium), and Titanium Ingot + Lubricant + Rubber + Tank Lining → Oil Tank (Large) |
 | Requested by | Vestibule, Polymer Stockpile, Vestibule, Bulk Polymer Run, Vestibule, Polymer Run, Vestibule, Refueling Hardware Build, Vestibule, Polymer Bulk Order, Vestibule, Polymer Megaorder, and Vestibule, Flexible Habitat Liners |
 
 ##### Tar `tar`
@@ -24637,7 +27050,7 @@ Heavy oil residue used in fertilizer, advanced components, and the `refiner`. Oi
 | --- | --- |
 | Produced by | Heavy Oil Cracking: Oil → Tar |
 | Byproduct of | Iron + Oil → Lubricant + Tar, Glass + Oil → Plastic + Tar, and Cobalt + Oil → Rubber + Tar |
-| Used in | Pipes + Valves + Rare Earth + Titanium + Tar → Coolant Loop, Neutronium + Cells + Controls + Rare Earth + Tar → Neutron Capacitor, Tar + Glass → Fertilizer, Tar + Glass + Panel → Fertilizer Mk II, Tar + Glass + Capacitor + Rare Earth → Fertilizer Mk III, Raw Sulfur Gas + Tar → Sulfur Gas, Raw Cryofluid + Tar → Cryofluid, Raw Chlorine + Tar → Chlorine, and Raw Quicksilver + Tar → Quicksilver |
+| Used in | Pipes + Valves + Rare Earth Core + Titanium Ingot + Tar → Coolant Loop, Neutronium Bar + Cells + Controls + Rare Earth Core + Tar → Neutron Capacitor, Tar + Glass → Fertilizer, Tar + Glass + Panel → Fertilizer Mk II, Tar + Glass + Capacitor + Rare Earth Core → Fertilizer Mk III, Raw Sulfur Gas + Tar → Sulfur Gas, Raw Cryofluid + Tar → Cryofluid, Raw Chlorine + Tar → Chlorine, and Raw Quicksilver + Tar → Quicksilver |
 
 ##### Reinforced Biopolymer `reinforced_biopolymer`
 
@@ -24646,16 +27059,16 @@ Structural biological composite made from plastic, plant forage, and water. Used
 | Field | Value |
 | --- | --- |
 | Produced by | Plastic + Forage + Water → Reinforced Biopolymer |
-| Used in | Biopolymer + Forage + Water → Enrichment Compound |
+| Used in | Reinforced Biopolymer + Forage + Water → Bio Enrichment Compound |
 | Requested by | Spire, Biopolymer Thermal Stock, Vestibule, Flexible Habitat Liners, Helios, Enriched Habitat Trial, and Spire, Biosphere Export Program |
 
-##### Enrichment Compound `enrichment_compound`
+##### Bio Enrichment Compound `enrichment_compound`
 
 Concentrated biological material made from Reinforced Biopolymer, forage, and water for late Earth exports.
 
 | Field | Value |
 | --- | --- |
-| Produced by | Biopolymer + Forage + Water → Enrichment Compound |
+| Produced by | Reinforced Biopolymer + Forage + Water → Bio Enrichment Compound |
 | Requested by | Helios, Enriched Habitat Trial and Spire, Biosphere Export Program |
 
 ##### Coolant Loop `coolant_loop`
@@ -24664,8 +27077,8 @@ Closed-circuit coolant assembly for reactor-grade heat loads.
 
 | Field | Value |
 | --- | --- |
-| Produced by | Pipes + Valves + Rare Earth + Titanium + Tar → Coolant Loop |
-| Used in | Capacitor + Controls + Rare Earth + Coolant → Yield Amplifier, Plastic + Coolant + Valves → Sprinkler Pack Mk II, Controls + Panels + Coolant → Sprinkler Pack Mk III, and Capacitors + Rare Earth + Controls + Coolant → Habitat Pack Mk II |
+| Produced by | Pipes + Valves + Rare Earth Core + Titanium Ingot + Tar → Coolant Loop |
+| Used in | Capacitor + Controls + Rare Earth Core + Coolant Loop → Yield Amplifier, Plastic + Coolant Loop + Valves → Sprinkler Pack Mk II, Controls + Panels + Coolant Loop → Sprinkler Pack Mk III, and Capacitors + Rare Earth Core + Controls + Coolant Loop → Habitat Pack Mk II |
 | Requested by | Spire, Polymer Megastock, Spire, T4 Reactor Build, and Spire, Biopolymer Thermal Stock |
 
 ##### Neutron Capacitor `neutron_capacitor`
@@ -24674,8 +27087,8 @@ Neutronium storage device for extreme energy applications.
 
 | Field | Value |
 | --- | --- |
-| Produced by | Neutronium + Cells + Controls + Rare Earth + Tar → Neutron Capacitor |
-| Used in | Tar + Glass + Capacitor + Rare Earth → Fertilizer Mk III, Capacitor + Controls + Rare Earth + Coolant → Yield Amplifier, Capacitor + Rare Earth + Controls → Grow Lamp Pack Mk III, and Capacitors + Rare Earth + Controls + Coolant → Habitat Pack Mk II |
+| Produced by | Neutronium Bar + Cells + Controls + Rare Earth Core + Tar → Neutron Capacitor |
+| Used in | Tar + Glass + Capacitor + Rare Earth Core → Fertilizer Mk III, Capacitor + Controls + Rare Earth Core + Coolant Loop → Yield Amplifier, Capacitor + Rare Earth Core + Controls → Grow Lamp Pack Mk III, and Capacitors + Rare Earth Core + Controls + Coolant Loop → Habitat Pack Mk II |
 | Requested by | Spire, Neutron Capacitor Order, Spire, Capacitor Bulk Order, and Spire, T4 Reactor Build |
 
 ##### Fertilizer `fertilizer`
@@ -24700,7 +27113,7 @@ Top-grade nutrient blend. One field dose gives a growing crop **5×** base Forag
 
 | Field | Value |
 | --- | --- |
-| Produced by | Tar + Glass + Capacitor + Rare Earth → Fertilizer Mk III |
+| Produced by | Tar + Glass + Capacitor + Rare Earth Core → Fertilizer Mk III |
 
 ##### Growth Accelerant `growth_accelerant`
 
@@ -24708,7 +27121,7 @@ One field dose doubles a growing crop's growth speed for **8 hours**, reaching t
 
 | Field | Value |
 | --- | --- |
-| Produced by | Plastic + Rare Earth → Growth Accelerant |
+| Produced by | Plastic + Rare Earth Core → Growth Accelerant |
 
 ##### Yield Amplifier `yield_amplifier`
 
@@ -24716,7 +27129,7 @@ One dose adds **+200% base Forage yield** (**3×** on its own) to growing crops 
 
 | Field | Value |
 | --- | --- |
-| Produced by | Capacitor + Controls + Rare Earth + Coolant → Yield Amplifier |
+| Produced by | Capacitor + Controls + Rare Earth Core + Coolant Loop → Yield Amplifier |
 
 ##### Grow Lamp Mk II Upgrade Pack `grow_lamp_upgrade_pack_mk2`
 
@@ -24724,7 +27137,7 @@ Upgrades one Grow Lamp to Mk II: **2×** base Forage yield on its own (**+100%**
 
 | Field | Value |
 | --- | --- |
-| Produced by | Panel + Glass + Rare Earth → Grow Lamp Pack Mk II |
+| Produced by | Panel + Glass + Rare Earth Core → Grow Lamp Pack Mk II |
 | Component docs | Grow Lamp |
 
 ##### Grow Lamp Mk III Upgrade Pack `grow_lamp_upgrade_pack_mk3`
@@ -24733,7 +27146,7 @@ Upgrades one Grow Lamp to Mk III: **4×** base Forage yield on its own (**+300%*
 
 | Field | Value |
 | --- | --- |
-| Produced by | Capacitor + Rare Earth + Controls → Grow Lamp Pack Mk III |
+| Produced by | Capacitor + Rare Earth Core + Controls → Grow Lamp Pack Mk III |
 | Component docs | Grow Lamp |
 
 ##### Sprinkler Mk II Upgrade Pack `sprinkler_upgrade_pack_mk2`
@@ -24742,7 +27155,7 @@ Upgrades one Sprinkler to Mk II: **2×** base Forage yield on its own (**+100%**
 
 | Field | Value |
 | --- | --- |
-| Produced by | Plastic + Coolant + Valves → Sprinkler Pack Mk II |
+| Produced by | Plastic + Coolant Loop + Valves → Sprinkler Pack Mk II |
 | Component docs | Sprinkler |
 
 ##### Sprinkler Mk III Upgrade Pack `sprinkler_upgrade_pack_mk3`
@@ -24751,7 +27164,7 @@ Upgrades one Sprinkler to Mk III: **4×** base Forage yield on its own (**+300%*
 
 | Field | Value |
 | --- | --- |
-| Produced by | Controls + Panels + Coolant → Sprinkler Pack Mk III |
+| Produced by | Controls + Panels + Coolant Loop → Sprinkler Pack Mk III |
 | Component docs | Sprinkler |
 
 ##### Lead Plate `lead_plate`
@@ -24766,7 +27179,7 @@ Rolled lead shielding plate for casks, fuel rods, and reactor internals.
 
 ##### Raw Uranium `raw_uranium`
 
-Storm-dealt fissile ore. Hot cargo: use Lead Casks for ordinary storage; deliver it to Fuel Assemblers or Supply Docks. Any drone can risk extraction, but each unplated batch adds 40 exposure; Shield Plating makes that gain zero.
+Storm-dealt fissile ore. Radioactive cargo: use Lead Casks for ordinary storage; deliver it to Fuel Assemblers or Supply Docks. Any drone can risk extraction, but each unplated batch adds 40 exposure; Shield Plating makes that gain zero.
 
 | Field | Value |
 | --- | --- |
@@ -24775,7 +27188,7 @@ Storm-dealt fissile ore. Hot cargo: use Lead Casks for ordinary storage; deliver
 
 ##### Fuel Rod `fuel_rod`
 
-Pressed reactor fuel, enriched uranium in a lead jacket. Hot cargo: use Lead Casks for ordinary storage; deliver it to machines that use fuel rods, such as Reactors, or to Supply Docks.
+Pressed reactor fuel, enriched uranium in a lead jacket. Radioactive cargo: use Lead Casks for ordinary storage; deliver it to machines that use fuel rods, such as Reactors, or to Supply Docks.
 
 | Field | Value |
 | --- | --- |
@@ -24839,63 +27252,63 @@ Fabricated deployment bundle for a `garbage_disposal`, displayed as a Waste Proc
 
 ##### Sunpetal Seed `seed_sunpetal`
 
-Banked Sunpetal seed line from the `seed_maker`. Needs **Light**, matures after **12 h** of met conditions, and has a base yield of **10 Forage**.
+Banked Sunpetal seed line from the `seed_maker`. Needs **Light**, matures after **12 h** in total with its needs met, and has a base yield of **10 Forage**.
 
 ##### Shadeleaf Seed `seed_shadeleaf`
 
-Banked Shadeleaf seed line from the `seed_maker`. Needs **Shade**, matures after **12 h** of met conditions, and has a base yield of **10 Forage**.
+Banked Shadeleaf seed line from the `seed_maker`. Needs **Shade**, matures after **12 h** in total with its needs met, and has a base yield of **10 Forage**.
 
 ##### Dewmoss Seed `seed_dewmoss`
 
-Banked Dewmoss seed line from the `seed_maker`. Needs **Water**, matures after **12 h** of met conditions, and has a base yield of **10 Forage**.
+Banked Dewmoss seed line from the `seed_maker`. Needs **Water**, matures after **12 h** in total with its needs met, and has a base yield of **10 Forage**.
 
 ##### Lonethorn Seed `seed_lonethorn`
 
-Banked Lonethorn seed line from the `seed_maker`. Needs no orthogonally adjacent plant (directly above, below, left, or right; machines may stand there), matures after **24 h** of met conditions, and has a base yield of **25 Forage**.
+Banked Lonethorn seed line from the `seed_maker`. Needs no orthogonally adjacent plant (directly above, below, left, or right; machines may stand there), matures after **24 h** in total with its needs met, and has a base yield of **25 Forage**.
 
 ##### Packfern Seed `seed_packfern`
 
-Banked Packfern seed line from the `seed_maker`. Needs at least two orthogonally adjacent Packferns (directly above, below, left, or right), matures after **24 h** of met conditions, and has a base yield of **25 Forage**.
+Banked Packfern seed line from the `seed_maker`. Needs at least two orthogonally adjacent Packferns (directly above, below, left, or right), matures after **24 h** in total with its needs met, and has a base yield of **25 Forage**.
 
 ##### Twinvine Seed `seed_twinvine`
 
-Banked Twinvine seed line from the `seed_maker`. Needs an orthogonally adjacent Dewmoss (directly above, below, left, or right), matures after **24 h** of met conditions, and has a base yield of **25 Forage**.
+Banked Twinvine seed line from the `seed_maker`. Needs an orthogonally adjacent Dewmoss (directly above, below, left, or right), matures after **24 h** in total with its needs met, and has a base yield of **25 Forage**.
 
 ##### Spitebud Seed `seed_spitebud`
 
-Banked Spitebud seed line from the `seed_maker`. Needs no orthogonally adjacent Packfern (directly above, below, left, or right), matures after **24 h** of met conditions, and has a base yield of **25 Forage**.
+Banked Spitebud seed line from the `seed_maker`. Needs no orthogonally adjacent Packfern (directly above, below, left, or right), matures after **24 h** in total with its needs met, and has a base yield of **25 Forage**.
 
 ##### Sunspur Seed `seed_sunspur`
 
-Banked Sunspur seed line from the `seed_maker`. Needs **Light** and no orthogonally adjacent plant (directly above, below, left, or right; machines may stand there), matures after **24 h** of met conditions, and has a base yield of **25 Forage**.
+Banked Sunspur seed line from the `seed_maker`. Needs **Light** and no orthogonally adjacent plant (directly above, below, left, or right; machines may stand there), matures after **24 h** in total with its needs met, and has a base yield of **25 Forage**.
 
 ##### Glowvine Seed `seed_glowvine`
 
-Banked Glowvine seed line from the `seed_maker`. Needs **Light** and **Water**, matures after **48 h** of met conditions, and has a base yield of **60 Forage**.
+Banked Glowvine seed line from the `seed_maker`. Needs **Light** and **Water**, matures after **48 h** in total with its needs met, and has a base yield of **60 Forage**.
 
 ##### Crowncap Seed `seed_crowncap`
 
-Banked Crowncap seed line from the `seed_maker`. Needs **Shade** and at least two orthogonally adjacent Crowncaps (directly above, below, left, or right), matures after **48 h** of met conditions, and has a base yield of **60 Forage**.
+Banked Crowncap seed line from the `seed_maker`. Needs **Shade** and at least two orthogonally adjacent Crowncaps (directly above, below, left, or right), matures after **48 h** in total with its needs met, and has a base yield of **60 Forage**.
 
 ##### Pondmoss Seed `seed_pondmoss`
 
-Banked Pondmoss seed line from the `seed_maker`. Needs **Water** and at least two orthogonally adjacent Pondmoss plants (directly above, below, left, or right), matures after **48 h** of met conditions, and has a base yield of **60 Forage**.
+Banked Pondmoss seed line from the `seed_maker`. Needs **Water** and at least two orthogonally adjacent Pondmoss plants (directly above, below, left, or right), matures after **48 h** in total with its needs met, and has a base yield of **60 Forage**.
 
 ##### Saltbloom Seed `seed_saltbloom`
 
-Banked Saltbloom seed line from the `seed_maker`. Needs **Salt**, matures after **72 h** of met conditions, and has a base yield of **120 Forage**.
+Banked Saltbloom seed line from the `seed_maker`. Needs **Salt**, matures after **72 h** in total with its needs met, and has a base yield of **120 Forage**.
 
 ##### Brinethorn Seed `seed_brinethorn`
 
-Banked Brinethorn seed line from the `seed_maker`. Needs **Salt** and no orthogonally adjacent plant (directly above, below, left, or right; machines may stand there), matures after **72 h** of met conditions, and has a base yield of **120 Forage**.
+Banked Brinethorn seed line from the `seed_maker`. Needs **Salt** and no orthogonally adjacent plant (directly above, below, left, or right; machines may stand there), matures after **72 h** in total with its needs met, and has a base yield of **120 Forage**.
 
 ##### Saltmate Seed `seed_saltmate`
 
-Banked Saltmate seed line from the `seed_maker`. Needs **Salt** and an orthogonally adjacent Saltbloom (directly above, below, left, or right), matures after **72 h** of met conditions, and has a base yield of **120 Forage**.
+Banked Saltmate seed line from the `seed_maker`. Needs **Salt** and an orthogonally adjacent Saltbloom (directly above, below, left, or right), matures after **72 h** in total with its needs met, and has a base yield of **120 Forage**.
 
 ##### Grandbloom Seed `seed_grandbloom`
 
-Banked Grandbloom seed line from the `seed_maker`. Needs **Light**, **Water**, and no orthogonally adjacent plant (directly above, below, left, or right; machines may stand there), matures after **72 h** of met conditions, and has a base yield of **150 Forage**.
+Banked Grandbloom seed line from the `seed_maker`. Needs **Light**, **Water**, and no orthogonally adjacent plant (directly above, below, left, or right; machines may stand there), matures after **72 h** in total with its needs met, and has a base yield of **150 Forage**.
 
 ##### Plant Forage `forage`
 
@@ -24903,7 +27316,7 @@ Physical crop yield collected when a ready plant is harvested and removed. The c
 
 | Field | Value |
 | --- | --- |
-| Used in | Plastic + Forage + Water → Reinforced Biopolymer, Biopolymer + Forage + Water → Enrichment Compound, Forage + Sea Algae + Snow Moss → Salt Tortoise Feed, Forage + Lava Algae + Cave Moss → Magmatic Annelid Feed, Forage + Cave Fungus + Frost Fungus + Coral Fungus → Mycelial Husk Feed, Forage + Magma Crust + Stone Mat → Mantle Strider Feed, Forage + Heat Lichen + Frost Lichen → Glasswing Mantis Feed, Forage + Cold Spores + Hot Spores → Veil Mantle Feed, Forage + Stone Lichen + Salt Crust → Vault Crab Feed, Forage + Brine Plankton + Deep Algae + Tide Moss → Tidal Cephalopod Feed, Forage + Ice Crust + Ash Spores → Bone Walker Feed, Forage + Vent Algae + Steam Moss + Sea Algae → Vent Drifter Feed, Forage + Hot Spores + Crystal Spores → Hive Sentinel Feed, Forage + Cave Moss + Heat Crust → Hollow Choir Feed, Forage + Shore Lichen + Crystal Spores + Vent Fungus → Ferric Sea-Lily Feed, Forage + Stone Mat + Cinder Lichen → Crustal Echo Feed, Forage + Ice Algae + Frost Lichen + Vent Algae + Black Fungus → Glacial Wyrm Feed, and Forage + Sulfur Moss + Cinder Lichen + Cold Spores + Stone Lichen → Spire Drake Feed |
+| Used in | Plastic + Forage + Water → Reinforced Biopolymer, Reinforced Biopolymer + Forage + Water → Bio Enrichment Compound, Forage + Sea Algae + Snow Moss → Salt Tortoise Feed, Forage + Lava Algae + Cave Moss → Magmatic Annelid Feed, Forage + Cave Fungus + Frost Fungus + Coral Fungus → Mycelial Husk Feed, Forage + Magma Crust + Stone Mat → Mantle Strider Feed, Forage + Heat Lichen + Frost Lichen → Glasswing Mantis Feed, Forage + Cold Spores + Hot Spores → Veil Mantle Feed, Forage + Stone Lichen + Salt Crust → Vault Crab Feed, Forage + Brine Plankton + Deep Algae + Tide Moss → Tidal Cephalopod Feed, Forage + Ice Crust + Ash Spores → Bone Walker Feed, Forage + Vent Algae + Steam Moss + Sea Algae → Vent Drifter Feed, Forage + Hot Spores + Crystal Spores → Hive Sentinel Feed, Forage + Cave Moss + Heat Crust → Hollow Choir Feed, Forage + Shore Lichen + Crystal Spores + Vent Fungus → Ferric Sea-Lily Feed, Forage + Stone Mat + Cinder Lichen → Crustal Echo Feed, Forage + Ice Algae + Frost Lichen + Vent Algae + Black Fungus → Glacial Wyrm Feed, and Forage + Sulfur Moss + Cinder Lichen + Cold Spores + Stone Lichen → Spire Drake Feed |
 
 ##### Salt Tortoise Feed `feed_salt_tortoise`
 
@@ -25415,7 +27828,6 @@ Glass fused where lightning struck open ground. A rare trade good Earth pays wel
 
 | Field | Value |
 | --- | --- |
-| Sells for | 350 cr |
 | Requested by | Spire, Storm Glass Acquisition and Spire, Storm Glass Contract (Crown) |
 
 *Database / Items*
@@ -26359,7 +28771,7 @@ Lab reagent for analyzing living-tissue specimens.
 
 ## Fluids
 
-Every substance that flows through pipes, one entry per fluid. Gas Pipes carry gases and Liquid Pipes carry liquids. Complete machine `connect()` relationships establish one exact substance per physical component; different exact substances on one component conflict. See **Flow Networks, Fluids** for the complete routing model.
+Every substance that flows through pipes, one entry per fluid. Gas Pipes carry gases and Liquid Pipes carry liquids. Complete machine `connect()` relationships establish one exact substance per pipe network; different exact substances on one network conflict. See **Flow Networks, Fluids** for the complete routing model.
 
 ### Industrial Fluids
 
@@ -26373,7 +28785,7 @@ Superheated vapor from the planet's thermal vents. Captured by a `thermal_cap`, 
 | --- | --- |
 | Type | Gas |
 | Produced by | Thermal Cap |
-| Consumed by | Fabricator, Steam Turbine, Steam Condenser, and Bio Caster and Titanium + Cobalt + Rare Earth → Turbine Rotor, Rare Earth + Rotor → Electric Thruster, Titanium + Glass → Cargo Pod (Small), Titanium + Glass + Panel → Cargo Pod (Medium), Titanium + Glass + Panel → Cargo Pod (Large), and Neutronium + Cells + Controls + Rare Earth + Tar → Neutron Capacitor |
+| Consumed by | Fabricator, Steam Turbine, Steam Condenser, and Bio Caster and Titanium Ingot + Cobalt Ingot + Rare Earth Core → Turbine Rotor, Rare Earth Core + Rotor → Electric Thruster, Titanium + Glass → Cargo Pod (Small), Titanium + Glass + Panel → Cargo Pod (Medium), Titanium + Glass + Panel → Cargo Pod (Large), and Neutronium Bar + Cells + Controls + Rare Earth Core + Tar → Neutron Capacitor |
 | Tier input | Heat Generator Mk III, 12 t/h |
 
 ##### Water `water`
@@ -26384,7 +28796,7 @@ Fresh liquid water raised from underground wells by a `water_pump`, or recovered
 | --- | --- |
 | Type | Liquid |
 | Produced by | Steam Condenser and Water Pump |
-| Consumed by | Fabricator, Bio Caster, Plant Terraformer, Sprinkler, and Reactor and Iron + Titanium → Machine Frame, Iron + Glass → Circuit Panel, Panel + Titanium + Glass → Control Unit, Cobalt + Iron + Glass → Battery Cell, Iron + Titanium + Glass → Tank Lining, Plastic + Forage + Water → Reinforced Biopolymer, Biopolymer + Forage + Water → Enrichment Compound, Frame + Control + Gas Pipe Segments + Liquid Pipe Segments → Drone Depot Kit, Frame + Control + Panel → Drone Depot Kit (Medium), Frame + Control + Panel → Drone Depot Kit (Large), Frame + Control + Panel → Mining Drill Kit, Frame + Control + Panel + Rotor → Industrial Mining Drill Kit, Frame + Control + Panel + Rotors → Heavy Mining Drill Kit, Rare Earth + Titanium + Control → Drone (Small), Rare Earth + Titanium + Control → Drone (Medium), Rare Earth + Titanium + Control → Drone (Large), Rare Earth + Control + Lubricant + Rubber → Heli Thruster, Titanium + Lubricant + Rubber → Oil Tank (Small), Titanium + Lubricant + Rubber + Lining → Oil Tank (Medium), Titanium + Lubricant + Rubber + Lining → Oil Tank (Large), Pipes + Valves + Rare Earth + Titanium + Tar → Coolant Loop, Neutronium + Cells + Controls + Rare Earth + Tar → Neutron Capacitor, Frame + Control + Panel → Seed Maker Kit, Frames + Controls + Panels + Liquid Pipe Segments → Plant Terraformer Kit, Frame + Pipes + Valve → Sprinkler Kit, Tar + Glass → Fertilizer, Tar + Glass + Panel → Fertilizer Mk II, Tar + Glass + Capacitor + Rare Earth → Fertilizer Mk III, Plastic + Rare Earth → Growth Accelerant, Capacitor + Controls + Rare Earth + Coolant → Yield Amplifier, Controls + Panels + Rare Earth + Valves → Plant Terraformer Pack Mk II, Capacitor + Rare Earth + Controls → Grow Lamp Pack Mk III, Controls + Panels + Coolant → Sprinkler Pack Mk III, Frames + Controls + Panels + Valves → Feed Maker Pack Mk II, and Capacitors + Rare Earth + Controls + Coolant → Habitat Pack Mk II |
+| Consumed by | Fabricator, Bio Caster, Plant Terraformer, Sprinkler, and Reactor and Fabricate Smelter Mk II Upgrade Pack, Fabricate Fabricator Mk II Upgrade Pack, Fabricate Oil Pump Mk II Upgrade Pack, Fabricate Smelter Mk III Upgrade Pack, Fabricate Fabricator Mk III Upgrade Pack, Iron Ingot + Titanium Ingot → Machine Frame, Iron + Glass → Circuit Panel, Circuit Panel + Titanium Ingot + Glass → Control Unit, Cobalt Ingot + Iron Ingot + Glass → Battery Cell, Iron + Titanium + Glass → Tank Lining, Plastic + Forage + Water → Reinforced Biopolymer, Reinforced Biopolymer + Forage + Water → Bio Enrichment Compound, Frame + Control + Gas Pipe Segments + Liquid Pipe Segments → Drone Depot Kit, Frame + Control + Panel → Drone Depot Kit (Medium), Frame + Control + Panel → Drone Depot Kit (Large), Frame + Control + Panel → Mining Drill Kit, Frame + Control + Panel + Rotor → Industrial Mining Drill Kit, Frame + Control + Panel + Rotors → Heavy Mining Drill Kit, Rare Earth Core + Titanium Ingot + Control → Drone (Small), Rare Earth Core + Titanium Ingot + Control → Drone (Medium), Rare Earth Core + Titanium Ingot + Control → Drone (Large), Rare Earth Core + Control + Lubricant + Rubber → Heli Thruster, Titanium Ingot + Lubricant + Rubber → Oil Tank (Small), Titanium Ingot + Lubricant + Rubber + Lining → Oil Tank (Medium), Titanium Ingot + Lubricant + Rubber + Tank Lining → Oil Tank (Large), Pipes + Valves + Rare Earth Core + Titanium Ingot + Tar → Coolant Loop, Neutronium Bar + Cells + Controls + Rare Earth Core + Tar → Neutron Capacitor, Frame + Control + Panel → Seed Maker Kit, Frames + Controls + Panels + Liquid Pipe Segments → Plant Terraformer Kit, Frame + Pipes + Valve → Sprinkler Kit, Tar + Glass → Fertilizer, Tar + Glass + Panel → Fertilizer Mk II, Tar + Glass + Capacitor + Rare Earth Core → Fertilizer Mk III, Plastic + Rare Earth Core → Growth Accelerant, Capacitor + Controls + Rare Earth Core + Coolant Loop → Yield Amplifier, Controls + Panels + Rare Earth Core + Valves → Plant Terraformer Pack Mk II, Capacitor + Rare Earth Core + Controls → Grow Lamp Pack Mk III, Controls + Panels + Coolant Loop → Sprinkler Pack Mk III, Frames + Controls + Panels + Valves → Feed Maker Pack Mk II, and Capacitors + Rare Earth Core + Controls + Coolant Loop → Habitat Pack Mk II |
 | Tier input | Oxygen Generator Mk III, 8 t/h and Pressure Generator Mk III, 5 t/h |
 
 ##### Oil `oil`
@@ -26582,7 +28994,7 @@ Watch Nocturna change in real time. Bring the exterior camera online and watch t
 
 ##### Ship Computer `research_computer` *(Unlocked)*
 
-Computer dashboard access. Unlocks the Ship → Computer page: a dashboard for system status, script management, the Playground, achievements, and notifications. It also opens the `computer` component to scripts, so deploying, undeploying, decommissioning, and renaming can run from code instead of a button. Further research adds more Computer tabs, starting with the Library.
+Computer dashboard access. Unlocks the Ship → Computer page: a dashboard for system status, script management, the Playground, achievements, and notifications. It also opens the `computer` component to scripts, so deploying, upgrading, undeploying, decommissioning, and renaming can run from code instead of a button. Further research adds more Computer tabs, starting with the Library.
 
 | Field | Value |
 | --- | --- |
@@ -26672,7 +29084,7 @@ Annotate the Planet Map. Adds map markers: named, colored annotations you place 
 
 ##### Control Room `research_custom_panels` *(Unlocked)*
 
-Create script-driven control panels. Opens the Control Room, a top-level page for script-driven dashboard cards. Build clocks, fleet boards, vent-cycle timelines, and recovery controls with drawing and input APIs.
+Create script-driven control panels. Opens the Control Room, a top-level page for script-driven dashboard cards. Build clocks, fleet boards, thermal vent cycle timelines, and recovery controls with drawing and input APIs.
 
 | Field | Value |
 | --- | --- |
@@ -26706,7 +29118,7 @@ Every inventory slot holds twice as much. Rebuilds the shelving at Nocturna Base
 | Threshold | Terraform Index 250,000 |
 | Tech id | high_density_storage_unlock |
 
-##### Weather Program `research_weather_program` *(Not yet unlocked)*
+##### Weather Program `research_weather_program` *(Unlocked)*
 
 Track storms and treasure signals. Unlocks the **Weather Network**, installs one free completed Weather Station and its building slot at Nocturna Base, and makes additional stations available in the Shop. Observe local storms, handle live transmissions, and publish optional results to the Signal Board.
 
@@ -26715,7 +29127,16 @@ Track storms and treasure signals. Unlocks the **Weather Network**, installs one
 | Threshold | Terraform Index 330,000 |
 | Tech id | weather_program_unlock |
 
-##### Fast Feeders `research_fast_feeders` *(Not yet unlocked)*
+##### Industrial Machinery Mk II `research_industrial_machinery_mk2` *(Unlocked)*
+
+Manufacture upgrades for faster factories. Unlocks Fabricator recipes for individual Smelter and Fabricator Mk II upgrade packs. Installed machinery processes twice as fast with 1.5× operating power. Apply each pack through Inventory or the Computer.
+
+| Field | Value |
+| --- | --- |
+| Threshold | Terraform Index 375,000 |
+| Tech id | industrial_machinery_mk2_unlock |
+
+##### Fast Feeders `research_fast_feeders` *(Unlocked)*
 
 Twice the item-transfer throughput. Reduces the duration of every timed discrete-item transfer by **50%**. Machine endpoints remain occupied until the faster handling cycle finishes. Fluids and manual world actions are unaffected.
 
@@ -26724,7 +29145,16 @@ Twice the item-transfer throughput. Reduces the duration of every timed discrete
 | Threshold | Terraform Index 400,000 |
 | Tech id | fast_feeders_unlock |
 
-##### Bulk Orders `research_bulk_orders` *(Not yet unlocked)*
+##### Advanced Oil Extraction `research_advanced_oil_extraction` *(Unlocked)*
+
+Improve pumps and prospect for deep oil. Unlocks the Oil Pump Mk II pack recipe and Seismic Sonar purchase in the Shop. Pioneers install pump packs through construction blueprints. To find three additional oil reservoirs, revisit inert formations, including ones already surveyed with ordinary sonar. Scan them with Seismic Sonar, then survey the potential deep oil contacts to reveal Oil Wells.
+
+| Field | Value |
+| --- | --- |
+| Threshold | Terraform Index 475,000 |
+| Tech id | advanced_oil_extraction_unlock |
+
+##### Bulk Orders `research_bulk_orders` *(Unlocked)*
 
 Double the weekly board. Earth starts placing bulk weekly contracts. Every Weekly Earth Order asks for **twice** the goods and pays **twice** the credits, raising the board's combined payout ceiling from **20,000 cr** to **40,000 cr**. The change applies from the next refresh, so orders already on the board keep their original size.
 
@@ -26753,7 +29183,7 @@ See approaching storms three times further out. Extends new Weather Station repo
 
 ##### High-Capacity Depot Handling `research_depot_handling` *(Not yet unlocked)*
 
-Faster intake and dispatch at Drone Depots. Automatically improves existing and newly deployed Drone Depots: **2× handling at a base Depot**, **4× at Medium**, and **8× at Large**, stacking with Fast Feeders. Speeds intake and dispatch so several remote machines can share a supply route. Each receiving machine still has its own intake cooldown. Drone speed, cargo capacity and Supply Dock dispatch rates stay the same. No upgrade pack is needed.
+Faster intake and dispatch at Drone Depots. Automatically doubles handling at every existing and newly deployed Drone Depot, stacking with Fast Feeders: a base Depot goes from **1×** to **2×**, a Medium Depot from **2×** to **4×**, and a Large Depot from **4×** to **8×**. Speeds intake and dispatch so several remote machines can share a supply route. Each receiving machine still has its own intake cooldown. Drone speed, cargo capacity and Supply Dock dispatch rates stay the same. No upgrade pack is needed.
 
 | Field | Value |
 | --- | --- |
@@ -26762,12 +29192,21 @@ Faster intake and dispatch at Drone Depots. Automatically improves existing and 
 
 ##### High-Pressure Fluid Transport `research_high_pressure_fluid_transport` *(Not yet unlocked)*
 
-Triple remote gas and liquid throughput. Retrofits every completed and future Gas Pipe and Liquid Pipe component. Each matched source-side and sink-side attachment link carries up to **6,000 t/h** instead of **2,000 t/h**. Pipe length and interior branches still add no capacity; separate attachment links and independent components retain their own budgets.
+Triple remote gas and liquid throughput. Retrofits every completed and future Gas Pipe and Liquid Pipe network. Each matched source-side and sink-side attachment link carries up to **6,000 t/h** instead of **2,000 t/h**. Pipe length and interior branches still add no capacity; separate attachment links and independent pipe networks retain their own budgets.
 
 | Field | Value |
 | --- | --- |
 | Threshold | Terraform Index 600,000 |
 | Tech id | high_pressure_fluid_transport_unlock |
+
+##### Industrial Machinery Mk III `research_industrial_machinery_mk3` *(Not yet unlocked)*
+
+Further improve your installed factories. Unlocks Fabricator recipes for individual Smelter and Fabricator Mk III upgrade packs. Upgrade Mk II machinery to four times the original processing speed with three times the original operating power.
+
+| Field | Value |
+| --- | --- |
+| Threshold | Terraform Index 625,000 |
+| Tech id | industrial_machinery_mk3_unlock |
 
 ##### Nuclear Program `research_nuclear_program` *(Not yet unlocked)*
 
@@ -26800,7 +29239,7 @@ Modular vehicle cargo storage access. Unlocks the Small Cargo Rack and Portable 
 
 ##### Constructor Module `research_constructor_module` *(Unlocked)*
 
-Builds Planet Map blueprints. Unlocks the Constructor Module for the Pioneer in the Shop. Plan construction in Planet Map Plan Mode or with `get_component("construction_blueprint")`, load the needed kits, segments, or bridges into the Pioneer's cargo, and drive out to build outposts, pipes, power lines, and machines on site.
+Builds Planet Map blueprints. Unlocks the Constructor Module for the Pioneer in the Shop. Plan construction in Planet Map Plan Mode or with `get_component("construction_blueprint")`, load the needed kits, Gas Pipe, Liquid Pipe, or Power Line Segments, or bridges into the Pioneer's cargo, and drive out to build outposts, pipes, power lines, and machines on site.
 
 | Field | Value |
 | --- | --- |
@@ -26822,7 +29261,7 @@ Higher heat output. Unlocks the Heat Generator Mk II Upgrade Pack in the shop. R
 
 | Field | Value |
 | --- | --- |
-| Threshold | Temperature 80 |
+| Threshold | Temperature 40 |
 | Tech id | heat_mk2_pack_unlock |
 
 ##### Bioluminescent Infusion `research_luminizer` *(Unlocked)*
@@ -26834,7 +29273,7 @@ Unlocks the Bio Luminizer. Unlocks the Bio Luminizer in the shop, the coastal ma
 | Threshold | Temperature 90 |
 | Tech id | luminizer_unlock |
 
-##### Medium Battery Holder `research_battery_holder_medium` *(Not yet unlocked)*
+##### Medium Battery Holder `research_battery_holder_medium` *(Unlocked)*
 
 Double-bay battery mount access. Unlocks the Medium Battery Holder in the shop. Two bays for portable batteries, a compact range upgrade for modular vehicles.
 
@@ -26843,7 +29282,7 @@ Double-bay battery mount access. Unlocks the Medium Battery Holder in the shop. 
 | Threshold | Temperature 280 |
 | Tech id | battery_holder_medium_unlock |
 
-##### Outpost Expansion `research_outpost_expansion` *(Not yet unlocked)*
+##### Outpost Expansion `research_outpost_expansion` *(Unlocked)*
 
 Increase every outpost's building capacity by 5. Raises the soft building capacity of every current and future outpost by **5**. Nocturna Base increases from **25** to **30** buildings, and founded outposts increase from **20** to **25**. Buildings beyond the new cap still incur the normal overcrowding penalty.
 
@@ -26852,16 +29291,16 @@ Increase every outpost's building capacity by 5. Raises the soft building capaci
 | Threshold | Temperature 400 |
 | Tech id | outpost_expansion_unlock |
 
-##### Large Battery `research_large_battery` *(Not yet unlocked)*
+##### Large Battery `research_large_battery` *(Unlocked)*
 
-5× grid storage in one cell. Unlocks the Large Battery in the Shop: **2,500 Wh** of base-station storage, five times the base cell. One unit replaces a cluster of Small Batteries.
+5× a Battery's storage on one map cell. Unlocks the Large Battery in the Shop: **2,500 Wh** of base-station storage, five times the base cell. One unit replaces a cluster of Small Batteries.
 
 | Field | Value |
 | --- | --- |
 | Threshold | Temperature 700 |
 | Tech id | large_battery_unlock |
 
-##### Deep-Sea Conditioning `research_bio_conditioner` *(Not yet unlocked)*
+##### Deep Fragment Conditioning `research_bio_conditioner` *(Unlocked)*
 
 Unlocks the Bio Conditioner. Unlocks the Bio Conditioner in the shop, the deep machine that quality-control-inspects a fragment through a 5-stage accept/reject gauntlet against a published rulebook. Deep Bio Orders require conditioned fragments. Power-only, no fluids or materials.
 
@@ -26870,7 +29309,7 @@ Unlocks the Bio Conditioner. Unlocks the Bio Conditioner in the shop, the deep m
 | Threshold | Temperature 1,200 |
 | Tech id | bio_conditioner_unlock |
 
-##### Oil Generator `research_oil_generator` *(Not yet unlocked)*
+##### Oil Generator `research_oil_generator` *(Unlocked)*
 
 High-density oil-burning power. Unlocks the Oil Generator in the shop. Burns oil to produce up to **700 W** from one machine (several times a Steam Turbine's peak) with full throttle control via script. Consumes **8 t/h** at full output.
 
@@ -26879,25 +29318,25 @@ High-density oil-burning power. Unlocks the Oil Generator in the shop. Burns oil
 | Threshold | Temperature 1,500 |
 | Tech id | oil_generator_unlock |
 
-##### Heli-Drones `research_heli_drones` *(Not yet unlocked)*
+##### Heli-Drones `research_heli_drones` *(Unlocked)*
 
-Long-range oil-fueled aerial transport. Allows Heli Thrusters and Oil Tanks to be mounted on drones. Their Fabricator recipes are earned separately through Vestibule orders. Heli drones fly **900 m/h** and consume **5 t/h Oil** at full throttle; burn rises with throttle squared. Three oil-tank sizes set their range, and Drone Service Stations refuel them from their oil input.
+Long-range oil-fueled aerial transport. Allows Heli Thrusters and Oil Tanks to be mounted on drones. Their Fabricator recipes are earned separately through Vestibule orders. At full throttle, heli drones fly **900 m/h** and consume **5 t/h Oil**; burn rises with throttle squared. Three oil-tank sizes set their range, and Drone Service Stations refuel them from their oil input.
 
 | Field | Value |
 | --- | --- |
 | Threshold | Temperature 6,000 |
 | Tech id | heli_drones_unlock |
 
-##### Lightning Rods `research_lightning_rod` *(Not yet unlocked)*
+##### Lightning Rods `research_lightning_rod` *(Unlocked)*
 
-Catch strikes, bank the surge. Unlocks the **Lightning Rod Kit recipe**. This storm-charged bank stores **4,000 Wh**, catches strikes within **600 m**, and feeds the grid behind batteries. Condition falls **0.05 per day**, reducing capture to zero unless a script repairs it with **1 Storm Glass**.
+Catch strikes, bank the surge. Unlocks the **Lightning Rod recipe**. This storm-charged bank stores **4,000 Wh**, catches strikes within **600 m**, and feeds the grid behind batteries. Condition falls **0.05 per day**, reducing capture to zero unless a script repairs it with **1 Storm Glass**.
 
 | Field | Value |
 | --- | --- |
 | Threshold | Temperature 8,000 |
 | Tech id | lightning_rod_unlock |
 
-##### Fuel Assembler `research_fuel_assembler` *(Not yet unlocked)*
+##### Fuel Assembler `research_fuel_assembler` *(Unlocked)*
 
 Raw Uranium + lead → Fuel Rods. Unlocks the Fuel Assembler in the Shop. This nuclear workbench presses Raw Uranium and lead casing into **Fuel Rods** and draws about **1,800 W** while running.
 
@@ -26908,7 +29347,7 @@ Raw Uranium + lead → Fuel Rods. Unlocks the Fuel Assembler in the Shop. This n
 
 ##### Heat Generator Mk IV `research_heat_mk4_pack` *(Not yet unlocked)*
 
-Nuclear-era heat tier, fuelled by rods. Unlocks the **Heat Upgrade Pack Mk IV recipe** at the Fabricator. This final tier **replaces the steam input entirely** with a **Fuel Rod** magazine fed from a connected Lead Cask and draws roughly 100x Mk I power. **A heater with no rod stops producing** rather than degrading.
+Nuclear-era heat tier, fuelled by rods. Unlocks the **Heat Upgrade Pack Mk IV recipe** at the Fabricator. This final tier **replaces the steam input entirely** with a **Fuel Rod** magazine fed from a connected Lead Cask and draws roughly 100x Mk I power. **A heater with no rod stops producing** instead of falling back to Mk III output.
 
 | Field | Value |
 | --- | --- |
@@ -26952,6 +29391,15 @@ Vehicle charging access. Unlocks the Vehicle Charging Station in the Shop. Mk I 
 | --- | --- |
 | Threshold | Oxygen 9 |
 | Tech id | charging_station_unlock |
+
+##### Battery Charger `research_battery_charger` *(Unlocked)*
+
+Charge spare vehicle batteries locally. Unlocks the **Battery Charger** in the Shop. Charge loose Portable Batteries and Heavy Portable Batteries from the local grid, then exchange them with a parked Pioneer. Mk I holds **4 cells** and charges one at **30 W**.
+
+| Field | Value |
+| --- | --- |
+| Threshold | Oxygen 25 |
+| Tech id | tech_battery_charger |
 
 ##### Industrial Drill `research_drill_industrial` *(Unlocked)*
 
@@ -26998,7 +29446,7 @@ Bulk-storage building. Unlocks the Warehouse in the shop. A **10,000-unit** mult
 | Threshold | Oxygen 150 |
 | Tech id | warehouse_unlock |
 
-##### Verified Contractor `research_verified_contractor` *(Not yet unlocked)*
+##### Verified Contractor `research_verified_contractor` *(Unlocked)*
 
 New contract batch access. Your terraforming output has passed Earth's vetting threshold. A second batch of contracts (denser puzzles, higher rewards) routes to your terminal. Adds new tiers to the Contractor Reputation ladder.
 
@@ -27007,7 +29455,7 @@ New contract batch access. Your terraforming output has passed Earth's vetting t
 | Threshold | Oxygen 300 |
 | Tech id | verified_contractor_unlock |
 
-##### Volcanic Forge-Casting `research_bio_caster` *(Not yet unlocked)*
+##### Volcanic Forge-Casting `research_bio_caster` *(Unlocked)*
 
 Unlocks the Bio Caster. Unlocks the Bio Caster in the shop, the volcanic machine that heat-casts a fragment with fabricated materials. Volcanic Bio Orders require forged fragments.
 
@@ -27016,7 +29464,7 @@ Unlocks the Bio Caster. Unlocks the Bio Caster in the shop, the volcanic machine
 | Threshold | Oxygen 350 |
 | Tech id | bio_caster_unlock |
 
-##### Liquid Tank `research_liquid_tank` *(Not yet unlocked)*
+##### Liquid Tank `research_liquid_tank` *(Unlocked)*
 
 Buffer any one liquid. Unlocks the Liquid Tank in the Shop, a passive **100**-ton buffer that latches to the first liquid it receives (water, oil, or any biome essence) and holds only that fluid until drained.
 
@@ -27025,7 +29473,7 @@ Buffer any one liquid. Unlocks the Liquid Tank in the Shop, a passive **100**-to
 | Threshold | Oxygen 400 |
 | Tech id | liquid_tank_unlock |
 
-##### Waste Processing `research_garbage_disposal` *(Not yet unlocked)*
+##### Waste Processing `research_garbage_disposal` *(Unlocked)*
 
 Programmable destruction for unwanted items and fluids. Unlocks the **Waste Processor Kit recipe**. The machine permanently destroys one selected stream: any item through its feeder input, any liquid through `liquid_in`, or any gas through `gas_in`. This provides an explicit overflow path for tar, surplus water, and unwanted gases without recovering power or materials. Fabricate the kit at a Fabricator; its script selects and enables the active mode.
 
@@ -27034,16 +29482,16 @@ Programmable destruction for unwanted items and fluids. Unlocks the **Waste Proc
 | Threshold | Oxygen 1,400 |
 | Tech id | garbage_disposal_unlock |
 
-##### Petroleum Survey `research_petroleum_survey` *(Not yet unlocked)*
+##### Petroleum Survey `research_petroleum_survey` *(Unlocked)*
 
-Oil wells visible to Deep Sonar. Unlocks survey of subsurface oil deposits and the **Oil Pump recipe**. **Deep Sonar required**: oil wells are a hidden layer for the late-tier sonar. Fabricate an Oil Pump at a Fabricator, deploy it on a surveyed well, and pipe oil to base for power generation and refining.
+Oil wells visible to Deep Sonar. Unlocks survey of subsurface oil deposits and the **Oil Pump recipe**. **Sonar with deep-survey capability required**: use Deep Sonar or an equivalent higher tier to discover oil wells. Fabricate an Oil Pump at a Fabricator, deploy it on a surveyed well, and pipe oil to base for power generation and refining.
 
 | Field | Value |
 | --- | --- |
 | Threshold | Oxygen 1,500 |
 | Tech id | petroleum_survey_unlock |
 
-##### Large Battery Holder `research_battery_holder_large` *(Not yet unlocked)*
+##### Large Battery Holder `research_battery_holder_large` *(Unlocked)*
 
 Triple-bay battery mount access. Unlocks the Large Battery Holder in the shop. Three bays, enough capacity to sustain Heavy Drill power draw on long edge-ring expeditions.
 
@@ -27052,7 +29500,7 @@ Triple-bay battery mount access. Unlocks the Large Battery Holder in the shop. T
 | Threshold | Oxygen 1,800 |
 | Tech id | battery_holder_large_unlock |
 
-##### Large Cargo Rack `research_cargo_rack_large` *(Not yet unlocked)*
+##### Large Cargo Rack `research_cargo_rack_large` *(Unlocked)*
 
 Triple-bin cargo mount access. Unlocks the Large Cargo Rack in the shop. Three bins for maximum haul capacity on large mining runs.
 
@@ -27061,7 +29509,7 @@ Triple-bin cargo mount access. Unlocks the Large Cargo Rack in the shop. Three b
 | Threshold | Oxygen 2,000 |
 | Tech id | cargo_rack_large_unlock |
 
-##### Heavy Drill `research_drill_heavy` *(Not yet unlocked)*
+##### Heavy Drill `research_drill_heavy` *(Unlocked)*
 
 Hardness-4 extraction access. Unlocks the Heavy Drill module in the shop. Extracts minerals up to hardness 4, so it cuts every mineral on the planet and is the only drill that can take Neutronium, required for Mk III fabrication.
 
@@ -27070,18 +29518,18 @@ Hardness-4 extraction access. Unlocks the Heavy Drill module in the shop. Extrac
 | Threshold | Oxygen 2,500 |
 | Tech id | drill_heavy_unlock |
 
-##### Shielded Logistics `research_shielded_logistics` *(Not yet unlocked)*
+##### Shielded Logistics `research_shielded_logistics` *(Unlocked)*
 
-Lead Casks + hot-cargo handling. Hot cargo needs a shielded lane: **Lead Casks** provide stationary storage for Raw Uranium and Fuel Rods, and **Shield Plating** lets a drone extract Raw Uranium without gaining exposure. Unlocks both items' availability; the fabrication recipes come through contractor orders.
+Lead Casks + radioactive-cargo handling. Radioactive cargo needs a shielded lane: **Lead Casks** provide stationary storage for Raw Uranium and Fuel Rods, and **Shield Plating** lets a drone collect Raw Uranium without gaining exposure. Unlocks both items' availability; the fabrication recipes come through contractor orders.
 
 | Field | Value |
 | --- | --- |
 | Threshold | Oxygen 3,000 |
 | Tech id | shielded_logistics_unlock |
 
-##### Shielded Depot Operations `research_shielded_depot_ops` *(Not yet unlocked)*
+##### Shielded Depot Operations `research_shielded_depot_ops` *(Unlocked)*
 
-Plated drones carry hot cargo between outposts. Plated drones can load hot cargo at any Drone Depot, straight from that outpost's Lead Cask, and unload it into the Lead Cask where they land. Depots never store Raw Uranium or Fuel Rods themselves. Until this is researched, drones can't load or unload hot cargo at depots at all.
+Plated drones carry radioactive cargo between outposts. Plated drones can load radioactive cargo at any Drone Depot, straight from that outpost's Lead Cask, and unload it into the Lead Cask where they land. Depots never store Raw Uranium or Fuel Rods themselves. Until this is researched, drones can't load or unload radioactive cargo at depots at all.
 
 | Field | Value |
 | --- | --- |
@@ -27090,7 +29538,7 @@ Plated drones carry hot cargo between outposts. Plated drones can load hot cargo
 
 ##### Oxygen Generator Mk IV `research_oxygen_mk4_pack` *(Not yet unlocked)*
 
-Nuclear-era oxygen tier, fuelled by rods. Unlocks the **Oxygen Upgrade Pack Mk IV recipe** at the Fabricator. This final tier **replaces the water input entirely** with a **Fuel Rod** magazine fed from a connected Lead Cask and draws roughly 100x Mk I power. **A generator with no rod stops producing** rather than degrading.
+Nuclear-era oxygen tier, fuelled by rods. Unlocks the **Oxygen Upgrade Pack Mk IV recipe** at the Fabricator. This final tier **replaces the water input entirely** with a **Fuel Rod** magazine fed from a connected Lead Cask and draws roughly 100x Mk I power. **A generator with no rod stops producing** instead of falling back to Mk III output.
 
 | Field | Value |
 | --- | --- |
@@ -27146,16 +29594,16 @@ Drilling hardware access. Unlocks Drill modules in the shop. Extract raw ore fro
 
 ##### Pressure Generator Mk II `research_pressure_mk2_pack` *(Unlocked)*
 
-Higher pressure output. Unlocks the Pressure Generator Mk II Upgrade Pack in the shop. Retrofits a Mk I pressure generator to Mk II for higher output.
+Higher pressure output. Unlocks the Pressure Generator Mk II Upgrade Pack in the shop. Retrofits a Mk I pressure generator to Mk II: 25× Mk I output and 5× Mk I power draw.
 
 | Field | Value |
 | --- | --- |
 | Threshold | Pressure 1.2 |
 | Tech id | pressure_mk2_pack_unlock |
 
-##### Wide Sonar `research_sonar_wide` *(Unlocked)*
+##### Extended Sonar `research_sonar_wide` *(Unlocked)*
 
-Mid-ring survey hardware access. Unlocks the Wide Sonar module in the shop. Extends scan range to **180 m** and detects minerals up to hardness 3, including Titanium, Cobalt and Rare Earth, out in the mid and outer rings.
+Mid-ring survey hardware access. Unlocks the Extended Sonar module in the shop. Extends scan range to **180 m** and detects minerals up to hardness 3, including Titanium, Cobalt and Rare Earth, out in the mid and outer rings.
 
 | Field | Value |
 | --- | --- |
@@ -27207,7 +29655,7 @@ Double-bin cargo mount access. Unlocks the Medium Cargo Rack and Heavy Portable 
 | Threshold | Pressure 4.5 |
 | Tech id | cargo_rack_medium_unlock |
 
-##### Hydrology Survey `research_hydrology_survey` *(Not yet unlocked)*
+##### Hydrology Survey `research_hydrology_survey` *(Unlocked)*
 
 Water wells visible to sonar. Unlocks survey of subsurface water deposits and the **Water Pump recipe**. Sonar scans now reveal water wells across the map. Wells produce continuous water at their yield tier (1× / 2× / 3×). Fabricate a Water Pump at a Fabricator, deploy it on a surveyed well, and pipe the output to base.
 
@@ -27216,16 +29664,16 @@ Water wells visible to sonar. Unlocks survey of subsurface water deposits and th
 | Threshold | Pressure 18 |
 | Tech id | hydrology_survey_unlock |
 
-##### Deep Sonar `research_sonar_deep` *(Not yet unlocked)*
+##### Deep Sonar `research_sonar_deep` *(Unlocked)*
 
-Edge-ring survey hardware access. Unlocks the Deep Sonar module in the shop. Extends scan range to **280 m** and detects minerals up to hardness 4, which adds Neutronium at the edge ring. Also deepens thermal/exotic survey detail and is required to reveal oil wells after **Petroleum Survey**.
+Edge-ring survey hardware access. Unlocks the Deep Sonar module in the shop. Extends scan range to **280 m** and detects minerals up to hardness 4, which adds Neutronium at the edge ring. Also reveals extra survey detail for thermal vents and exotic deposits, such as their cycle timing. Deep Sonar can reveal oil wells after **Petroleum Survey**; oil discovery requires deep-survey capability, also provided by a higher sonar tier.
 
 | Field | Value |
 | --- | --- |
 | Threshold | Pressure 60 |
 | Tech id | sonar_deep_unlock |
 
-##### Gene Sequencing `research_dna_sequencer` *(Not yet unlocked)*
+##### Gene Sequencing `research_dna_sequencer` *(Unlocked)*
 
 Unlocks the DNA Sequencer. Unlocks the DNA Sequencer in the shop, the geothermal machine that reads and rewrites fragment DNA. Geothermal Bio Orders require fragments engineered to carry specific genes.
 
@@ -27234,7 +29682,7 @@ Unlocks the DNA Sequencer. Unlocks the DNA Sequencer in the shop, the geothermal
 | Threshold | Pressure 120 |
 | Tech id | dna_sequencer_unlock |
 
-##### Prime Contractor `research_prime_contractor` *(Not yet unlocked)*
+##### Prime Contractor `research_prime_contractor` *(Unlocked)*
 
 Top contract batch access. Unlocks three difficult contracts in the atmosphere-era program. Completing them contributes to Contractor Reputation; the final contract batch arrives with Smart Contractor.
 
@@ -27243,7 +29691,7 @@ Top contract batch access. Unlocks three difficult contracts in the atmosphere-e
 | Threshold | Pressure 130 |
 | Tech id | prime_contractor_unlock |
 
-##### Bulk Logistics II `research_dispatch_mk2` *(Not yet unlocked)*
+##### Bulk Logistics II `research_dispatch_mk2` *(Unlocked)*
 
 Quadruple Supply Dock throughput. Quadruples each Supply Dock's per-pulse emission count from **1** to **4** units, so the effective rate jumps from **25 units/h** to **100 units/h**. Pulse cadence is unchanged; only the packet size scales.
 
@@ -27254,7 +29702,7 @@ Quadruple Supply Dock throughput. Quadruples each Supply Dock's per-pulse emissi
 
 ##### Pressure Generator Mk IV `research_pressure_mk4_pack` *(Not yet unlocked)*
 
-Nuclear-era pressure tier, fuelled by rods. Unlocks the **Pressure Upgrade Pack Mk IV recipe** at the Fabricator. This final tier **replaces the water input entirely** with a **Fuel Rod** magazine fed from a connected Lead Cask and draws roughly 100x Mk I power. **A generator with no rod stops producing** rather than degrading.
+Nuclear-era pressure tier, fuelled by rods. Unlocks the **Pressure Upgrade Pack Mk IV recipe** at the Fabricator. This final tier **replaces the water input entirely** with a **Fuel Rod** magazine fed from a connected Lead Cask and draws roughly 100x Mk I power. **A generator with no rod stops producing** instead of falling back to Mk III output.
 
 | Field | Value |
 | --- | --- |
@@ -27263,7 +29711,7 @@ Nuclear-era pressure tier, fuelled by rods. Unlocks the **Pressure Upgrade Pack 
 
 ### Biomass
 
-##### Seed Maker `research_seed_maker` *(Not yet unlocked)*
+##### Seed Maker `research_seed_maker` *(Unlocked)*
 
 Combine life-forms into seeds. Opens the **Plants** tier and unlocks the **Seed Maker Kit recipe**. The machine consumes **1 t each of three different harvested life forms** to test for a viable seed. Most combinations come out as sludge and produce nothing; the recipes that work are unique to this planet. Plant the seeds you find into your Harvester field.
 
@@ -27272,7 +29720,7 @@ Combine life-forms into seeds. Opens the **Plants** tier and unlocks the **Seed 
 | Threshold | Biomass 500 |
 | Tech id | seed_maker_unlock |
 
-##### Plant Terraformer `research_plant_terraformer` *(Not yet unlocked)*
+##### Plant Terraformer `research_plant_terraformer` *(Unlocked)*
 
 Turn harvested Forage into Plants progress. Unlocks the **Plant Terraformer Kit recipe** at **2,000 t Biomass**. It is the only machine that creates permanent Plants km². Feed it harvested Forage, then satisfy the cumulative phase ladder with Water, Salt, Fertilizer, and Growth Accelerant. Fabricate its kit, deploy it at an outpost, connect its supplies, and enable it from its script. Build as many as your harvest can feed.
 
@@ -27281,7 +29729,7 @@ Turn harvested Forage into Plants progress. Unlocks the **Plant Terraformer Kit 
 | Threshold | Biomass 2,000 |
 | Tech id | plant_terraformer_unlock |
 
-##### Heavy Portable Battery `research_heavy_portable_battery` *(Not yet unlocked)*
+##### Heavy Portable Battery `research_heavy_portable_battery` *(Unlocked)*
 
 High-capacity vehicle cell access. Unlocks the Heavy Portable Battery in the shop. A **100 Wh** portable cell, double a standard battery, that drops into any vehicle holder bay to sustain long-haul fleets far from the Vehicle Charging Station.
 
@@ -27289,6 +29737,15 @@ High-capacity vehicle cell access. Unlocks the Heavy Portable Battery in the sho
 | --- | --- |
 | Threshold | Biomass 3,000 |
 | Tech id | heavy_portable_battery_unlock |
+
+##### Battery Charger Mk II Upgrade Pack `research_battery_charger_mk2` *(Unlocked)*
+
+More battery storage and two charging bays. Unlocks the **Battery Charger Mk II Upgrade Pack** in the Shop. Upgrade an existing charger to **8 shared slots**, **2 charging bays**, and **60 W** total while preserving stored batteries and queued work.
+
+| Field | Value |
+| --- | --- |
+| Threshold | Biomass 5,500 |
+| Tech id | tech_battery_charger_mk2 |
 
 ##### Smart Contractor `research_smart_contractor` *(Not yet unlocked)*
 
@@ -27330,7 +29787,7 @@ Fifteen kinds of material in one building. Unlocks the **Large Warehouse** in th
 
 ##### Sprinkler `research_sprinkler` *(Not yet unlocked)*
 
-Water provider for the grid. Unlocks the **Sprinkler Kit recipe**. Fabricate the kit at a Fabricator, then deploy it in a Harvester field to water the four orthogonally adjacent cells (directly above, below, left, and right) while supplied. Upgrade packs improve the crops it supports.
+Water provider for the grid. Unlocks the **Sprinkler Kit recipe**. Fabricate the kit at a Fabricator, then deploy it in a Harvester field to water the four orthogonally adjacent cells (directly above, below, left, and right) while supplied. Upgrade packs raise its multiplier on the Forage output of covered crops that need water.
 
 | Field | Value |
 | --- | --- |
@@ -27348,7 +29805,7 @@ Salt provider for the grid. Unlocks the **Dispenser Kit recipe**. Fabricate the 
 
 ##### Grow Lamp `research_grow_lamp` *(Not yet unlocked)*
 
-Light provider for the grid. Unlocks the **Grow Lamp Kit recipe**. Fabricate the kit at a Fabricator, then deploy it in a Harvester field to light the four orthogonally adjacent cells (directly above, below, left, and right). Upgrade packs improve the crops it supports.
+Light provider for the grid. Unlocks the **Grow Lamp Kit recipe**. Fabricate the kit at a Fabricator, then deploy it in a Harvester field to light the four orthogonally adjacent cells (directly above, below, left, and right). Upgrade packs raise its multiplier on the Forage output of covered crops that need light.
 
 | Field | Value |
 | --- | --- |
@@ -27366,7 +29823,7 @@ Automate harvest, planting, and treatment. Unlocks the **Crop Automator Kit** in
 
 ##### Large Liquid Tank `research_reservoir_engineering` *(Not yet unlocked)*
 
-Holds 10× what a Liquid Tank does. Unlocks the **Large Liquid Tank** in the shop. It works just like a Liquid Tank, taking whatever liquid reaches it first and holding only that until it runs dry, but it holds **1,000 t** instead of 100 t. Use it where plant, essence, or wildlife supply has to ride out a long gap.
+Holds 10× what a Liquid Tank does. Unlocks the **Large Liquid Tank** in the shop. It works just like a Liquid Tank, taking whatever liquid reaches it first and holding only that until it runs dry, but it holds **1,000 t** instead of 100 t. Use it where the liquid feeding plant, essence, or Habitat production has to ride out a long gap.
 
 | Field | Value |
 | --- | --- |
@@ -27393,7 +29850,7 @@ Fertilizer and Accelerant injectors. Unlocks the **Plant Terraformer Mk II Upgra
 
 ##### Wildlife `research_wildlife` *(Not yet unlocked)*
 
-Revive and house the first fauna. Opens the **Wildlife** tier and makes the **Habitat** and **Feed Maker** available in the Shop. A Habitat revives cataloged creatures and houses a breeding colony, while the Feed Maker crafts species feed from harvested **Forage** plus life forms gathered across the biomes. Hold each colony's feed, gas, and liquid bands and it breeds toward its ceiling. Gated on a thriving Plants field because every feed recipe uses Forage; harvested biome life forms provide the remaining ingredients.
+Revive and house the first fauna. Opens the **Wildlife** tier and makes the **Habitat** and **Feed Maker** available in the Shop. A Habitat revives cataloged creatures and houses a breeding colony, while the Feed Maker crafts species feed from harvested **Forage** plus life forms gathered across the biomes. Keep each colony's stored feed, gas, and liquid inside its required ranges and it breeds toward its ceiling. Gated on the Plants pillar reaching its Fields phase because every feed recipe uses Forage; harvested biome life forms provide the remaining ingredients.
 
 | Field | Value |
 | --- | --- |
@@ -27402,7 +29859,7 @@ Revive and house the first fauna. Opens the **Wildlife** tier and makes the **Ha
 
 ##### Advanced Biopolymers `research_advanced_biopolymers` *(Not yet unlocked)*
 
-Make structural composite. Unlocks the Fabricator recipe for **Reinforced Biopolymer**. The composite joins established oil, plant, and water production into a structural material used by large Earth orders and advanced biological chemistry.
+Make structural composite. Unlocks the Fabricator recipe for **Reinforced Biopolymer**. The composite turns Plastic, Forage, and Water from your established production chains into a structural material used by large Earth orders and advanced biological chemistry.
 
 | Field | Value |
 | --- | --- |
@@ -27411,9 +29868,9 @@ Make structural composite. Unlocks the Fabricator recipe for **Reinforced Biopol
 
 ### Wildlife
 
-##### Exotic Husbandry `research_exotic_husbandry` *(Not yet unlocked)*
+##### Exotic Fluids `research_exotic_husbandry` *(Not yet unlocked)*
 
-Source exotic gases and liquids. Unlocks exotic deposit survey, the **Exotic Gas Cap Kit** and **Exotic Spring Tap Kit** recipes, and the **Refiner** in the Shop. Common and uncommon exotic deposits can now appear on sonar; rare deposits wait for **Deep Exotics**. Capture raw exotic gas or liquid, then refine it into the fluid a Habitat band requires. Fabricate the caps and taps at a Fabricator.
+Source exotic gases and liquids. Unlocks exotic deposit survey, the **Exotic Gas Cap Kit** and **Exotic Spring Tap Kit** recipes, and the **Refiner** in the Shop. Common and uncommon exotic deposits can now appear on sonar; rare deposits wait for **Rare Exotics**. Capture raw exotic gas or liquid, then refine it into the fluid a Habitat colony's gas or liquid band requires. Fabricate the caps and taps at a Fabricator.
 
 | Field | Value |
 | --- | --- |
@@ -27422,7 +29879,7 @@ Source exotic gases and liquids. Unlocks exotic deposit survey, the **Exotic Gas
 
 ##### Enrichment Chemistry `research_habitat_development` *(Not yet unlocked)*
 
-Synthesize a late biological export. Unlocks the Fabricator recipe for **Enrichment Compound** at **2,000 Wildlife**. This advanced biological material is used in late Earth exports; Habitat adaptations are purchased with Insight and do not consume it.
+Synthesize a late biological export. Unlocks the Fabricator recipe for **Bio Enrichment Compound** at **2,000 Wildlife**. This advanced biological material is used in late Earth exports; Habitat adaptations are purchased with Insight and do not consume Bio Enrichment Compound.
 
 | Field | Value |
 | --- | --- |
@@ -27431,14 +29888,14 @@ Synthesize a late biological export. Unlocks the Fabricator recipe for **Enrichm
 
 ##### Feed Maker Mk II `research_feed_maker_mk2` *(Not yet unlocked)*
 
-Faster feed production with higher power demand. Unlocks the **Feed Maker Mk II Upgrade Pack recipe in the Fabricator** at **250,000 Wildlife**. Craft a pack, then use **Upgrade in Inventory** to apply it to one existing Feed Maker at any outpost. Mk II provides **1.5× crafting and input Auto Feeder speed** with **2× operating power**. Each machine needs its own pack and keeps its existing building slot. Ingredient quantities and feed produced per batch stay the same.
+Faster feed production with higher power demand. Unlocks the **Feed Maker Mk II Upgrade Pack recipe in the Fabricator** at **250,000 Wildlife**. Craft a pack, then use **Upgrade in Inventory** to apply it to one existing Feed Maker at any outpost. Mk II provides **1.5× crafting speed and 1.5× Auto Feeder speed into its input** with **2× operating power**. Each machine needs its own pack and keeps its existing building slot. Ingredient quantities and feed produced per batch stay the same.
 
 | Field | Value |
 | --- | --- |
 | Threshold | Wildlife 250,000 |
 | Tech id | feed_maker_mk2_unlock |
 
-##### Deep Exotics `research_deep_exotics` *(Not yet unlocked)*
+##### Rare Exotics `research_deep_exotics` *(Not yet unlocked)*
 
 Refine the rarest exotics. Unlocks sonar discovery, extraction, and refining for the **rarest** exotic gases and liquids used by late-stage Habitat requirements.
 
@@ -27449,7 +29906,7 @@ Refine the rarest exotics. Unlocks sonar discovery, extraction, and refining for
 
 ##### Habitat Engineering Mk II `research_habitat_pack_mk2` *(Not yet unlocked)*
 
-Double an enclosure's carrying capacity. Unlocks the **Habitat Mk II Upgrade Pack recipe** at the Fabricator at **600,000 Wildlife**, after Deep Exotics. Each pack upgrades one Habitat from Mk I to Mk II, doubling its carrying capacity while increasing mature draw to **144-168 W**. Mk II affects capacity only; Insight adaptations control breeding pace and biological costs.
+Double an enclosure's carrying capacity. Unlocks the **Habitat Mk II Upgrade Pack recipe** at the Fabricator at **600,000 Wildlife**, after Rare Exotics. Each pack upgrades one Habitat from Mk I to Mk II, doubling its carrying capacity while raising its power draw to **144-168 W**, depending on population. Mk II affects capacity only; adaptations bought with Insight control breeding pace and biological costs.
 
 | Field | Value |
 | --- | --- |
@@ -27461,6 +29918,31 @@ Double an enclosure's carrying capacity. Unlocks the **Habitat Mk II Upgrade Pac
 ## Bounds
 
 **Returned by:** planet.get_bounds()
+
+Import `Bounds` with `from __builtins__ import Bounds`. Arguments accept positional and keyword forms. Use `vars()` to obtain a dictionary for storage or messaging.
+
+##### `Bounds(min_x: float, max_x: float, min_y: float, max_y: float) → Bounds`
+
+Create a local `Bounds` value for your script. Creating this value does not change the world. Requires `min_x <= max_x`. Requires `min_y <= max_y`.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `min_x` | `float` | Minimum X coordinate (meters). Must be a finite number. |
+| `max_x` | `float` | Maximum X coordinate (meters). Must be a finite number. |
+| `min_y` | `float` | Minimum Y coordinate (meters). Must be a finite number. |
+| `max_y` | `float` | Maximum Y coordinate (meters). Must be a finite number. |
+
+- **Returns** `Bounds`
+
+*Raises*
+
+| Exception | Condition |
+| --- | --- |
+| `TypeError` | An argument has the wrong type, or the call has missing, excess, duplicate, or unknown arguments. |
+| `ValueError` | A numeric value is outside the permitted range, or the bounds are reversed. |
+| `OverflowError` | An integer cannot be represented safely as a game number. |
 
 ### Properties
 
@@ -27494,6 +29976,8 @@ Maximum Y coordinate (meters).
 
 **Returned by:** get_component / self
 
+Get `Component` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.id: str`
@@ -27504,7 +29988,7 @@ Programmatic identifier of this component.
 
 ##### `.type_id: str`
 
-Which kind of component this is, as the stable type id ("bio_lab", "rover", "drone_small"). Every component of the same kind shares it, so a library function can branch on what it was handed. For a building at an outpost, `outpost.buildings(self.type_id)` lists buildings of that type there; the query excludes mobile units and sensors. Use `.id` for which individual one this is.
+Which kind of component this is, as the stable type id (`"bio_lab"`, `"rover"`, `"drone_small"`). Every component of the same kind shares it, so a library function can branch on what it was handed. For a building at an outpost, `outpost.buildings(self.type_id)` lists buildings of that type there; the query excludes mobile units and sensors. Use `.id` for which individual one this is.
 
 - **Returns** `str`
 
@@ -27513,6 +29997,8 @@ Which kind of component this is, as the stable type id ("bio_lab", "rover", "dro
 ## PointOfInterest
 
 **Returned by:** nocturna.points_of_interest()
+
+Get `PointOfInterest` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -27530,13 +30016,13 @@ Whole-number Y coordinate (meters from base) of this contact.
 
 ##### `.scanned: bool`
 
-`True` once you've resolved this contact: a Rover/Pioneer sonar **survey** for a productive non-biomass site, a drone **bio-scan** at a biomass site, or a sonar **scan** for an inert contact. `False` is your work list. Filter `if not p.scanned:` for the sites left to visit, and pair it with the sweep's blocked contacts: one your scanner cannot identify stays `False` after a sweep that succeeded, so a plain retry loop returns to it.
+`True` once you've resolved this contact: a Rover/Pioneer sonar **survey** for a productive non-biomass site, a drone **bio-scan** at a biomass site, or a sonar **scan** for an inert contact. `False` is your work list. Filter `if not p.scanned:` for the sites left to visit, and pair it with the sweep's `blocked` contacts: one your scanner cannot identify stays `False` after a sweep that succeeded, so a plain retry loop returns to it.
 
 - **Returns** `bool`
 
 ##### `.kind: str`
 
-What the contact is: but **`"unknown"` until `.scanned` is True**. Once resolved it reads `"mineral"`, `"biomass"`, `"thermal"`, `"water"`, `"oil"`, `"exotic"`, or `"inert"`. A sonar `scan()` only places the contact on the map; a productive site stays `"unknown"` until you drive to it and `survey()` it, and a biomass site until a drone bio-scans it. Only inert contacts resolve from the scan alone.
+The contact's type: **`"unknown"` until `.scanned` is `True`**. Once resolved it reads `"mineral"`, `"biomass"`, `"thermal"`, `"water"`, `"oil"`, `"exotic"`, or `"inert"`. A sonar `scan()` only places the contact on the map; a productive site stays `"unknown"` until you drive to it and `survey()` it, and a biomass site until a drone bio-scans it. Only inert contacts resolve from the scan alone.
 
 - **Returns** `str`
 - **Possible values** `"unknown"`, `"mineral"`, `"biomass"`, `"thermal"`, `"water"`, `"oil"`, `"exotic"`, `"inert"`
@@ -27546,6 +30032,28 @@ What the contact is: but **`"unknown"` until `.scanned` is True**. Once resolved
 ## Position
 
 **Returned by:** self.nav.get_position()
+
+Import `Position` with `from __builtins__ import Position`. Arguments accept positional and keyword forms. Use `vars()` to obtain a dictionary for storage or messaging.
+
+##### `Position(x: float, y: float) → Position`
+
+Create a local `Position` value for your script. Creating this value does not change the world.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `x` | `float` | X coordinate in meters from base for this position snapshot. Must be a finite number. |
+| `y` | `float` | Y coordinate in meters from base for this position snapshot. Must be a finite number. |
+
+- **Returns** `Position`
+
+*Raises*
+
+| Exception | Condition |
+| --- | --- |
+| `TypeError` | An argument has the wrong type, or the call has missing, excess, duplicate, or unknown arguments. |
+| `OverflowError` | An integer cannot be represented safely as a game number. |
 
 ### Properties
 
@@ -27573,7 +30081,9 @@ Iterate over `x`, then `y`, so this position can be unpacked or passed to `list(
 
 ## ScriptCommand
 
-**Returned by:** self.peek_command() / self.next_command().command after status == "ok"
+**Returned by:** `self.peek_command()` / `self.next_command().command` after `status == "ok"`
+
+Get `ScriptCommand` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -27591,7 +30101,7 @@ Command name, such as `"return_base"`. Your script decides what each name means.
 
 ##### `.args: dict[str, JsonValue]`
 
-JSON-safe argument dict sent with the command. Use `.get(key, default)` for optional arguments.
+JSON-safe argument `dict` sent with the command. Use `.get(key, default)` for optional arguments.
 
 - **Returns** `dict[str, JsonValue]`
 
@@ -27614,11 +30124,48 @@ Game tick when the command was queued, or `None` if not available.
 
 - **Returns** `int | None`
 
+*Types / Core Data*
+
+## ScriptStatusReport
+
+**Returned by:** get_status_report() / self.get_status_report()
+
+Get `ScriptStatusReport` from the APIs listed here. It has no script constructor.
+
+### Properties
+
+##### `.message: str`
+
+The player-authored plain-text explanation.
+
+- **Returns** `str`
+
+##### `.level: str`
+
+The player-selected `info`, `warn`, or `error` presentation level.
+
+- **Returns** `str`
+- **Possible values** `"info"`, `"warn"`, `"error"`
+
+##### `.active: bool`
+
+`True` while the reporting run is running or waiting. `False` while paused, halted by the debugger, completed, or failed.
+
+- **Returns** `bool`
+
+##### `.run_id: str`
+
+The exact run identity. Changes when a new execution starts.
+
+- **Returns** `str`
+
 *Types / World & Sites*
 
 ## Outpost
 
 **Returned by:** get_component(outpost_id) / get_component_by_name(outpost_name)
+
+Get `Outpost` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -27674,7 +30221,7 @@ Fresh list of `BuildingRef` snapshots: one entry per building deployed here. Pas
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `type_id` | `str` | Optional. Machine type id to filter by (e.g. "storage_bin"). Omit to return every building at this outpost. |
+| `type_id` | `str` | Optional. Machine type id to filter by (e.g. `"storage_bin"`). Omit to return every building at this outpost. |
 
 - **Returns** `list[BuildingRef]`
 
@@ -27695,6 +30242,8 @@ Fresh list of `HarvestingMachineRef` snapshots for fixed machines deployed on th
 ## OutpostNetwork
 
 **Returned by:** get_component("outpost_network")
+
+Get `OutpostNetwork` from the APIs listed here. It has no script constructor.
 
 ### Related object types
 
@@ -27732,6 +30281,8 @@ Nearest owned outpost to the given world coordinate as an `OutpostRef` snapshot.
 ## OutpostRef
 
 **Returned by:** outpost_network.outposts() / outpost_network.home() / outpost_network.nearest()
+
+Get `OutpostRef` from the APIs listed here. It has no script constructor.
 
 ### Related object types
 
@@ -27817,7 +30368,7 @@ Fresh list of `BuildingRef` snapshots: one entry per building deployed here. Pas
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `type_id` | `str` | Optional. Machine type id to filter by (e.g. "storage_bin"). Omit to return every building at this outpost. |
+| `type_id` | `str` | Optional. Machine type id to filter by (e.g. `"storage_bin"`). Omit to return every building at this outpost. |
 
 - **Returns** `list[BuildingRef]`
 
@@ -27838,6 +30389,8 @@ Fresh list of `HarvestingMachineRef` snapshots for fixed machines deployed on th
 ## BuildingRef
 
 **Returned by:** outpost.buildings() / outpost_network.outposts()[i].buildings()
+
+Get `BuildingRef` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -27889,6 +30442,8 @@ World coordinates as `[x, y]`. For most buildings this is the deploy anchor; doe
 
 **Returned by:** outpost.harvesting_machines() / outpost_network.home().harvesting_machines()
 
+Get `HarvestingMachineRef` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.id: str`
@@ -27928,11 +30483,13 @@ Harvesting-field sector occupied by the fixed machine, such as `"B22"`.
 
 **Returned by:** transmitter.list_planets()
 
+Get `Planet` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.id: str`
 
-Planet id: pass this to transmitter.connect().
+Planet id: pass this to `transmitter.connect()`.
 
 - **Returns** `str`
 
@@ -27953,6 +30510,8 @@ Short planet description.
 ## ScanResult
 
 **Returned by:** scanner.scan(), harvester.collect()
+
+Get `ScanResult` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -27993,7 +30552,9 @@ Credit value of the item.
 
 *abstract*
 
-**Returned by:** SonarModule.scan().sites / SonarModule.survey().site / journal and site-bound machine queries
+**Returned by:** `SonarModule.scan().sites` / `SonarModule.survey().site` / journal and site-bound machine queries
+
+Get `Site` from the APIs listed here. It has no script constructor.
 
 ### Concrete subtypes
 
@@ -28032,7 +30593,7 @@ Site Y coordinate in meters from base.
 
 ##### `.surveyed: bool`
 
-Survey flag captured when this object was returned; resolved inert contacts also report `True`. The property never updates. Mining-site fields are snapshots. Well, vent and exotic-deposit methods read live, except on pre-survey sonar results: those keep their hidden values, so obtain a new object after surveying.
+Survey flag captured when this object was returned; resolved inert contacts also report `True`. The property never updates. Mining-site properties are snapshots. Mining-site, well, vent and exotic-deposit methods read live, except on pre-survey sonar results: those keep their hidden values, so obtain a new object after surveying.
 
 - **Returns** `bool`
 
@@ -28040,7 +30601,7 @@ Survey flag captured when this object was returned; resolved inert contacts also
 
 ##### `.kind() → str`
 
-One of `"mineral"` / `"thermal"` / `"water"` / `"oil"` / `"exotic"` / `"inert"`. Use it to narrow to the concrete subtype: after `if site.kind() == "mineral":` the editor surfaces `MiningSite`-specific fields on `site`. `"inert"` means sonar resolved a physical formation with no extractable signal.
+One of `"mineral"` / `"thermal"` / `"water"` / `"oil"` / `"exotic"` / `"inert"`. Use it to narrow to the concrete subtype: after `if site.kind() == "mineral":` the editor surfaces `MiningSite`-specific fields on `site`. `"inert"` means sonar resolved a physical formation that holds nothing to extract.
 
 - **Returns** `str`
 - **Possible values** `"mineral"`, `"thermal"`, `"water"`, `"oil"`, `"exotic"`, `"inert"`
@@ -28057,7 +30618,9 @@ One of `"mineral"` / `"thermal"` / `"water"` / `"oil"` / `"exotic"` / `"inert"`.
 
 Extends `Site`
 
-**Returned by:** any Site-returning API where `kind() == "exotic"` (e.g. `exotic_gas_cap.deposit()`, `exotic_spring_tap.deposit()`, sonar / journal queries)
+**Returned by:** any `Site`-returning API where `kind() == "exotic"` (e.g. `exotic_gas_cap.deposit()`, `exotic_spring_tap.deposit()`, sonar / journal queries)
+
+Get `ExoticDeposit` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -28087,7 +30650,7 @@ Site Y coordinate in meters from base.
 
 ##### `.surveyed: bool`
 
-Survey flag captured when this object was returned; resolved inert contacts also report `True`. The property never updates. Mining-site fields are snapshots. Well, vent and exotic-deposit methods read live, except on pre-survey sonar results: those keep their hidden values, so obtain a new object after surveying.
+Survey flag captured when this object was returned; resolved inert contacts also report `True`. The property never updates. Mining-site properties are snapshots. Mining-site, well, vent and exotic-deposit methods read live, except on pre-survey sonar results: those keep their hidden values, so obtain a new object after surveying.
 
 - **Returns** `bool`
 
@@ -28095,7 +30658,7 @@ Survey flag captured when this object was returned; resolved inert contacts also
 
 ##### `.kind() → str`
 
-One of `"mineral"` / `"thermal"` / `"water"` / `"oil"` / `"exotic"` / `"inert"`. Use it to narrow to the concrete subtype: after `if site.kind() == "mineral":` the editor surfaces `MiningSite`-specific fields on `site`. `"inert"` means sonar resolved a physical formation with no extractable signal.
+One of `"mineral"` / `"thermal"` / `"water"` / `"oil"` / `"exotic"` / `"inert"`. Use it to narrow to the concrete subtype: after `if site.kind() == "mineral":` the editor surfaces `MiningSite`-specific fields on `site`. `"inert"` means sonar resolved a physical formation that holds nothing to extract.
 
 - **Returns** `str`
 - **Possible values** `"mineral"`, `"thermal"`, `"water"`, `"oil"`, `"exotic"`, `"inert"`
@@ -28129,14 +30692,14 @@ Fluid id this deposit emits, e.g. `"ammonia"` (common, usable direct) or `"raw_c
 
 ##### `.survey_level() → str | None`
 
-Highest survey tier achieved on this deposit: `"basic"` / `"wide"` / `"deep"`, or `None` if not yet surveyed. Reads live: a deeper re-survey upgrades held Site objects too. Higher tiers unlock more fields below. A pre-survey sonar result stays unrevealed; obtain a new object after surveying.
+Highest survey tier achieved on this deposit: `"basic"` / `"wide"` / `"deep"` / `"seismic"`, or `None` if not yet surveyed. Reads live: a deeper re-survey upgrades held `Site` objects too. Higher tiers unlock more fields below. A pre-survey sonar result stays unrevealed; obtain a new object after surveying.
 
 - **Returns** `str | None`
-- **Possible values** `"basic"`, `"wide"`, `"deep"`
+- **Possible values** `"basic"`, `"wide"`, `"deep"`, `"seismic"`
 
 ##### `.current_phase() → str | None`
 
-The deposit's phase right now: `"active"` (emitting) or `"dormant"` (idle). Reads live: poll it from a held Site object and it follows the cycle. Returns `None` before the deposit is surveyed. A pre-survey sonar result stays unrevealed; obtain a new object after surveying.
+The deposit's phase right now: `"active"` (emitting) or `"dormant"` (idle). Reads live: poll it from a held `Site` object and it follows the cycle. Returns `None` before the deposit is surveyed. A pre-survey sonar result stays unrevealed; obtain a new object after surveying.
 
 - **Returns** `str | None`
 - **Possible values** `"active"`, `"dormant"`
@@ -28189,7 +30752,9 @@ Machine id of the currently deployed cap/tap, or empty string when none is prese
 
 Extends `Site`
 
-**Returned by:** any Site-returning API where `kind() == "inert"`
+**Returned by:** any `Site`-returning API where `kind() == "inert"`
+
+Get `GeologicalAnomaly` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -28219,15 +30784,22 @@ Site Y coordinate in meters from base.
 
 ##### `.surveyed: bool`
 
-Survey flag captured when this object was returned; resolved inert contacts also report `True`. The property never updates. Mining-site fields are snapshots. Well, vent and exotic-deposit methods read live, except on pre-survey sonar results: those keep their hidden values, so obtain a new object after surveying.
+Survey flag captured when this object was returned; resolved inert contacts also report `True`. The property never updates. Mining-site properties are snapshots. Mining-site, well, vent and exotic-deposit methods read live, except on pre-survey sonar results: those keep their hidden values, so obtain a new object after surveying.
 
 - **Returns** `bool`
+
+##### `.seismic_status: str`
+
+Learned seismic contact: `"unscanned"` before prospecting, `"potential"` for a deep reservoir contact, or `"dry"` for a formation without oil. Only a Seismic Sonar survey confirms a potential contact as an Oil Well.
+
+- **Returns** `str`
+- **Possible values** `"unscanned"`, `"potential"`, `"dry"`
 
 ### Methods
 
 ##### `.kind() → str`
 
-One of `"mineral"` / `"thermal"` / `"water"` / `"oil"` / `"exotic"` / `"inert"`. Use it to narrow to the concrete subtype: after `if site.kind() == "mineral":` the editor surfaces `MiningSite`-specific fields on `site`. `"inert"` means sonar resolved a physical formation with no extractable signal.
+One of `"mineral"` / `"thermal"` / `"water"` / `"oil"` / `"exotic"` / `"inert"`. Use it to narrow to the concrete subtype: after `if site.kind() == "mineral":` the editor surfaces `MiningSite`-specific fields on `site`. `"inert"` means sonar resolved a physical formation that holds nothing to extract.
 
 - **Returns** `str`
 - **Possible values** `"mineral"`, `"thermal"`, `"water"`, `"oil"`, `"exotic"`, `"inert"`
@@ -28244,7 +30816,9 @@ One of `"mineral"` / `"thermal"` / `"water"` / `"oil"` / `"exotic"` / `"inert"`.
 
 Extends `Site`
 
-**Returned by:** any Site-returning API where `kind() == "mineral"`
+**Returned by:** any `Site`-returning API where `kind() == "mineral"`
+
+Get `MiningSite` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -28274,7 +30848,7 @@ Site Y coordinate in meters from base.
 
 ##### `.surveyed: bool`
 
-Survey flag captured when this object was returned; resolved inert contacts also report `True`. The property never updates. Mining-site fields are snapshots. Well, vent and exotic-deposit methods read live, except on pre-survey sonar results: those keep their hidden values, so obtain a new object after surveying.
+Survey flag captured when this object was returned; resolved inert contacts also report `True`. The property never updates. Mining-site properties are snapshots. Mining-site, well, vent and exotic-deposit methods read live, except on pre-survey sonar results: those keep their hidden values, so obtain a new object after surveying.
 
 - **Returns** `bool`
 
@@ -28302,7 +30876,7 @@ Yield multiplier tier: `"standard"` (**1×**) / `"rich"` (**2×**) / `"pure"` (*
 
 ##### `.kind() → str`
 
-One of `"mineral"` / `"thermal"` / `"water"` / `"oil"` / `"exotic"` / `"inert"`. Use it to narrow to the concrete subtype: after `if site.kind() == "mineral":` the editor surfaces `MiningSite`-specific fields on `site`. `"inert"` means sonar resolved a physical formation with no extractable signal.
+One of `"mineral"` / `"thermal"` / `"water"` / `"oil"` / `"exotic"` / `"inert"`. Use it to narrow to the concrete subtype: after `if site.kind() == "mineral":` the editor surfaces `MiningSite`-specific fields on `site`. `"inert"` means sonar resolved a physical formation that holds nothing to extract.
 
 - **Returns** `str`
 - **Possible values** `"mineral"`, `"thermal"`, `"water"`, `"oil"`, `"exotic"`, `"inert"`
@@ -28313,13 +30887,27 @@ One of `"mineral"` / `"thermal"` / `"water"` / `"oil"` / `"exotic"` / `"inert"`.
 
 - **Returns** `Position`
 
+##### `.has_drill() → bool`
+
+Boolean: `True` if a Mining Drill of any tier is currently deployed on this site. A pre-survey sonar result always returns `False`; obtain a new object after surveying for live readings.
+
+- **Returns** `bool`
+
+##### `.drill_id() → str`
+
+Current machine id of the Mining Drill deployed on this site, or empty string when no drill is present. A pre-survey sonar result always returns empty string; obtain a new object after surveying for live readings.
+
+- **Returns** `str`
+
 *Types / World & Sites*
 
 ## OilWell
 
 Extends `Site`
 
-**Returned by:** any Site-returning API where `kind() == "oil"` (e.g. `oil_pump.well()`, sonar / journal queries)
+**Returned by:** any `Site`-returning API where `kind() == "oil"` (e.g. `oil_pump.well()`, sonar / journal queries)
+
+Get `OilWell` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -28349,7 +30937,7 @@ Site Y coordinate in meters from base.
 
 ##### `.surveyed: bool`
 
-Survey flag captured when this object was returned; resolved inert contacts also report `True`. The property never updates. Mining-site fields are snapshots. Well, vent and exotic-deposit methods read live, except on pre-survey sonar results: those keep their hidden values, so obtain a new object after surveying.
+Survey flag captured when this object was returned; resolved inert contacts also report `True`. The property never updates. Mining-site properties are snapshots. Mining-site, well, vent and exotic-deposit methods read live, except on pre-survey sonar results: those keep their hidden values, so obtain a new object after surveying.
 
 - **Returns** `bool`
 
@@ -28357,7 +30945,7 @@ Survey flag captured when this object was returned; resolved inert contacts also
 
 ##### `.kind() → str`
 
-One of `"mineral"` / `"thermal"` / `"water"` / `"oil"` / `"exotic"` / `"inert"`. Use it to narrow to the concrete subtype: after `if site.kind() == "mineral":` the editor surfaces `MiningSite`-specific fields on `site`. `"inert"` means sonar resolved a physical formation with no extractable signal.
+One of `"mineral"` / `"thermal"` / `"water"` / `"oil"` / `"exotic"` / `"inert"`. Use it to narrow to the concrete subtype: after `if site.kind() == "mineral":` the editor surfaces `MiningSite`-specific fields on `site`. `"inert"` means sonar resolved a physical formation that holds nothing to extract.
 
 - **Returns** `str`
 - **Possible values** `"mineral"`, `"thermal"`, `"water"`, `"oil"`, `"exotic"`, `"inert"`
@@ -28399,7 +30987,9 @@ Current machine id of the Oil Pump deployed on this well, or empty string when n
 
 Extends `Site`
 
-**Returned by:** any Site-returning API where `kind() == "thermal"` (e.g. `thermal_cap.vent()`, sonar / journal queries)
+**Returned by:** any `Site`-returning API where `kind() == "thermal"` (e.g. `thermal_cap.vent()`, sonar / journal queries)
+
+Get `ThermalVent` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -28429,7 +31019,7 @@ Site Y coordinate in meters from base.
 
 ##### `.surveyed: bool`
 
-Survey flag captured when this object was returned; resolved inert contacts also report `True`. The property never updates. Mining-site fields are snapshots. Well, vent and exotic-deposit methods read live, except on pre-survey sonar results: those keep their hidden values, so obtain a new object after surveying.
+Survey flag captured when this object was returned; resolved inert contacts also report `True`. The property never updates. Mining-site properties are snapshots. Mining-site, well, vent and exotic-deposit methods read live, except on pre-survey sonar results: those keep their hidden values, so obtain a new object after surveying.
 
 - **Returns** `bool`
 
@@ -28437,7 +31027,7 @@ Survey flag captured when this object was returned; resolved inert contacts also
 
 ##### `.kind() → str`
 
-One of `"mineral"` / `"thermal"` / `"water"` / `"oil"` / `"exotic"` / `"inert"`. Use it to narrow to the concrete subtype: after `if site.kind() == "mineral":` the editor surfaces `MiningSite`-specific fields on `site`. `"inert"` means sonar resolved a physical formation with no extractable signal.
+One of `"mineral"` / `"thermal"` / `"water"` / `"oil"` / `"exotic"` / `"inert"`. Use it to narrow to the concrete subtype: after `if site.kind() == "mineral":` the editor surfaces `MiningSite`-specific fields on `site`. `"inert"` means sonar resolved a physical formation that holds nothing to extract.
 
 - **Returns** `str`
 - **Possible values** `"mineral"`, `"thermal"`, `"water"`, `"oil"`, `"exotic"`, `"inert"`
@@ -28450,10 +31040,10 @@ One of `"mineral"` / `"thermal"` / `"water"` / `"oil"` / `"exotic"` / `"inert"`.
 
 ##### `.survey_level() → str | None`
 
-Highest survey tier achieved on this vent: `"basic"` / `"wide"` / `"deep"`, or `None` if not yet surveyed. Reads live: a deeper re-survey upgrades held Site objects too. Higher tiers unlock more fields below. A pre-survey sonar result stays unrevealed; obtain a new object after surveying.
+Highest survey tier achieved on this vent: `"basic"` / `"wide"` / `"deep"` / `"seismic"`, or `None` if not yet surveyed. Reads live: a deeper re-survey upgrades held `Site` objects too. Higher tiers unlock more fields below. A pre-survey sonar result stays unrevealed; obtain a new object after surveying.
 
 - **Returns** `str | None`
-- **Possible values** `"basic"`, `"wide"`, `"deep"`
+- **Possible values** `"basic"`, `"wide"`, `"deep"`, `"seismic"`
 
 ##### `.cycle_active_minutes() → float | None`
 
@@ -28469,7 +31059,7 @@ Duration of the dormant phase in minutes. Requires **deep** survey: returns `Non
 
 ##### `.current_phase() → str | None`
 
-The vent's phase right now: `"active"` or `"dormant"`. Reads live: poll it from a held Site object and it follows the cycle. Returns `None` before the vent is surveyed. A pre-survey sonar result stays unrevealed; obtain a new object after surveying.
+The vent's phase right now: `"active"` or `"dormant"`. Reads live: poll it from a held `Site` object and it follows the cycle. Returns `None` before the vent is surveyed. A pre-survey sonar result stays unrevealed; obtain a new object after surveying.
 
 - **Returns** `str | None`
 - **Possible values** `"active"`, `"dormant"`
@@ -28510,7 +31100,9 @@ Machine id of the currently deployed Thermal Cap, or empty string when no cap is
 
 Extends `Site`
 
-**Returned by:** any Site-returning API where `kind() == "water"` (e.g. `water_pump.well()`, sonar / journal queries)
+**Returned by:** any `Site`-returning API where `kind() == "water"` (e.g. `water_pump.well()`, sonar / journal queries)
+
+Get `WaterWell` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -28540,7 +31132,7 @@ Site Y coordinate in meters from base.
 
 ##### `.surveyed: bool`
 
-Survey flag captured when this object was returned; resolved inert contacts also report `True`. The property never updates. Mining-site fields are snapshots. Well, vent and exotic-deposit methods read live, except on pre-survey sonar results: those keep their hidden values, so obtain a new object after surveying.
+Survey flag captured when this object was returned; resolved inert contacts also report `True`. The property never updates. Mining-site properties are snapshots. Mining-site, well, vent and exotic-deposit methods read live, except on pre-survey sonar results: those keep their hidden values, so obtain a new object after surveying.
 
 - **Returns** `bool`
 
@@ -28548,7 +31140,7 @@ Survey flag captured when this object was returned; resolved inert contacts also
 
 ##### `.kind() → str`
 
-One of `"mineral"` / `"thermal"` / `"water"` / `"oil"` / `"exotic"` / `"inert"`. Use it to narrow to the concrete subtype: after `if site.kind() == "mineral":` the editor surfaces `MiningSite`-specific fields on `site`. `"inert"` means sonar resolved a physical formation with no extractable signal.
+One of `"mineral"` / `"thermal"` / `"water"` / `"oil"` / `"exotic"` / `"inert"`. Use it to narrow to the concrete subtype: after `if site.kind() == "mineral":` the editor surfaces `MiningSite`-specific fields on `site`. `"inert"` means sonar resolved a physical formation that holds nothing to extract.
 
 - **Returns** `str`
 - **Possible values** `"mineral"`, `"thermal"`, `"water"`, `"oil"`, `"exotic"`, `"inert"`
@@ -28588,7 +31180,9 @@ Current machine id of the Water Pump deployed on this well, or empty string when
 
 ## Battery
 
-**Returned by:** self.battery (vehicles)
+**Returned by:** `self.battery` (vehicles)
+
+Get `Battery` from the APIs listed here. It has no script constructor.
 
 ### Related object types
 
@@ -28626,6 +31220,8 @@ List of every Battery Holder currently mounted on the vehicle. Empty for the Rov
 ## Holder
 
 **Returned by:** self.battery.holders()
+
+Get `Holder` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -28666,6 +31262,8 @@ List indexed by internal slot: each entry is a `PortableBattery` object, or `Non
 
 **Returned by:** self.battery.holders()[...].batteries[...]
 
+Get `PortableBattery` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.id: str`
@@ -28699,7 +31297,9 @@ Rated capacity in Wh.
 
 ## Cargo
 
-**Returned by:** self.cargo (vehicles)
+**Returned by:** `self.cargo` (vehicles)
+
+Get `Cargo` from the APIs listed here. It has no script constructor.
 
 ### Related object types
 
@@ -28749,7 +31349,7 @@ On a Pioneer, consolidate equal item ids into the fewest installed Portable Bins
 
 | Status | Kind | Meaning |
 | --- | --- | --- |
-| `"ok"` | success | Repositioned `.moved` units into fewer Pioneer Portable Bins. |
+| `"ok"` | success | Repositioned units: `.moved` into fewer Pioneer Portable Bins. |
 | `"already_compact"` | success | This cargo is already compact; no Portable Bin cargo needs to move. |
 | `"research_required"` | rejection | The required material-transfer research is not unlocked. |
 | `"busy"` | transient | This material endpoint is already handling another material operation. |
@@ -28774,7 +31374,7 @@ Permanently jettison everything in the whole-number, zero-based `rack_index`. On
 
 | Status | Kind | Meaning |
 | --- | --- | --- |
-| `"ok"` | success | Permanently discarded `.discarded` units. |
+| `"ok"` | success | Permanently discarded units: `.discarded`. |
 | `"empty"` | success | The selected cargo area was already empty. |
 | `"busy"` | transient | The vehicle is occupied by another field action. |
 | `"invalid_rack"` | rejection | The requested cargo rack does not exist. |
@@ -28784,6 +31384,8 @@ Permanently jettison everything in the whole-number, zero-based `rack_index`. On
 ## Rack
 
 **Returned by:** self.cargo.racks()
+
+Get `Rack` from the APIs listed here. It has no script constructor.
 
 ### Related object types
 
@@ -28815,6 +31417,8 @@ List indexed by internal slot: each entry is a `Bin` object, or `None` for an em
 ## Bin
 
 **Returned by:** Rack.bins
+
+Get `Bin` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -28855,6 +31459,8 @@ Property-distinct `ItemStack` snapshots in this portable bin. Equal ids with dif
 
 **Returned by:** Cargo.discard(), DroneCargo.discard()
 
+Get `DiscardResult` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.status: str`
@@ -28886,19 +31492,21 @@ Whole-number units permanently destroyed.
 
 ## InputSlot
 
-**Returned by:** self.input on stationary machines with an input buffer
+**Returned by:** `self.input` on stationary machines with an input buffer
+
+Get `InputSlot` from the APIs listed here. It has no script constructor.
 
 ### Methods
 
 ##### `.connect(name: str) → ActionResult`
 
-Set a compatible item source by stable id or display name. Two stationary endpoints must share an outpost. A Rover or Pioneer is reachable from any outpost, but only while it is parked inside this machine's service area. Field-extractor pickup outputs can be pulled only by a Rover or Pioneer. A drone's cargo moves through its Drone Depot. `"inventory"` is a freight source only while the endpoint is at Nocturna Base; remote stationary ports use local Storage Bins, Warehouses, or machine buffers.
+Set a compatible item source by stable id or display name. Two stationary endpoints must share an outpost. A Rover or Pioneer is reachable from any outpost, but only while it is parked inside this machine's service area. The output stockpile of a field structure on the map, such as a Mining Drill, can be pulled only by a Rover or Pioneer parked there. A drone's cargo moves through its Drone Depot. `"inventory"` is a freight source only while the endpoint is at Nocturna Base; remote stationary ports use local Storage Bins, Warehouses, or machine buffers.
 
 *Parameters*
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `name` | `str` | Stable id or display name of a compatible item source, or inventory |
+| `name` | `str` | Stable id or display name of a compatible item source, or `"inventory"` |
 
 - **Returns** `ActionResult`
 - **Result fields** `.status`, `.message`
@@ -28943,7 +31551,7 @@ Stable id of the currently connected source, or empty string. `connect()` accept
 
 ##### `.take(item_id: str, count: int, properties: ItemProperties | None = None, property_match: str | None = None) → TransferResult`
 
-Take up to whole-number `count` units of `item_id` from the connected source. A property dict selects stacks containing that subset by default. Pass `"exact"` as the fourth argument for one full identity; `None, "exact"` selects only propertyless items. `"any"` ignores properties. Exact source properties are always retained. The transfer waits automatically for time proportional to units moved and requires Auto Feeders research.
+Take up to whole-number `count` units of `item_id` from the connected source. A property `dict` selects stacks containing that subset by default. Pass `"exact"` as the fourth argument for one full identity; `None, "exact"` selects only propertyless items. `"any"` ignores properties. Exact source properties are always retained. The transfer takes time proportional to units moved and requires Auto Feeders research.
 
 *Parameters*
 
@@ -28951,8 +31559,8 @@ Take up to whole-number `count` units of `item_id` from the connected source. A 
 | --- | --- | --- |
 | `item_id` | `str` | Item id to take |
 | `count` | `int` | Whole-number max units to take |
-| `properties` | `ItemProperties \| None` | Optional property dict, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
-| `property_match` | `str \| None` | Optional selection mode: any, subset, or exact |
+| `properties` | `ItemProperties \| None` | Optional property `dict`, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
+| `property_match` | `str \| None` | Optional selection mode: `"any"`, `"subset"`, or `"exact"` |
 
 - **Returns** `TransferResult`
 - **Result fields** `.status`, `.message`
@@ -28962,7 +31570,7 @@ Take up to whole-number `count` units of `item_id` from the connected source. A 
 
 | Status | Kind | Meaning |
 | --- | --- | --- |
-| `"ok"` | success | Moved all `.moved` requested units. |
+| `"ok"` | success | Moved requested units: `.moved`. |
 | `"partial"` | partial | Moved `.moved` of `.requested` requested units; source availability or destination capacity limited the transfer. |
 | `"no_op"` | success | No units were requested, so no state changed. |
 | `"research_required"` | rejection | The required material-transfer research is not unlocked. |
@@ -28987,7 +31595,7 @@ Take up to whole-number `count` units of `item_id` from the connected source. A 
 | `"target_wrong_material"` | rejection | The destination is latched to or accepts a different material. |
 | `"wrong_biome"` | rejection | The destination rejects this biological material because its biome is incompatible. |
 | `"target_unconfigured"` | rejection | The destination lacks the world-state configuration required to accept this material. |
-| `"hot_cargo_requires_cask"` | rejection | A transfer endpoint does not support this hot cargo. |
+| `"hot_cargo_requires_cask"` | rejection | A transfer endpoint does not support this radioactive cargo. |
 | `"order_item_not_required"` | rejection | The active order does not require this item. |
 | `"order_slots_full"` | rejection | Every Supply Dock material slot is assigned to another required item. |
 | `"order_fulfilled"` | rejection | The active order already has all required units of this item loaded or shipped. |
@@ -29001,17 +31609,17 @@ Take up to whole-number `count` units of `item_id` from the connected source. A 
 
 ##### `.eject(destination: str, item_id: str, count: int, properties: ItemProperties | None = None, property_match: str | None = None) → TransferResult`
 
-Recover up to whole-number `count` units of `item_id` from this buffer without changing its source connection. Use `"inventory"` at Nocturna Base, or a compatible same-outpost store, machine input, or parked ground vehicle. Optional properties use the standard any, subset, or exact selection rules; exact item properties are preserved. Destination capacity may limit the move. Active or reserved work rejects without moving anything; a successful ejection cancels fractional work attached to the staged input. The transfer waits automatically for time proportional to units moved and requires Auto Feeders research.
+Recover up to whole-number `count` units of `item_id` from this buffer without changing its source connection. Use `"inventory"` at Nocturna Base, or a compatible store or machine input at the same outpost, or a ground vehicle parked in this machine's service area. Optional properties use the standard `"any"`, `"subset"`, or `"exact"` rules; item properties are preserved exactly. Destination capacity may limit it. While work is active or reserved, the call is rejected and nothing moves; a successful ejection cancels fractional work on the staged input. The transfer takes time proportional to units moved and requires Auto Feeders research.
 
 *Parameters*
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `destination` | `str` | Stable id or display name of a local compatible freight destination, or inventory |
+| `destination` | `str` | Stable id or display name of a local compatible freight destination, or `"inventory"` |
 | `item_id` | `str` | Item id to recover |
 | `count` | `int` | Whole-number max units to recover |
-| `properties` | `ItemProperties \| None` | Optional property dict, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
-| `property_match` | `str \| None` | Optional selection mode: any, subset, or exact |
+| `properties` | `ItemProperties \| None` | Optional property `dict`, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
+| `property_match` | `str \| None` | Optional selection mode: `"any"`, `"subset"`, or `"exact"` |
 
 - **Returns** `TransferResult`
 - **Result fields** `.status`, `.message`
@@ -29021,7 +31629,7 @@ Recover up to whole-number `count` units of `item_id` from this buffer without c
 
 | Status | Kind | Meaning |
 | --- | --- | --- |
-| `"ok"` | success | Moved all `.moved` requested units. |
+| `"ok"` | success | Moved requested units: `.moved`. |
 | `"partial"` | partial | Moved `.moved` of `.requested` requested units; source availability or destination capacity limited the transfer. |
 | `"no_op"` | success | No units were requested, so no state changed. |
 | `"research_required"` | rejection | The required material-transfer research is not unlocked. |
@@ -29043,8 +31651,8 @@ Recover up to whole-number `count` units of `item_id` from this buffer without c
 | `"target_wrong_material"` | rejection | The destination is latched to or accepts a different material. |
 | `"wrong_biome"` | rejection | The destination rejects this biological material because its biome is incompatible. |
 | `"target_unconfigured"` | rejection | The destination lacks the world-state configuration required to accept this material. |
-| `"hot_cargo_requires_cask"` | rejection | A transfer endpoint does not support this hot cargo. |
-| `"cask_accepts_hot_only"` | rejection | Lead Casks accept only supported hot cargo. |
+| `"hot_cargo_requires_cask"` | rejection | A transfer endpoint does not support this radioactive cargo. |
+| `"cask_accepts_hot_only"` | rejection | Lead Casks accept only radioactive cargo: Raw Uranium and Fuel Rods. |
 | `"order_item_not_required"` | rejection | The active order does not require this item. |
 | `"order_slots_full"` | rejection | Every Supply Dock material slot is assigned to another required item. |
 | `"order_fulfilled"` | rejection | The active order already has all required units of this item loaded or shipped. |
@@ -29065,7 +31673,7 @@ Permanently discard everything currently buffered in this input port. Flushed it
 
 | Status | Kind | Meaning |
 | --- | --- | --- |
-| `"ok"` | success | Moved all `.moved` requested units. |
+| `"ok"` | success | Moved requested units: `.moved`. |
 | `"no_op"` | success | No units were requested, so no state changed. |
 
 ##### `.count() → int`
@@ -29091,6 +31699,8 @@ Snapshot list of property-distinct `ItemStack` values currently buffered. Two en
 ## ItemInfo
 
 **Returned by:** item_catalog.lookup(item_id)
+
+Get `ItemInfo` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -29145,6 +31755,8 @@ Lowest production tier that creates this item, or `None` when it is a raw, harve
 
 **Returned by:** harvester.store(), inventory.drop()
 
+Get `ItemResult` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.status: str`
@@ -29172,6 +31784,30 @@ Stable id of the item moved or destroyed, or `None` when no item changed.
 
 **Returned by:** InputSlot.stacks(), VehicleInputSlot.stacks(), OutputSlot.stacks(), PickupOutputSlot.stacks(), Cargo.stacks(), Bin.stacks, storage_bin.stacks(), warehouse.stacks()
 
+Import `ItemStack` with `from __builtins__ import ItemStack`. Arguments accept positional and keyword forms. Use `vars()` to obtain a dictionary for storage or messaging.
+
+##### `ItemStack(id: str, count: int, properties: ItemProperties | None = None) → ItemStack`
+
+Create a local `ItemStack` value for your script. Creating this value does not change the world.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `id` | `str` | Stable item id shared by every unit in this stack. |
+| `count` | `int` | Whole-number units with this exact property identity. Must be a whole number. Must be at least 0. |
+| `properties` | `ItemProperties \| None` | Exact property `dict` for this item, or `None` for an ordinary commodity. Items with different properties form separate stacks and never merge. |
+
+- **Returns** `ItemStack`
+
+*Raises*
+
+| Exception | Condition |
+| --- | --- |
+| `TypeError` | An argument has the wrong type, or the call has missing, excess, duplicate, or unknown arguments. |
+| `ValueError` | A numeric value is outside the permitted range, or the bounds are reversed. |
+| `OverflowError` | An integer cannot be represented safely as a game number. |
+
 ### Properties
 
 ##### `.id: str`
@@ -29188,7 +31824,7 @@ Whole-number units with this exact property identity.
 
 ##### `.properties: ItemProperties | None`
 
-Exact property dict for this item, or `None` for an ordinary commodity. Items with different properties form separate stacks and never merge.
+Exact property `dict` for this item, or `None` for an ordinary commodity. Items with different properties form separate stacks and never merge.
 
 - **Returns** `ItemProperties | None`
 
@@ -29196,7 +31832,9 @@ Exact property dict for this item, or `None` for an ordinary commodity. Items wi
 
 ## OutputSlot
 
-**Returned by:** self.output (machines with output port)
+**Returned by:** `self.output` (machines with output port)
+
+Get `OutputSlot` from the APIs listed here. It has no script constructor.
 
 ### Methods
 
@@ -29208,7 +31846,7 @@ Set a compatible item destination by stable id or display name. Two stationary e
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `name` | `str` | Stable id or display name of a compatible item destination, or inventory |
+| `name` | `str` | Stable id or display name of a compatible item destination, or `"inventory"` |
 
 - **Returns** `ActionResult`
 - **Result fields** `.status`, `.message`
@@ -29253,7 +31891,7 @@ Stable id of the currently connected target, or empty string. `connect()` accept
 
 ##### `.send(item_id: str, count: int, properties: ItemProperties | None = None, property_match: str | None = None) → TransferResult`
 
-Send up to whole-number `count` units of `item_id` to the connected target. A property dict selects stacks containing that subset by default. Pass `"exact"` as the fourth argument for one full identity; `None, "exact"` selects only propertyless items. `"any"` ignores properties. Exact source properties are preserved. The transfer waits automatically for time proportional to units moved and requires Auto Feeders research.
+Send up to whole-number `count` units of `item_id` to the connected target. A property `dict` selects stacks containing that subset by default. Pass `"exact"` as the fourth argument for one full identity; `None, "exact"` selects only propertyless items. `"any"` ignores properties. Exact source properties are preserved. The transfer takes time proportional to units moved and requires Auto Feeders research.
 
 *Parameters*
 
@@ -29261,8 +31899,8 @@ Send up to whole-number `count` units of `item_id` to the connected target. A pr
 | --- | --- | --- |
 | `item_id` | `str` | Item id to send |
 | `count` | `int` | Whole-number max units to send |
-| `properties` | `ItemProperties \| None` | Optional property dict, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
-| `property_match` | `str \| None` | Optional selection mode: any, subset, or exact |
+| `properties` | `ItemProperties \| None` | Optional property `dict`, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
+| `property_match` | `str \| None` | Optional selection mode: `"any"`, `"subset"`, or `"exact"` |
 
 - **Returns** `TransferResult`
 - **Result fields** `.status`, `.message`
@@ -29272,7 +31910,7 @@ Send up to whole-number `count` units of `item_id` to the connected target. A pr
 
 | Status | Kind | Meaning |
 | --- | --- | --- |
-| `"ok"` | success | Moved all `.moved` requested units. |
+| `"ok"` | success | Moved requested units: `.moved`. |
 | `"partial"` | partial | Moved `.moved` of `.requested` requested units; source availability or destination capacity limited the transfer. |
 | `"no_op"` | success | No units were requested, so no state changed. |
 | `"research_required"` | rejection | The required material-transfer research is not unlocked. |
@@ -29295,8 +31933,8 @@ Send up to whole-number `count` units of `item_id` to the connected target. A pr
 | `"wrong_biome"` | rejection | The destination rejects this biological material because its biome is incompatible. |
 | `"target_unconfigured"` | rejection | The destination lacks the world-state configuration required to accept this material. |
 | `"mixed_materials"` | rejection | One transfer can contain only one item id. |
-| `"hot_cargo_requires_cask"` | rejection | A transfer endpoint does not support this hot cargo. |
-| `"cask_accepts_hot_only"` | rejection | Lead Casks accept only supported hot cargo. |
+| `"hot_cargo_requires_cask"` | rejection | A transfer endpoint does not support this radioactive cargo. |
+| `"cask_accepts_hot_only"` | rejection | Lead Casks accept only radioactive cargo: Raw Uranium and Fuel Rods. |
 | `"order_item_not_required"` | rejection | The active order does not require this item. |
 | `"order_slots_full"` | rejection | Every Supply Dock material slot is assigned to another required item. |
 | `"order_fulfilled"` | rejection | The active order already has all required units of this item loaded or shipped. |
@@ -29331,7 +31969,9 @@ Snapshot list of property-distinct `ItemStack` values currently buffered. Use `.
 
 ## PickupOutputSlot
 
-**Returned by:** self.output on field Water Pumps and Mining Drills
+**Returned by:** `self.output` on field Water Pumps and Mining Drills
+
+Get `PickupOutputSlot` from the APIs listed here. It has no script constructor.
 
 ### Methods
 
@@ -29357,7 +31997,9 @@ Snapshot list of property-distinct `ItemStack` values waiting for carrier pickup
 
 ## Recipe
 
-**Returned by:** list_recipes() / find_recipe() on Smelter, Fabricator, Feed Maker, Refiner, and Fuel Assembler
+**Returned by:** `list_recipes()` / `find_recipe()` on Smelter, Fabricator, Feed Maker, Refiner, and Fuel Assembler
+
+Get `Recipe` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -29381,7 +32023,7 @@ Pre-translated display name of the recipe.
 
 ##### `.inputs: dict[str, int]`
 
-A dict `{item_id: count}` of materials consumed per run. Iterate via `.keys()`, `.values()`, `.items()`, or index: `recipe.inputs["iron_ore"]`.
+A `dict` `{item_id: count}` of materials consumed per run. Iterate via `.keys()`, `.values()`, `.items()`, or index: `recipe.inputs["iron_ore"]`.
 
 - **Returns** `dict[str, int]`
 
@@ -29399,7 +32041,7 @@ Amount of `output_item` produced per run: whole units for an item or tons for a 
 
 ##### `.duration_game_hours: float`
 
-Cycle duration in hours at full efficiency, including the querying Feed Maker's Mk tier. Inputs, power and output space must be available; overcrowding and blocked output can extend actual completion time.
+Cycle duration in hours at full efficiency, including the querying machine's Mk tier. Inputs, power and output space must be available; overcrowding and blocked output can extend actual completion time.
 
 - **Returns** `float`
 
@@ -29411,7 +32053,7 @@ Watts the machine draws while this recipe is running.
 
 ##### `.fluid_inputs: dict[str, float]`
 
-A dict `{port_name: tons_per_run}` of fluid consumed when one run completes (`"water_in"` etc.). Empty dict for recipes with no fluid input.
+A `dict` `{port_name: tons_per_run}` of fluid consumed when one run completes (`"water_in"` etc.). Empty `dict` for recipes with no fluid input.
 
 - **Returns** `dict[str, float]`
 
@@ -29424,7 +32066,7 @@ Concrete fluid id required by a generic input port, or `None` when the port itse
 
 ##### `.fluid_outputs: dict[str, float]`
 
-A dict `{port_name: tons_per_run}` of fluid deposited when one run completes. Empty dict for item-output recipes; Refiner recipes identify `gas_out` or `liquid_out` here.
+A `dict` `{port_name: tons_per_run}` of fluid deposited when one run completes. Empty `dict` for item-output recipes; Refiner recipes identify `gas_out` or `liquid_out` here.
 
 - **Returns** `dict[str, float]`
 
@@ -29452,6 +32094,8 @@ Units of `byproduct_item` produced per run; **0** for recipes with no byproduct.
 ## SaleResult
 
 **Returned by:** shop.sell(), shop.sell_all()
+
+Get `SaleResult` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -29492,6 +32136,8 @@ Whole-number credits earned by this sale.
 
 **Returned by:** shop.get_catalogue()
 
+Get `ShopItem` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.id: str`
@@ -29517,6 +32163,8 @@ Price in credits.
 ## Slot
 
 **Returned by:** inventory.get_slots()
+
+Get `Slot` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -29552,7 +32200,7 @@ Stack count in this slot.
 
 ##### `.properties: ItemProperties | None`
 
-Exact property dict for this stack, or `None` for an ordinary item. Pass it to property-aware transfer and capacity methods.
+Exact property `dict` for this stack, or `None` for an ordinary item. Pass it to property-aware transfer and capacity methods.
 
 - **Returns** `ItemProperties | None`
 
@@ -29578,7 +32226,9 @@ Per-instance bioluminescent glow `[r,g,b]` (0-255) for a held **coastal** fragme
 
 ## TransferResult
 
-**Returned by:** InputSlot.take(), InputSlot.eject(), InputSlot.flush(), VehicleInputSlot.take(), OutputSlot.send(), Cargo.compact(), storage_bin transfer methods, warehouse.compact()
+**Returned by:** `InputSlot.take()`, `InputSlot.eject()`, `InputSlot.flush()`, `VehicleInputSlot.take()`, `OutputSlot.send()`, `Cargo.compact()`, `storage_bin` transfer methods, `warehouse.compact()`
+
+Get `TransferResult` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -29611,7 +32261,9 @@ Whole-number units actually transferred, repositioned, or destroyed. Always **0*
 
 ## VehicleInputSlot
 
-**Returned by:** self.input on Rover and Pioneer
+**Returned by:** `self.input` on Rover and Pioneer
+
+Get `VehicleInputSlot` from the APIs listed here. It has no script constructor.
 
 ### Methods
 
@@ -29623,7 +32275,7 @@ Set a compatible cargo source by stable id or display name. A Rover or Pioneer m
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `name` | `str` | Stable id or display name of a compatible cargo source, or inventory |
+| `name` | `str` | Stable id or display name of a compatible cargo source, or `"inventory"` |
 
 - **Returns** `ActionResult`
 - **Result fields** `.status`, `.message`
@@ -29667,7 +32319,7 @@ Stable id of the currently connected cargo source, or empty string. `connect()` 
 
 ##### `.take(item_id: str, count: int, properties: ItemProperties | None = None, property_match: str | None = None) → TransferResult`
 
-Load up to whole-number `count` units of `item_id` into vehicle cargo from the connected source. A property dict selects stacks containing that subset by default. Pass `"exact"` as the fourth argument for one full identity; `None, "exact"` selects only propertyless items. `"any"` ignores properties. Exact source properties are retained. The transfer waits automatically for time proportional to units moved and requires Auto Feeders research.
+Load up to whole-number `count` units of `item_id` into vehicle cargo from the connected source. A property `dict` selects stacks containing that subset by default. Pass `"exact"` as the fourth argument for one full identity; `None, "exact"` selects only propertyless items. `"any"` ignores properties. Exact source properties are retained. The transfer takes time proportional to units moved and requires Auto Feeders research.
 
 *Parameters*
 
@@ -29675,8 +32327,8 @@ Load up to whole-number `count` units of `item_id` into vehicle cargo from the c
 | --- | --- | --- |
 | `item_id` | `str` | Item id to load |
 | `count` | `int` | Whole-number max units to load |
-| `properties` | `ItemProperties \| None` | Optional property dict, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
-| `property_match` | `str \| None` | Optional selection mode: any, subset, or exact |
+| `properties` | `ItemProperties \| None` | Optional property `dict`, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
+| `property_match` | `str \| None` | Optional selection mode: `"any"`, `"subset"`, or `"exact"` |
 
 - **Returns** `TransferResult`
 - **Result fields** `.status`, `.message`
@@ -29686,7 +32338,7 @@ Load up to whole-number `count` units of `item_id` into vehicle cargo from the c
 
 | Status | Kind | Meaning |
 | --- | --- | --- |
-| `"ok"` | success | Moved all `.moved` requested units. |
+| `"ok"` | success | Moved requested units: `.moved`. |
 | `"partial"` | partial | Moved `.moved` of `.requested` requested units; source availability or destination capacity limited the transfer. |
 | `"no_op"` | success | No units were requested, so no state changed. |
 | `"research_required"` | rejection | The required material-transfer research is not unlocked. |
@@ -29711,7 +32363,7 @@ Load up to whole-number `count` units of `item_id` into vehicle cargo from the c
 | `"target_wrong_material"` | rejection | The destination is latched to or accepts a different material. |
 | `"wrong_biome"` | rejection | The destination rejects this biological material because its biome is incompatible. |
 | `"target_unconfigured"` | rejection | The destination lacks the world-state configuration required to accept this material. |
-| `"hot_cargo_requires_cask"` | rejection | A transfer endpoint does not support this hot cargo. |
+| `"hot_cargo_requires_cask"` | rejection | A transfer endpoint does not support this radioactive cargo. |
 | `"order_item_not_required"` | rejection | The active order does not require this item. |
 | `"order_slots_full"` | rejection | Every Supply Dock material slot is assigned to another required item. |
 | `"order_fulfilled"` | rejection | The active order already has all required units of this item loaded or shipped. |
@@ -29747,6 +32399,8 @@ Snapshot list of property-distinct `ItemStack` values currently carried. Two ent
 
 **Returned by:** warehouse.slots()
 
+Get `WarehouseSlot` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.index: int`
@@ -29775,7 +32429,7 @@ This slot's capacity (units).
 
 ##### `.properties: ItemProperties | None`
 
-Exact property dict for the item variant in this physical slot, or `None` when the slot is empty or holds an ordinary item.
+Exact property `dict` for the item variant in this physical slot, or `None` when the slot is empty or holds an ordinary item.
 
 - **Returns** `ItemProperties | None`
 
@@ -29784,6 +32438,8 @@ Exact property dict for the item variant in this physical slot, or `None` when t
 ## BlockedContact
 
 **Returned by:** SonarScanResult.blocked
+
+Get `BlockedContact` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -29818,6 +32474,8 @@ Readable explanation of `.reason`, suitable for printing straight to the console
 
 **Returned by:** drone_small.collect(), drone_medium.collect(), drone_large.collect()
 
+Get `CollectResult` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.status: str`
@@ -29849,7 +32507,9 @@ Whole-number units committed to drone cargo by this call.
 
 ## ConstructorModule
 
-**Returned by:** self.constructor (Pioneer)
+**Returned by:** `self.constructor` (Pioneer)
+
+Get `ConstructorModule` from the APIs listed here. It has no script constructor.
 
 ### Methods
 
@@ -29861,7 +32521,7 @@ Execute a Plan Mode construction or deconstruction blueprint. Drive the Pioneer 
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `blueprint_id` | `str` | Pending, active, or paused blueprint id from the construction_blueprint queue. |
+| `blueprint_id` | `str` | Pending, active, or paused blueprint id from the `construction_blueprint` queue. |
 
 - **Returns** `ActionResult`
 - **Result fields** `.status`, `.message`
@@ -29890,7 +32550,9 @@ Execute a Plan Mode construction or deconstruction blueprint. Drive the Pioneer 
 
 ## DrillModule
 
-**Returned by:** self.drill (vehicles)
+**Returned by:** `self.drill` (vehicles)
+
+Get `DrillModule` from the APIs listed here. It has no script constructor.
 
 ### Methods
 
@@ -29926,7 +32588,7 @@ Max mineral hardness this drill can extract (**1** basic, **3** Industrial, **4*
 
 | Exception | Condition |
 | --- | --- |
-| `ReferenceError` | This DrillModule reference is stale because its module is no longer mounted. Read self.drill again after mounting a drill. |
+| `ReferenceError` | This `DrillModule` reference is stale because its module is no longer mounted. Read `self.drill` again after mounting a drill. |
 
 ##### `.speed_multiplier() → float`
 
@@ -29938,13 +32600,15 @@ Drill-time multiplier (**1.0** basic, **0.75** Industrial, **0.6** Heavy: lower 
 
 | Exception | Condition |
 | --- | --- |
-| `ReferenceError` | This DrillModule reference is stale because its module is no longer mounted. Read self.drill again after mounting a drill. |
+| `ReferenceError` | This `DrillModule` reference is stale because its module is no longer mounted. Read `self.drill` again after mounting a drill. |
 
 *Types / Fleet & Vehicles*
 
 ## DroneBattery
 
-**Returned by:** self.battery (electric drones)
+**Returned by:** `self.battery` (electric drones)
+
+Get `DroneBattery` from the APIs listed here. It has no script constructor.
 
 ### Methods
 
@@ -29958,7 +32622,7 @@ Current charge in Wh across mounted Battery Packs. Raises `ReferenceError` when 
 
 | Exception | Condition |
 | --- | --- |
-| `ReferenceError` | This drone does not currently have an electric powertrain and mounted Battery Pack. |
+| `ReferenceError` | This drone does not currently have an electric powertrain. |
 
 ##### `.capacity() → float`
 
@@ -29970,7 +32634,7 @@ Total charge capacity in Wh. Raises `ReferenceError` when this drone does not ha
 
 | Exception | Condition |
 | --- | --- |
-| `ReferenceError` | This drone does not currently have an electric powertrain and mounted Battery Pack. |
+| `ReferenceError` | This drone does not currently have an electric powertrain. |
 
 ##### `.percent() → float`
 
@@ -29982,13 +32646,15 @@ Charge as a fraction **0-1** (`level / capacity`). Raises `ReferenceError` when 
 
 | Exception | Condition |
 | --- | --- |
-| `ReferenceError` | This drone does not currently have an electric powertrain and mounted Battery Pack. |
+| `ReferenceError` | This drone does not currently have an electric powertrain. |
 
 *Types / Fleet & Vehicles*
 
 ## DroneCargo
 
-**Returned by:** self.cargo (drones)
+**Returned by:** `self.cargo` (drones)
+
+Get `DroneCargo` from the APIs listed here. It has no script constructor.
 
 ### Methods
 
@@ -30006,7 +32672,7 @@ Total physical capacity summed over every container: each mounted Cargo Pod (Sma
 
 ##### `.contents() → dict[str, int]`
 
-A dict mapping `item_id` → unit count for every material currently in cargo. Iterate with `.keys()` / `.items()`.
+A `dict` mapping `item_id` → unit count for every material currently in cargo. Iterate with `.keys()` / `.items()`.
 
 - **Returns** `dict[str, int]`
 
@@ -30030,7 +32696,7 @@ Free room for this specific material. **Each Cargo Pod holds one material**, so 
 
 ##### `.load(item_id: str, count: int, properties: ItemProperties | None = None, property_match: str | None = None) → TransferResult`
 
-Move up to whole-number `count` units into this drone's cargo, retaining exact properties. Loads from the docked Drone Depot stockpile or a field Mining Drill after the drone finishes its route there. Hot cargo loads from a local Lead Cask and requires Shield Plating.
+Move up to whole-number `count` units into this drone's cargo, retaining exact properties. Loads from the docked Drone Depot stockpile or a field Mining Drill after the drone finishes its route there. Radioactive cargo loads from a local Lead Cask and requires Shield Plating.
 
 *Parameters*
 
@@ -30038,8 +32704,8 @@ Move up to whole-number `count` units into this drone's cargo, retaining exact p
 | --- | --- | --- |
 | `item_id` | `str` | Item id to load |
 | `count` | `int` | Whole-number maximum units to load |
-| `properties` | `ItemProperties \| None` | Optional property dict, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
-| `property_match` | `str \| None` | Optional selection mode: any, subset, or exact |
+| `properties` | `ItemProperties \| None` | Optional property `dict`, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
+| `property_match` | `str \| None` | Optional selection mode: `"any"`, `"subset"`, or `"exact"` |
 
 - **Returns** `TransferResult`
 - **Result fields** `.status`, `.message`
@@ -30049,7 +32715,7 @@ Move up to whole-number `count` units into this drone's cargo, retaining exact p
 
 | Status | Kind | Meaning |
 | --- | --- | --- |
-| `"ok"` | success | Moved all `.moved` requested units. |
+| `"ok"` | success | Moved requested units: `.moved`. |
 | `"partial"` | partial | Moved `.moved` of `.requested` requested units; source availability or destination capacity limited the transfer. |
 | `"no_op"` | success | No units were requested, so no state changed. |
 | `"invalid_properties"` | rejection | The item property selector has an invalid shape or value. |
@@ -30060,14 +32726,14 @@ Move up to whole-number `count` units into this drone's cargo, retaining exact p
 | `"source_empty"` | rejection | The source has no matching units available. |
 | `"slots_full"` | rejection | The destination has capacity but no slot for this material identity. |
 | `"target_full"` | rejection | The destination has no capacity for matching units. |
-| `"needs_plating"` | rejection | This hot cargo requires Shield Plating on the drone. |
+| `"needs_plating"` | rejection | This radioactive cargo requires Shield Plating on the drone. |
 | `"cask_missing"` | rejection | No compatible Lead Cask is available at this outpost. |
 | `"source_changed"` | transient | The source changed between transfer planning and commit. |
 | `"target_changed"` | transient | The destination changed between transfer planning and commit. |
 
 ##### `.unload(item_id: str, count: int, properties: ItemProperties | None = None, property_match: str | None = None) → TransferResult`
 
-Move up to whole-number `count` units from this drone's cargo into its docked Drone Depot, retaining exact properties. Hot cargo unloads into a compatible Lead Cask.
+Move up to whole-number `count` units from this drone's cargo into its docked Drone Depot, retaining exact properties. Radioactive cargo unloads into a compatible Lead Cask.
 
 *Parameters*
 
@@ -30075,8 +32741,8 @@ Move up to whole-number `count` units from this drone's cargo into its docked Dr
 | --- | --- | --- |
 | `item_id` | `str` | Item id to unload |
 | `count` | `int` | Whole-number maximum units to unload |
-| `properties` | `ItemProperties \| None` | Optional property dict, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
-| `property_match` | `str \| None` | Optional selection mode: any, subset, or exact |
+| `properties` | `ItemProperties \| None` | Optional property `dict`, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
+| `property_match` | `str \| None` | Optional selection mode: `"any"`, `"subset"`, or `"exact"` |
 
 - **Returns** `TransferResult`
 - **Result fields** `.status`, `.message`
@@ -30086,7 +32752,7 @@ Move up to whole-number `count` units from this drone's cargo into its docked Dr
 
 | Status | Kind | Meaning |
 | --- | --- | --- |
-| `"ok"` | success | Moved all `.moved` requested units. |
+| `"ok"` | success | Moved requested units: `.moved`. |
 | `"partial"` | partial | Moved `.moved` of `.requested` requested units; source availability or destination capacity limited the transfer. |
 | `"no_op"` | success | No units were requested, so no state changed. |
 | `"invalid_properties"` | rejection | The item property selector has an invalid shape or value. |
@@ -30110,8 +32776,8 @@ Permanently destroy up to whole-number `count` units from this drone's cargo. Th
 | --- | --- | --- |
 | `item_id` | `str` | Item id to destroy |
 | `count` | `int` | Whole-number maximum units to destroy |
-| `properties` | `ItemProperties \| None` | Optional property dict, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
-| `property_match` | `str \| None` | Optional selection mode: any, subset, or exact |
+| `properties` | `ItemProperties \| None` | Optional property `dict`, matched as a subset by default. Omitted or `None` matches any properties; use `None` with `property_match="exact"` to select propertyless items only. |
+| `property_match` | `str \| None` | Optional selection mode: `"any"`, `"subset"`, or `"exact"` |
 
 - **Returns** `DiscardResult`
 - **Result fields** `.status`, `.message`
@@ -30121,7 +32787,7 @@ Permanently destroy up to whole-number `count` units from this drone's cargo. Th
 
 | Status | Kind | Meaning |
 | --- | --- | --- |
-| `"ok"` | success | Permanently discarded `.discarded` units. |
+| `"ok"` | success | Permanently discarded units: `.discarded`. |
 | `"partial"` | partial | Permanently discarded `.discarded` of `.requested` requested units. |
 | `"empty"` | success | The selected cargo area was already empty. |
 | `"no_op"` | success | No item was specified or the requested count was zero, so nothing was discarded. |
@@ -30133,7 +32799,9 @@ Permanently destroy up to whole-number `count` units from this drone's cargo. Th
 
 ## DroneOilTank
 
-**Returned by:** self.oil_tank (heli drones)
+**Returned by:** `self.oil_tank` (heli drones)
+
+Get `DroneOilTank` from the APIs listed here. It has no script constructor.
 
 ### Methods
 
@@ -30179,6 +32847,8 @@ Oil as a fraction **0-1**. Raises `ReferenceError` when this drone does not have
 
 **Returned by:** get_component("fleet")
 
+Get `Fleet` from the APIs listed here. It has no script constructor.
+
 ### Related object types
 
 - `DroneRef`
@@ -30209,7 +32879,9 @@ All owned vehicles and drones in one snapshot list. Use `.category` to branch be
 
 ## DroneRef
 
-**Returned by:** fleet.drones()
+**Returned by:** `fleet.drones()`
+
+Get `DroneRef` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -30340,6 +33012,8 @@ Position snapshot from when this ref was returned.
 
 **Returned by:** fleet.mobile_units()
 
+Get `MobileUnitRef` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.category: str`
@@ -30418,7 +33092,9 @@ Position snapshot from when this ref was returned.
 
 ## VehicleRef
 
-**Returned by:** fleet.vehicles()
+**Returned by:** `fleet.vehicles()`
+
+Get `VehicleRef` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -30528,7 +33204,9 @@ Position snapshot from when this ref was returned.
 
 ## MountSlot
 
-**Returned by:** modules() on a rover, pioneer, or drone
+**Returned by:** `modules()` on a rover, pioneer, or drone
+
+Get `MountSlot` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -30567,7 +33245,9 @@ List of item ids currently installed in this module's internal slots. `None` ent
 
 ## NavModule
 
-**Returned by:** self.nav (vehicles)
+**Returned by:** `self.nav` (vehicles)
+
+Get `NavModule` from the APIs listed here. It has no script constructor.
 
 ### Methods
 
@@ -30674,13 +33354,15 @@ Top-speed multiplier: **1.0** basic, or **1 + mounted Sport Nav count** on Pione
 
 ## SonarModule
 
-**Returned by:** self.sonar (vehicles)
+**Returned by:** `self.sonar` (vehicles)
+
+Get `SonarModule` from the APIs listed here. It has no script constructor.
 
 ### Methods
 
 ##### `.scan() → SonarScanResult`
 
-Point-sweep for nearby sites. A completed sweep can find no compatible contacts. Mineral contacts obey sonar range and hardness; thermal, water, oil, and exotic contacts also require matching research. A sweep that succeeded can still leave a contact unidentified: it is reported separately, with its coordinates and a reason, and stays unscanned until the right instrument reaches it. The sweep updates the Journal with newly classified sites. A stale captured module reference raises `ReferenceError`.
+Point-sweep for nearby sites. A sweep can complete without finding any compatible contacts. Mineral contacts must be within sonar range, and a mineral harder than the sonar's hardness limit stays unidentified; thermal, water, oil, and exotic contacts also require matching research. A sweep that succeeded can still leave a contact unidentified: it is reported separately, with its coordinates and a reason, and stays unscanned until the right instrument reaches it. The sweep updates the Journal with newly classified sites. A stale captured module reference raises `ReferenceError`.
 
 - **Returns** `SonarScanResult`
 - **Result fields** `.status`, `.message`
@@ -30702,11 +33384,11 @@ Point-sweep for nearby sites. A completed sweep can find no compatible contacts.
 
 | Exception | Condition |
 | --- | --- |
-| `ReferenceError` | This SonarModule reference is stale because its module is no longer mounted. Read self.sonar again after mounting a sonar. |
+| `ReferenceError` | This `SonarModule` reference is stale because its module is no longer mounted. Read `self.sonar` again after mounting a sonar. |
 
 ##### `.survey(site: str | Site | IdRecord) → SurveyResult`
 
-Reveal the details available for a productive site. An inert `GeologicalAnomaly` is already resolved, so surveying it is free. Re-surveying is also free unless a deeper sonar tier can reveal more. Malformed site values raise `ValueError`; a stale captured module reference raises `ReferenceError`.
+Reveal the details available for a productive site. With Seismic Sonar and Advanced Oil Extraction, an inert `GeologicalAnomaly` receives a paid deep-oil survey even if ordinary sonar already resolved it. Confirmed reservoirs become Oil Wells at the same coordinates. Known dry formations are free to re-survey. Other inert surveys are free. Re-surveying is also free unless a deeper sonar tier can reveal more. Malformed site values raise `ValueError`; a stale captured module reference raises `ReferenceError`.
 
 *Parameters*
 
@@ -30735,12 +33417,12 @@ Reveal the details available for a productive site. An inert `GeologicalAnomaly`
 
 | Exception | Condition |
 | --- | --- |
-| `ValueError` | survey() requires a non-empty site id or a Site object. |
-| `ReferenceError` | This SonarModule reference is stale because its module is no longer mounted. Read self.sonar again after mounting a sonar. |
+| `ValueError` | `survey()` requires a non-empty site id or a `Site` object. |
+| `ReferenceError` | This `SonarModule` reference is stale because its module is no longer mounted. Read `self.sonar` again after mounting a sonar. |
 
 ##### `.range() → float`
 
-Sonar range in meters (**50** basic, **180** Wide, **280** Deep). A stale captured module reference raises `ReferenceError`.
+Sonar range in meters (**50** basic, **180** Extended, **280** Deep or Seismic). A stale captured module reference raises `ReferenceError`.
 
 - **Returns** `float`
 
@@ -30748,11 +33430,11 @@ Sonar range in meters (**50** basic, **180** Wide, **280** Deep). A stale captur
 
 | Exception | Condition |
 | --- | --- |
-| `ReferenceError` | This SonarModule reference is stale because its module is no longer mounted. Read self.sonar again after mounting a sonar. |
+| `ReferenceError` | This `SonarModule` reference is stale because its module is no longer mounted. Read `self.sonar` again after mounting a sonar. |
 
 ##### `.hardness_limit() → int`
 
-Max mineral hardness this sonar can identify (**1** basic, **3** Wide, **4** Deep). A stale captured module reference raises `ReferenceError`.
+Max mineral hardness this sonar can identify (**1** basic, **3** Extended, **4** Deep or Seismic). A stale captured module reference raises `ReferenceError`.
 
 - **Returns** `int`
 
@@ -30760,26 +33442,28 @@ Max mineral hardness this sonar can identify (**1** basic, **3** Wide, **4** Dee
 
 | Exception | Condition |
 | --- | --- |
-| `ReferenceError` | This SonarModule reference is stale because its module is no longer mounted. Read self.sonar again after mounting a sonar. |
+| `ReferenceError` | This `SonarModule` reference is stale because its module is no longer mounted. Read `self.sonar` again after mounting a sonar. |
 
 ##### `.tier() → str`
 
-Survey-depth tier granted by the mounted sonar: `"basic"` / `"wide"` / `"deep"`. Determines thermal/exotic survey detail; `"deep"` is also required to discover oil wells once **Petroleum Survey** is unlocked. A stale captured module reference raises `ReferenceError`.
+Survey-depth tier granted by the mounted sonar: `"basic"` / `"wide"` / `"deep"` / `"seismic"`. Determines thermal/exotic survey detail; Deep or Seismic Sonar is also required to discover oil wells once **Petroleum Survey** is unlocked. A stale captured module reference raises `ReferenceError`.
 
 - **Returns** `str`
-- **Possible values** `"basic"`, `"wide"`, `"deep"`
+- **Possible values** `"basic"`, `"wide"`, `"deep"`, `"seismic"`
 
 *Raises*
 
 | Exception | Condition |
 | --- | --- |
-| `ReferenceError` | This SonarModule reference is stale because its module is no longer mounted. Read self.sonar again after mounting a sonar. |
+| `ReferenceError` | This `SonarModule` reference is stale because its module is no longer mounted. Read `self.sonar` again after mounting a sonar. |
 
 *Types / Fleet & Vehicles*
 
 ## SonarScanResult
 
 **Returned by:** SonarModule.scan()
+
+Get `SonarScanResult` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -30814,6 +33498,8 @@ Contacts the sweep detected but this sonar cannot identify, nearest first, and e
 
 **Returned by:** SonarModule.survey()
 
+Get `SurveyResult` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.status: str`
@@ -30840,6 +33526,8 @@ Surveyed concrete `Site`, or `None` when the survey was rejected.
 ## ComputerDeployResult
 
 **Returned by:** computer.deploy()
+
+Get `ComputerDeployResult` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -30868,6 +33556,8 @@ Id of the machine that was created, empty when nothing was deployed. Pass it to 
 
 **Returned by:** .pending_constructions() / .active_constructions() / .paused_constructions()
 
+Get `Construction` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.id: str`
@@ -30878,10 +33568,10 @@ Unique blueprint id. Pass to `self.constructor.execute(id)`.
 
 ##### `.kind: str`
 
-What's being built or removed. One of `"pipe"` / `"power_line"` / `"gas_bridge"` / `"liquid_bridge"` / `"power_bridge"` / `"deconstruct"` / `"outpost"` / `"thermal_cap"` / `"water_pump"` / `"oil_pump"` / `"exotic_gas_cap"` / `"exotic_spring_tap"` / `"mining_drill"` / `"mining_drill_industrial"` / `"mining_drill_heavy"`.
+What's being built, upgraded or removed. One of `"pipe"` / `"power_line"` / `"gas_bridge"` / `"liquid_bridge"` / `"power_bridge"` / `"deconstruct"` / `"upgrade"` / `"outpost"` / `"thermal_cap"` / `"water_pump"` / `"oil_pump"` / `"exotic_gas_cap"` / `"exotic_spring_tap"` / `"mining_drill"` / `"mining_drill_industrial"` / `"mining_drill_heavy"`.
 
 - **Returns** `str`
-- **Possible values** `"pipe"`, `"power_line"`, `"gas_bridge"`, `"liquid_bridge"`, `"power_bridge"`, `"deconstruct"`, `"outpost"`, `"thermal_cap"`, `"water_pump"`, `"oil_pump"`, `"exotic_gas_cap"`, `"exotic_spring_tap"`, `"mining_drill"`, `"mining_drill_industrial"`, `"mining_drill_heavy"`
+- **Possible values** `"pipe"`, `"power_line"`, `"gas_bridge"`, `"liquid_bridge"`, `"power_bridge"`, `"upgrade"`, `"deconstruct"`, `"outpost"`, `"thermal_cap"`, `"water_pump"`, `"oil_pump"`, `"exotic_gas_cap"`, `"exotic_spring_tap"`, `"mining_drill"`, `"mining_drill_industrial"`, `"mining_drill_heavy"`
 
 ##### `.medium: str | None`
 
@@ -30892,7 +33582,7 @@ Physical utility layer: `"gas"`, `"liquid"`, or `"power"`; `None` for point stru
 
 ##### `.position: Position`
 
-Tile-aligned world coordinates as a `Position` snapshot (`.x`, `.y`). Pioneer drives here to start/resume construction.
+World coordinates as a `Position` snapshot (`.x`, `.y`). Pioneer drives here to start or resume construction. Pump upgrades use the existing pump's service area.
 
 - **Returns** `Position`
 
@@ -30920,6 +33610,8 @@ Units of `.required_item` needed to accept this job. Most single-piece jobs need
 
 **Returned by:** any `<fluid>_in` / `<fluid>_out` property on a flow-network machine
 
+Get `FluidPort` from the APIs listed here. It has no script constructor.
+
 ### Related object types
 
 - `FluidConnection`
@@ -30928,7 +33620,7 @@ Units of `.required_item` needed to accept this job. Most single-piece jobs need
 
 ##### `.connect(target: str) → ActionResult`
 
-Record or replace this port's one declared target, using a stable machine id or display name. The target must expose a compatible opposite-direction port. Either the provider or consumer may declare the relationship; one declaration is enough. Local machines transfer directly, while remote intent waits for any completed conflict-free same-medium component reaching both anchors.
+Record or replace this port's one declared target, using a stable machine id or display name. The target must expose a compatible opposite-direction port. Either the provider or consumer may declare the relationship; one declaration is enough. Local machines transfer directly, while remote intent waits for any completed conflict-free pipe network of the same medium reaching both anchors.
 
 *Parameters*
 
@@ -31004,6 +33696,8 @@ Current total live flow in **t/h**. **0** may mean idle, starved, full, unreacha
 
 **Returned by:** FluidPort.connections()
 
+Get `FluidConnection` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.machine_id: str`
@@ -31020,7 +33714,7 @@ Current display name of the peer machine.
 
 ##### `.fluid: str | None`
 
-Exact fluid established by this relationship, or `None` while the relationship is neutral or incompatible.
+Exact fluid established by this relationship, or `None` while the relationship is `"neutral"` or `"incompatible"`.
 
 - **Returns** `str | None`
 - **Possible values** `"steam"`, `"water"`, `"oil"`, `"frozen_essence"`, `"coastal_essence"`, `"geothermal_essence"`, `"volcanic_essence"`, `"deep_essence"`, `"ammonia"`, `"swamp_gas"`, `"raw_sulfur_gas"`, `"sulfur_gas"`, `"raw_chlorine"`, `"chlorine"`, `"brine"`, `"raw_cryofluid"`, `"cryofluid"`, `"raw_quicksilver"`, `"quicksilver"`
@@ -31034,7 +33728,7 @@ Who owns the durable declaration: `"self"`, `"peer"`, or `"both"`. One side is s
 
 ##### `.state: str`
 
-Connection state: `"local"` for a direct same-outpost link; `"ready"` for a usable remote pipe network; `"unreachable"` when no completed component can be assigned; `"conflict"` when the assigned component carries different fluid connections; `"neutral"` before a fluid is known; or `"incompatible"` when the two fluids disagree.
+Connection state: `"local"` for a direct same-outpost link; `"ready"` for a usable remote pipe network; `"unreachable"` when no completed pipe network connects both ends; `"conflict"` when that pipe network carries different fluid connections; `"neutral"` before a fluid is known; or `"incompatible"` when the two fluids disagree.
 
 - **Returns** `str`
 - **Possible values** `"local"`, `"ready"`, `"unreachable"`, `"conflict"`, `"neutral"`, `"incompatible"`
@@ -31044,6 +33738,8 @@ Connection state: `"local"` for a direct same-outpost link; `"ready"` for a usab
 ## Pipe
 
 **Returned by:** list_pipes() / get_pipe(pipe_id)
+
+Get `Pipe` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -31076,20 +33772,20 @@ Pipe hardware medium: `"gas"` or `"liquid"`. Use `contents()` for the exact subs
 
 ##### `.contents() → str | None`
 
-The one exact fluid established by complete player connections whose locations this physical component reaches, such as `"steam"`, `"water"`, or `"oil"`. Returns `None` when there is no complete connection or multiple exact substances conflict. Activity, power, throttle, flow, and headroom do not change this identity.
+The one exact fluid established by complete player connections whose locations this pipe network reaches, such as `"steam"`, `"water"`, or `"oil"`. Returns `None` when there is no complete connection or multiple exact substances conflict. Activity, power, throttle, flow, and headroom do not change this identity.
 
 - **Returns** `str | None`
 - **Possible values** `"steam"`, `"water"`, `"oil"`, `"frozen_essence"`, `"coastal_essence"`, `"geothermal_essence"`, `"volcanic_essence"`, `"deep_essence"`, `"ammonia"`, `"swamp_gas"`, `"raw_sulfur_gas"`, `"sulfur_gas"`, `"raw_chlorine"`, `"chlorine"`, `"brine"`, `"raw_cryofluid"`, `"cryofluid"`, `"raw_quicksilver"`, `"quicksilver"`
 
 ##### `.conflicting_contents() → list[str]`
 
-Sorted exact substances established by complete provider-consumer connections when more than one uses this physical component, or an empty list. A non-empty result means flow is halted.
+Sorted exact substances established by complete provider-consumer connections when more than one uses this pipe network, or an empty list. A non-empty result means flow is halted.
 
 - **Returns** `list[str]`
 
 ##### `.connections() → list[dict[str, str]]`
 
-Diagnostic machine-port claims established on this physical component. Each dictionary contains `machine_id`, `port`, `direction`, `fluid`, and a representative `pipe_id` from the component; players never connect to that pipe id directly.
+Diagnostic machine-port claims established on this pipe network. Each dictionary contains `machine_id`, `port`, `direction`, `fluid`, and a representative `pipe_id` from the pipe network; players never connect to that pipe id directly.
 
 - **Returns** `list[dict[str, str]]`
 
@@ -31119,7 +33815,7 @@ Total length of the pipe in meters, summed over every H/V segment.
 
 ##### `.flow_rate() → float`
 
-Tons per world hour (`t/h`) currently moving through the pipe. **0** while incomplete, stalled, source-empty, or conflicted. Live read.
+Tons per world hour (t/h) currently moving through the pipe. **0** while incomplete, stalled, source-empty, or conflicted. Live read.
 
 - **Returns** `float`
 
@@ -31135,6 +33831,8 @@ Current pipe state: one of `"flowing"` / `"stalled"` / `"incomplete"` / `"no_sou
 ## PowerGrid
 
 **Returned by:** power_control.grids() / power_control.grid(target_id)
+
+Get `PowerGrid` from the APIs listed here. It has no script constructor.
 
 ### Related object types
 
@@ -31220,6 +33918,8 @@ Total Lightning Rod reserve capacity on this grid in Wh.
 
 **Returned by:** PowerGrid.members
 
+Get `PowerGridMember` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.id: str`
@@ -31300,6 +34000,8 @@ Lightning reserve capacity in Wh, or 0 for another machine role.
 
 **Returned by:** power_control.total()
 
+Get `PowerSummary` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.grid_count: int`
@@ -31356,6 +34058,8 @@ Total Lightning Rod reserve capacity across every grid in Wh.
 
 **Returned by:** run.status()
 
+Get `RunControlStatus` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.script_id: str`
@@ -31366,14 +34070,14 @@ The script attached to the requested machine slot.
 
 ##### `.state: str`
 
-Current execution state: idle, running, paused, error, or completed. Sleeping and waiting for actions count as running.
+Current execution state: `"idle"`, `"running"`, `"paused"`, `"error"`, or `"completed"`. Sleeping and waiting for actions count as `"running"`.
 
 - **Returns** `str`
 - **Possible values** `"idle"`, `"running"`, `"paused"`, `"error"`, `"completed"`
 
 ##### `.variant_id: str`
 
-Identity of the assigned variant, suitable for run.apply_variant().
+Identity of the assigned variant, suitable for `run.apply_variant()`.
 
 - **Returns** `str`
 
@@ -31385,19 +34089,19 @@ Name of the assigned variant.
 
 ##### `.modified: bool`
 
-True when the machine's working code differs from its saved named variant. Editing a shared variant elsewhere can cause this difference. Main always reads False because it tracks its own working code.
+`True` when the machine's working code differs from its saved named variant. Editing a shared variant elsewhere can cause this difference. While `Main` is the active variant, this is always `False`, because `Main` tracks its own working code.
 
 - **Returns** `bool`
 
 ##### `.source_pending: bool`
 
-True when a running or paused script still has an older code version loaded than its current working code.
+`True` when a running or paused script still has an older code version loaded than its current working code.
 
 - **Returns** `bool`
 
 ##### `.editor_busy: bool`
 
-True while an editor has pending changes or an unresolved conflict, or a recovered source draft differs from the current code.
+`True` while an editor has pending changes or an unresolved conflict, or a recovered source draft differs from the current code.
 
 - **Returns** `bool`
 
@@ -31407,11 +34111,13 @@ True while an editor has pending changes or an unresolved conflict, or a recover
 
 **Returned by:** run.variants()
 
+Get `ScriptVariantRef` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.id: str`
 
-Variant identifier passed to run.apply_variant(). Shared variants can be applied to compatible machines. Main belongs only to its original script. Renaming changes the id; reusing a deleted name in the same catalog reuses its id.
+Variant identifier passed to `run.apply_variant()`. Shared variants can be applied to compatible machines. `Main` belongs only to its original script. Renaming changes the id; reusing a deleted name in the same catalog reuses its id.
 
 - **Returns** `str`
 
@@ -31431,7 +34137,9 @@ The description saved with the variant.
 
 ## BroadcastInfo
 
-**Returned by:** comms.latest_info(channel); comms.wait_broadcast(channel).broadcast after status == "ok"
+**Returned by:** `comms.latest_info(channel)`; `comms.wait_broadcast(channel).broadcast` after `status == "ok"`
+
+Get `BroadcastInfo` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -31457,7 +34165,9 @@ Simulation seconds since this broadcast, sampled when `latest_info()` is read or
 
 ## CommsMessage
 
-**Returned by:** comms.pending(channel) list entries; comms.receive(channel).packet, comms.wait(channel).packet, or comms.wait_any(channels).packet after status == "ok"
+**Returned by:** `comms.pending(channel)` list entries; `comms.receive(channel).packet`, `comms.wait(channel).packet`, or `comms.wait_any(channels).packet` after `status == "ok"`
+
+Get `CommsMessage` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -31481,7 +34191,7 @@ Game tick when the message was sent.
 
 ##### `.value: JsonValue`
 
-JSON-safe message value: `None`, boolean, number, string, list, or dict with string keys.
+JSON-safe message value: `None`, boolean, number, string, `list`, or `dict` with string keys.
 
 - **Returns** `JsonValue`
 
@@ -31490,6 +34200,8 @@ JSON-safe message value: `None`, boolean, number, string, list, or dict with str
 ## DockSlot
 
 **Returned by:** supply_dock.slots()
+
+Get `DockSlot` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -31515,7 +34227,9 @@ Units currently stored in this slot.
 
 ## Order
 
-**Returned by:** orders.list_orders() / orders.list_upcoming_orders() / orders.list_weekly_orders() / orders.get_order() / orders.completed_orders() (Earth Orders)
+**Returned by:** `orders.list_orders()` / `orders.list_upcoming_orders()` / `orders.list_weekly_orders()` / `orders.get_order()` / `orders.completed_orders()` (Earth Orders)
+
+Get `Order` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -31533,13 +34247,13 @@ Pre-translated display name of the Earth Order.
 
 ##### `.requires: dict[str, int]`
 
-A dict `{item_id: count}` of what Earth is demanding. Use `.keys()`, `.values()`, `.items()`, or index directly: `order.requires["iron_ore"]`.
+A `dict` `{item_id: count}` of what Earth is demanding. Use `.keys()`, `.values()`, `.items()`, or index directly: `order.requires["iron_ore"]`.
 
 - **Returns** `dict[str, int]`
 
 ##### `.shipped: dict[str, int]`
 
-A dict `{item_id: count}` of how many units of each item have already landed. Empty for upcoming orders. Use `.get(item_id, 0)` to read safely.
+A `dict` `{item_id: count}` of how many units of each item have already landed. Empty for upcoming orders. Use `.get(item_id, 0)` to read safely.
 
 - **Returns** `dict[str, int]`
 
@@ -31601,6 +34315,8 @@ Pre-translated issuing contractor name, or `None` for Weekly Earth Orders.
 
 **Returned by:** comms.receive(); comms.wait()
 
+Get `ReceiveResult` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.status: str`
@@ -31627,6 +34343,8 @@ The consumed `CommsMessage` when `status == "ok"`, otherwise `None`. When a mess
 ## SendResult
 
 **Returned by:** comms.send()
+
+Get `SendResult` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -31655,11 +34373,13 @@ The queued message's positive integer id when `status == "ok"`, or `None` when n
 
 **Returned by:** transmitter.get_info()
 
+Get `TransmitterInfo` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.connected: bool`
 
-True if connected to a target.
+`True` if connected to a target.
 
 - **Returns** `bool`
 
@@ -31675,6 +34395,8 @@ Connected planet id, or `"none"` when disconnected.
 ## WaitAnyResult
 
 **Returned by:** comms.wait_any()
+
+Get `WaitAnyResult` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -31709,6 +34431,8 @@ The consumed `CommsMessage` when `status == "ok"`; otherwise `None`. Its id, sen
 
 **Returned by:** comms.wait_broadcast()
 
+Get `WaitBroadcastResult` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.status: str`
@@ -31734,7 +34458,9 @@ The captured `BroadcastInfo` when `status == "ok"`; otherwise `None`. It contain
 
 ## Panel
 
-**Returned by:** panel (panel scripts only). Create one on the **Control Room** page; see `custom_panels`
+**Returned by:** `panel` (panel scripts only). Create one on the **Control Room** page; see `custom_panels`
+
+Get `Panel` from the APIs listed here. It has no script constructor.
 
 ### Methods
 
@@ -31838,7 +34564,7 @@ toggle(10, 12, true, "powered")
 
 ##### `pill(x: float, y: float, text: str, color?: str, size?: float) → None`
 
-Rounded badge with text, achievement-style. Color accepts theme tokens (`"accent"`, `"success"`, `"warning"`, `"error"`, `"text-muted"`) or hex. Use for status labels or category tags.
+Rounded badge with text, achievement-style. `color` accepts theme tokens (`"accent"`, `"success"`, `"warning"`, `"error"`, `"text-muted"`) or hex. Use for status labels or category tags.
 
 ```preview
 pill(10, 22, "earned", "success")
@@ -31879,31 +34605,16 @@ counter(16, 38, 87, "shipped", 26)
 
 ##### `progress_bar(x: float, y: float, w: float, h: float, fraction: float, color?: str) → None`
 
-Horizontal fill bar with track + filled accent. `fraction` clamps to **0-1**. Color defaults to `"accent"`; use `"success"`, `"warning"`, `"error"` for traffic-light cues.
+Horizontal fill bar with track + filled accent. `fraction` clamps to **0-1**. `color` defaults to `"accent"`; use `"success"`, `"warning"`, `"error"` for traffic-light cues.
 
 ```preview
 progress_bar(0.72, "success")
 ```
 
-*Parameters*
-
-| Name | Type | Description |
-| --- | --- | --- |
-| `x` | `float` | Left edge (pixels) |
-| `y` | `float` | Top edge (pixels) |
-| `w` | `float` | Width (pixels) |
-| `h` | `float` | Height (pixels) |
-| `fraction` | `float` | Fill (0-1) |
-| `color` | `str` | Theme token, or any CSS color (hex, `rgb()`, `hsl()`, named). |
-
-- **Returns** `None`
-
-##### `vertical_bar(x: float, y: float, w: float, h: float, fraction: float, color?: str) → None`
-
-Vertical fill bar, fills from the bottom up. Same `fraction` and color rules as `progress_bar`. Use when the panel layout favors verticality (multi-tank stacks, atmospheric stacks).
+`color` also takes three gradient presets, the meters on machine cards: `"good-high"` runs red, orange, green, for a value that is good when high (battery charge); `"good-low"` runs green, orange, red, for one that is good when low (heat, waste); `"neutral"` runs accent to green, for plain progress. The gradient spans the whole bar and the fill reveals it, so a low `"good-high"` bar shows only its red end. The colors follow the player's theme.
 
 ```preview
-vertical_bar(110, 10, 30, 60, 0.6)
+progress_bar(0.3, "good-high")
 ```
 
 *Parameters*
@@ -31915,7 +34626,32 @@ vertical_bar(110, 10, 30, 60, 0.6)
 | `w` | `float` | Width (pixels) |
 | `h` | `float` | Height (pixels) |
 | `fraction` | `float` | Fill (0-1) |
-| `color` | `str` | Theme token, or any CSS color (hex, `rgb()`, `hsl()`, named). |
+| `color` | `str` | Theme token, gradient preset (`"good-high"`, `"good-low"`, `"neutral"`), or any CSS color (hex, `rgb()`, `hsl()`, named). |
+
+- **Returns** `None`
+
+##### `vertical_bar(x: float, y: float, w: float, h: float, fraction: float, color?: str) → None`
+
+Vertical fill bar, fills from the bottom up. Same `fraction` and `color` rules as `progress_bar`, including the gradient presets `"good-high"`, `"good-low"` and `"neutral"`, which run from the bottom up. Use when the panel layout favors verticality (multi-tank stacks, atmospheric stacks).
+
+```preview
+vertical_bar(110, 10, 30, 60, 0.6)
+```
+
+```preview
+vertical_bar(110, 10, 30, 60, 0.8, "good-low")
+```
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `x` | `float` | Left edge (pixels) |
+| `y` | `float` | Top edge (pixels) |
+| `w` | `float` | Width (pixels) |
+| `h` | `float` | Height (pixels) |
+| `fraction` | `float` | Fill (0-1) |
+| `color` | `str` | Theme token, gradient preset (`"good-high"`, `"good-low"`, `"neutral"`), or any CSS color (hex, `rgb()`, `hsl()`, named). |
 
 - **Returns** `None`
 
@@ -31938,7 +34674,7 @@ bar_chart(0, 0, 0, 0, [42, 80, 26, 61, 95], 100)
 | `values` | `list[float]` | Numeric values to plot |
 | `max` | `float` | Optional maximum value |
 | `labels` | `list[str]` | Optional labels |
-| `color` | `str` | Theme token, or any CSS color (hex, `rgb()`, `hsl()`, named), for every bar. Without it the bars alternate accent and warning. |
+| `color` | `str` | Theme token, or any CSS color (hex, `rgb()`, `hsl()`, named), for every bar. Without it the bars alternate `"accent"` and `"warning"`. |
 
 - **Returns** `None`
 
@@ -32308,7 +35044,7 @@ Drop every stored widget value on this card. Widget keys are never swept automat
 
 ##### `mouse() → PanelMouse`
 
-Where the cursor is on this card, in the same coordinates you draw in. `over` is `False` while the cursor is elsewhere. The sample is taken once per tick, so a highlight drawn from it follows the cursor about a frame behind. `pressed` and `released` say the left button went down on this card, or back up, since your previous call. Each is handed out once, so read the mouse once per frame. Together they let a card drag things.
+Where the cursor is on this card, in the same coordinates you draw in. `over` is `False` while the cursor is elsewhere. The sample is taken once per tick, so a highlight drawn from it follows the cursor about a frame behind. `pressed` says the left button went down on this card, and `released` says it came back up anywhere, since your previous call. Each is handed out once, so read the mouse once per frame. Together they let a card drag things.
 
 ```
 m = panel.mouse()
@@ -32353,7 +35089,7 @@ while True:
 
 ##### `draw_text(x: float, y: float, text: str, size?: float, color?: str, wrap?: float) → None`
 
-Text rendered in monospace at the given size. Optional `wrap` (pixel width) enables greedy word-wrapping into a multi-line block, useful for log feeds and order briefings. Color accepts theme tokens or hex.
+Text rendered in monospace at the given size. Optional `wrap` (pixel width) enables greedy word-wrapping into a multi-line block, useful for log feeds and order briefings. `color` accepts theme tokens or hex.
 
 ```preview
 draw_text(10, 24, "Hello, panel.", 14, "text-bright")
@@ -32558,7 +35294,7 @@ polyline([10, 60, 60, 20, 110, 50, 160, 15, 210, 40], "accent", 2)
 
 ##### `texture(key: str, rows: list[str], palette: dict[str, str | None]) → None`
 
-Create a small picture for `draw_texture` to draw. `rows` is the picture, one string per row, and each character is looked up in `palette`, which maps it to a hex colour or to `None` for a transparent pixel. Every row is the same length, up to **128** by **128** pixels. Using the same key again replaces that texture. A card holds up to **32** textures and **131,072** pixels of them in total. Textures belong to the running script, so create them at the top, before your loop.
+Create a small picture for `draw_texture` to draw. `rows` is the picture, one string per row, and each character is looked up in `palette`, which maps it to a hex colour or to `None` for a transparent pixel. Every row is the same length, up to **128** by **128** pixels. Using the same `key` again replaces that texture. A card holds up to **32** textures and **131,072** pixels of them in total. Textures belong to the running script, so create them at the top, before your loop.
 
 ```
 panel.texture("floor", [
@@ -32581,7 +35317,7 @@ panel.texture("floor", [
 
 | Exception | Condition |
 | --- | --- |
-| `TypeError` | The key is not a non-empty string, `rows` is not a non-empty list of strings, `palette` is not a dict, a palette key is not a string, or a palette colour is neither a string nor `None`. |
+| `TypeError` | The `key` is not a non-empty string, `rows` is not a non-empty list of strings, `palette` is not a `dict`, a palette key is not a string, or a palette colour is neither a string nor `None`. |
 | `ValueError` | A row is empty, the rows differ in length or exceed 128 by 128 pixels, a palette key is not exactly one character, a palette colour is not a hex colour, a row uses a character the palette does not have, or adding or replacing the texture would exceed the card's limits of 32 textures or 131,072 total pixels. |
 
 ##### `draw_texture(key: str, x: float, y: float, w?: float, h?: float) → None`
@@ -32640,7 +35376,7 @@ Close the innermost `clip_rect`, or every open one when passed `True`.
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `all` | `bool` | True closes every open clip; omitted closes the innermost one. |
+| `all` | `bool` | `True` closes every open clip; omitted closes the innermost one. |
 
 - **Returns** `None`
 
@@ -32699,6 +35435,31 @@ Current logical canvas height in pixels: **200** for a one-row card or **400** f
 
 **Returned by:** `panel.last_bounds()` (panel scripts only)
 
+Import `PanelBounds` with `from __builtins__ import PanelBounds`. Arguments accept positional and keyword forms. Use `vars()` to obtain a dictionary for storage or messaging.
+
+##### `PanelBounds(x: float, y: float, w: float, h: float) → PanelBounds`
+
+Create a local `PanelBounds` value for your script. Creating this value does not change the world.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `x` | `float` | Left edge in panel coordinates. Must be a finite number. |
+| `y` | `float` | Top edge in panel coordinates. Must be a finite number. |
+| `w` | `float` | Width in pixels. Must be a finite number. Must be at least 0. |
+| `h` | `float` | Height in pixels. Must be a finite number. Must be at least 0. |
+
+- **Returns** `PanelBounds`
+
+*Raises*
+
+| Exception | Condition |
+| --- | --- |
+| `TypeError` | An argument has the wrong type, or the call has missing, excess, duplicate, or unknown arguments. |
+| `ValueError` | A numeric value is outside the permitted range, or the bounds are reversed. |
+| `OverflowError` | An integer cannot be represented safely as a game number. |
+
 ### Properties
 
 ##### `.x: float`
@@ -32731,6 +35492,8 @@ Height in pixels.
 
 **Returned by:** `panel.clicks()` (panel scripts only)
 
+Get `PanelClick` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.x: float`
@@ -32751,6 +35514,8 @@ Click Y in panel coordinates.
 
 **Returned by:** `panel.keys()` (panel scripts only)
 
+Get `PanelKey` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.key: str`
@@ -32761,25 +35526,25 @@ Key name, such as `"a"`, `"Enter"`, or `"ArrowLeft"`.
 
 ##### `.ctrl: bool`
 
-True when Ctrl was held.
+`True` when Ctrl was held.
 
 - **Returns** `bool`
 
 ##### `.shift: bool`
 
-True when Shift was held.
+`True` when Shift was held.
 
 - **Returns** `bool`
 
 ##### `.alt: bool`
 
-True when Alt was held.
+`True` when Alt was held.
 
 - **Returns** `bool`
 
 ##### `.meta: bool`
 
-True when Cmd or the Windows key was held.
+`True` when Cmd or the Windows key was held.
 
 - **Returns** `bool`
 
@@ -32788,6 +35553,8 @@ True when Cmd or the Windows key was held.
 ## PanelMouse
 
 **Returned by:** `panel.mouse()` (panel scripts only)
+
+Get `PanelMouse` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -32805,19 +35572,19 @@ Cursor Y in panel coordinates.
 
 ##### `.over: bool`
 
-True while the cursor is over this card.
+`True` while the cursor is over this card.
 
 - **Returns** `bool`
 
 ##### `.pressed: bool`
 
-True if the left button went down on this card since the previous `mouse()` call.
+`True` if the left button went down on this card since the previous `mouse()` call.
 
 - **Returns** `bool`
 
 ##### `.released: bool`
 
-True if the left button came back up since the previous `mouse()` call, even when it was released off the card.
+`True` if the left button came back up since the previous `mouse()` call, even when it was released off the card.
 
 - **Returns** `bool`
 
@@ -32826,6 +35593,29 @@ True if the left button came back up since the previous `mouse()` call, even whe
 ## PanelSize
 
 **Returned by:** `panel.measure_text()` (panel scripts only)
+
+Import `PanelSize` with `from __builtins__ import PanelSize`. Arguments accept positional and keyword forms. Use `vars()` to obtain a dictionary for storage or messaging.
+
+##### `PanelSize(w: float, h: float) → PanelSize`
+
+Create a local `PanelSize` value for your script. Creating this value does not change the world.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `w` | `float` | Width in pixels. Must be a finite number. Must be at least 0. |
+| `h` | `float` | Height in pixels, every wrapped line included. Must be a finite number. Must be at least 0. |
+
+- **Returns** `PanelSize`
+
+*Raises*
+
+| Exception | Condition |
+| --- | --- |
+| `TypeError` | An argument has the wrong type, or the call has missing, excess, duplicate, or unknown arguments. |
+| `ValueError` | A numeric value is outside the permitted range, or the bounds are reversed. |
+| `OverflowError` | An integer cannot be represented safely as a game number. |
 
 ### Properties
 
@@ -32846,6 +35636,8 @@ Height in pixels, every wrapped line included.
 ## Contract
 
 **Returned by:** self.contract
+
+Get `Contract` from the APIs listed here. It has no script constructor.
 
 ### Concrete subtypes
 
@@ -32888,7 +35680,7 @@ Credit reward for completing this contract.
 
 ##### `.status: str`
 
-Contract status: 'available' or 'completed'.
+Contract status: `"available"` or `"completed"`.
 
 - **Returns** `str`
 - **Possible values** `"available"`, `"completed"`
@@ -32900,6 +35692,8 @@ Contract status: 'available' or 'completed'.
 Extends `Contract`
 
 **Returned by:** self.contract (beat_the_system)
+
+Get `BeatTheSystemContract` from the APIs listed here. It has no script constructor.
 
 ### Related object types
 
@@ -32928,7 +35722,7 @@ Credit reward for completing this contract.
 
 ##### `.status: str`
 
-Contract status: 'available' or 'completed'.
+Contract status: `"available"` or `"completed"`.
 
 - **Returns** `str`
 - **Possible values** `"available"`, `"completed"`
@@ -32944,6 +35738,8 @@ The alien Arbiter. It takes an immediate win, otherwise blocks your immediate wi
 ## Arbiter
 
 **Returned by:** .arbiter
+
+Get `Arbiter` from the APIs listed here. It has no script constructor.
 
 ### Methods
 
@@ -32964,7 +35760,7 @@ Start a fresh 3×3 game on an empty board; you move first. After a finished game
 
 ##### `.restart() → ActionResult`
 
-Abandon any game in progress and start fresh; you move first. Abandoning a game mid-play counts as a non-win and resets your current-run streak to 0. Like new_game(), it pauses about half a second between games.
+Abandon any game in progress and start fresh; you move first. Abandoning a game mid-play counts as a non-win and resets your current-run streak to 0. Like `new_game()`, it pauses about half a second between games.
 
 - **Returns** `ActionResult`
 - **Result fields** `.status`, `.message`
@@ -33005,18 +35801,18 @@ Place your mark in a whole-number cell in the **0-8** range (row-major), then th
 
 | Exception | Condition |
 | --- | --- |
-| `TypeError` | Arbiter.play() requires a numeric cell. |
-| `ValueError` | Arbiter.play() requires a finite whole-number cell in the **0-8** range. |
+| `TypeError` | `Arbiter.play()` requires a numeric cell. |
+| `ValueError` | `Arbiter.play()` requires a finite whole-number cell in the **0-8** range. |
 
 ##### `.board() → list[str]`
 
-The 9 board cells as a list, index 0-8 row-major. Each cell is "" (empty), "you", or "arbiter".
+The 9 board cells as a list, index 0-8 row-major. Each cell is `""` (empty), `"you"`, or `"arbiter"`.
 
 - **Returns** `list[str]`
 
 ##### `.result() → str`
 
-Current game outcome: "ongoing", "win", "loss", "draw", or "no_game" (no game started yet).
+Current game outcome: `"ongoing"`, `"win"`, `"loss"`, `"draw"`, or `"no_game"` (no game started yet).
 
 - **Returns** `str`
 - **Possible values** `"ongoing"`, `"win"`, `"loss"`, `"draw"`, `"no_game"`
@@ -33035,7 +35831,7 @@ The consecutive-win count needed to complete the contract.
 
 ##### `.token() → str`
 
-The passcode to transmit: a non-empty string once streak() reaches target(), otherwise an empty string.
+The passcode to transmit: a non-empty string once `streak()` reaches `target()`, otherwise an empty string.
 
 - **Returns** `str`
 
@@ -33046,6 +35842,8 @@ The passcode to transmit: a non-empty string once streak() reaches target(), oth
 Extends `Contract`
 
 **Returned by:** self.contract (buried_five)
+
+Get `BuriedFiveContract` from the APIs listed here. It has no script constructor.
 
 ### Related object types
 
@@ -33074,7 +35872,7 @@ Credit reward for completing this contract.
 
 ##### `.status: str`
 
-Contract status: 'available' or 'completed'.
+Contract status: `"available"` or `"completed"`.
 
 - **Returns** `str`
 - **Possible values** `"available"`, `"completed"`
@@ -33103,6 +35901,8 @@ Whole-number count of five-fold wrapping layers applied to the transmission.
 
 **Returned by:** .analyzer
 
+Get `Analyzer` from the APIs listed here. It has no script constructor.
+
 ### Methods
 
 ##### `.read(group: list[str]) → str`
@@ -33121,8 +35921,8 @@ Read a list of exactly five string tokens and return the single token they were 
 
 | Exception | Condition |
 | --- | --- |
-| `TypeError` | Analyzer.read() requires a list containing only string tokens. |
-| `ValueError` | Analyzer.read() requires exactly five tokens forming a recognized aligned group. |
+| `TypeError` | `Analyzer.read()` requires a list containing only string tokens. |
+| `ValueError` | `Analyzer.read()` requires exactly five tokens forming a recognized aligned group. |
 
 *Types / Contracts*
 
@@ -33131,6 +35931,8 @@ Read a list of exactly five string tokens and return the single token they were 
 Extends `Contract`
 
 **Returned by:** self.contract (cold_boot)
+
+Get `ColdBootContract` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -33155,7 +35957,7 @@ Credit reward for completing this contract.
 
 ##### `.status: str`
 
-Contract status: 'available' or 'completed'.
+Contract status: `"available"` or `"completed"`.
 
 - **Returns** `str`
 - **Possible values** `"available"`, `"completed"`
@@ -33173,6 +35975,8 @@ The artifact's bytecode: a list of whole numbers. Copy it before running: `memor
 Extends `Contract`
 
 **Returned by:** self.contract (core_sample)
+
+Get `CoreSampleContract` from the APIs listed here. It has no script constructor.
 
 ### Related object types
 
@@ -33201,20 +36005,20 @@ Credit reward for completing this contract.
 
 ##### `.status: str`
 
-Contract status: 'available' or 'completed'.
+Contract status: `"available"` or `"completed"`.
 
 - **Returns** `str`
 - **Possible values** `"available"`, `"completed"`
 
 ##### `.cores: list[list[int | None]]`
 
-The 10 damaged cores, as a list of byte lists. A byte destroyed in transit reads as None: recover it from the construction rules.
+The 10 damaged cores, as a list of byte lists. A byte destroyed in transit reads as `None`: recover it from the construction rules.
 
 - **Returns** `list[list[int | None]]`
 
 ##### `.device: CoreDevice`
 
-The reconstruction device: submit your rebuilt cores to it. See CoreDevice.
+The reconstruction device: submit your rebuilt cores to it. See `CoreDevice`.
 
 - **Returns** `CoreDevice`
 
@@ -33223,6 +36027,8 @@ The reconstruction device: submit your rebuilt cores to it. See CoreDevice.
 ## CoreDevice
 
 **Returned by:** .device
+
+Get `CoreDevice` from the APIs listed here. It has no script constructor.
 
 ### Methods
 
@@ -33252,8 +36058,8 @@ Submit a rebuilt core for whole-number slot `index` (0-9). Wrong container or el
 
 | Exception | Condition |
 | --- | --- |
-| `TypeError` | CoreDevice.submit() requires a numeric index and a list containing only numeric bytes. |
-| `ValueError` | CoreDevice.submit() requires a whole-number slot in the **0-9** range and a correctly sized list of whole-number bytes in the **0-255** range. |
+| `TypeError` | `CoreDevice.submit()` requires a numeric index and a list containing only numeric bytes. |
+| `ValueError` | `CoreDevice.submit()` requires a whole-number slot in the **0-9** range and a correctly sized list of whole-number bytes in the **0-255** range. |
 
 ##### `.recovered() → int`
 
@@ -33269,7 +36075,7 @@ The number of cores you must recover to complete the contract: 10.
 
 ##### `.token() → str`
 
-The passcode to transmit: a non-empty string once recovered() reaches target(), otherwise an empty string.
+The passcode to transmit: a non-empty string once `recovered()` reaches `target()`, otherwise an empty string.
 
 - **Returns** `str`
 
@@ -33280,6 +36086,8 @@ The passcode to transmit: a non-empty string once recovered() reaches target(), 
 Extends `Contract`
 
 **Returned by:** self.contract (corrupted_archive)
+
+Get `CorruptedArchiveContract` from the APIs listed here. It has no script constructor.
 
 ### Related object types
 
@@ -33308,7 +36116,7 @@ Credit reward for completing this contract.
 
 ##### `.status: str`
 
-Contract status: 'available' or 'completed'.
+Contract status: `"available"` or `"completed"`.
 
 - **Returns** `str`
 - **Possible values** `"available"`, `"completed"`
@@ -33324,6 +36132,8 @@ The scrambled data archive.
 ## Archive
 
 **Returned by:** .archive
+
+Get `Archive` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -33349,8 +36159,8 @@ Reveal and return the word at a whole-number grid cell. Wrong argument types rai
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `row` | `int` | Whole-number grid row, 0 to rows - 1 |
-| `col` | `int` | Whole-number grid column, 0 to cols - 1 |
+| `row` | `int` | Whole-number grid row, 0 to `rows - 1` |
+| `col` | `int` | Whole-number grid column, 0 to `cols - 1` |
 
 - **Returns** `str`
 
@@ -33358,8 +36168,8 @@ Reveal and return the word at a whole-number grid cell. Wrong argument types rai
 
 | Exception | Condition |
 | --- | --- |
-| `TypeError` | Archive.flip() requires numeric row and column coordinates. |
-| `ValueError` | Archive.flip() requires finite whole-number coordinates inside the archive grid. |
+| `TypeError` | `Archive.flip()` requires numeric row and column coordinates. |
+| `ValueError` | `Archive.flip()` requires finite whole-number coordinates inside the archive grid. |
 
 *Types / Contracts*
 
@@ -33368,6 +36178,8 @@ Reveal and return the word at a whole-number grid cell. Wrong argument types rai
 Extends `Contract`
 
 **Returned by:** self.contract (crosstalk)
+
+Get `CrosstalkContract` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -33392,7 +36204,7 @@ Credit reward for completing this contract.
 
 ##### `.status: str`
 
-Contract status: 'available' or 'completed'.
+Contract status: `"available"` or `"completed"`.
 
 - **Returns** `str`
 - **Possible values** `"available"`, `"completed"`
@@ -33405,7 +36217,7 @@ First intercepted signal: a string of letters with 0s and 1s scattered through. 
 
 ##### `.input_y: str`
 
-Second intercepted signal: same shape as input_x.
+Second intercepted signal: same shape as `input_x`.
 
 - **Returns** `str`
 
@@ -33422,6 +36234,8 @@ Minimum palindrome length for a bit to count: a bit qualifies only if the letter
 Extends `Contract`
 
 **Returned by:** self.contract (data_tablet)
+
+Get `DataTabletContract` from the APIs listed here. It has no script constructor.
 
 ### Related object types
 
@@ -33450,7 +36264,7 @@ Credit reward for completing this contract.
 
 ##### `.status: str`
 
-Contract status: 'available' or 'completed'.
+Contract status: `"available"` or `"completed"`.
 
 - **Returns** `str`
 - **Possible values** `"available"`, `"completed"`
@@ -33466,6 +36280,8 @@ The data tablet scanner.
 ## DataTablet
 
 **Returned by:** .tablet
+
+Get `DataTablet` from the APIs listed here. It has no script constructor.
 
 ### Related object types
 
@@ -33495,8 +36311,8 @@ Probe a whole-number cell and return a `ProbeResult` with `.char` and whole-numb
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `row` | `int` | Whole-number grid row, 0 to rows - 1 |
-| `col` | `int` | Whole-number grid column, 0 to cols - 1 |
+| `row` | `int` | Whole-number grid row, 0 to `rows - 1` |
+| `col` | `int` | Whole-number grid column, 0 to `cols - 1` |
 
 - **Returns** `ProbeResult`
 
@@ -33512,6 +36328,8 @@ Probe a whole-number cell and return a `ProbeResult` with `.char` and whole-numb
 ## ProbeResult
 
 **Returned by:** tablet.probe()
+
+Get `ProbeResult` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -33534,6 +36352,8 @@ Whole-number Manhattan distance (steps) to the nearest message cell. 0 means thi
 Extends `Contract`
 
 **Returned by:** self.contract (drifting_signal)
+
+Get `DriftingSignalContract` from the APIs listed here. It has no script constructor.
 
 ### Related object types
 
@@ -33562,7 +36382,7 @@ Credit reward for completing this contract.
 
 ##### `.status: str`
 
-Contract status: 'available' or 'completed'.
+Contract status: `"available"` or `"completed"`.
 
 - **Returns** `str`
 - **Possible values** `"available"`, `"completed"`
@@ -33579,6 +36399,8 @@ The recovered slab contraption.
 
 **Returned by:** .device
 
+Get `SlabDevice` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.slabs: str`
@@ -33594,6 +36416,8 @@ Current state of the letter slabs. Uppercase letters, spaces preserved.
 Extends `Contract`
 
 **Returned by:** self.contract (lattice)
+
+Get `LatticeContract` from the APIs listed here. It has no script constructor.
 
 ### Related object types
 
@@ -33622,14 +36446,14 @@ Credit reward for completing this contract.
 
 ##### `.status: str`
 
-Contract status: 'available' or 'completed'.
+Contract status: `"available"` or `"completed"`.
 
 - **Returns** `str`
 - **Possible values** `"available"`, `"completed"`
 
 ##### `.grid: LatticeGrid`
 
-The alien deep-scan lattice. Probe only proven-clear cells to map the volatile nodes; a trip blocks further probes until the grid is reset. See LatticeGrid.
+The alien deep-scan lattice. Probe only proven-clear cells to map the volatile nodes; a trip blocks further probes until the grid is reset. See `LatticeGrid`.
 
 - **Returns** `LatticeGrid`
 
@@ -33638,6 +36462,8 @@ The alien deep-scan lattice. Probe only proven-clear cells to map the volatile n
 ## LatticeGrid
 
 **Returned by:** .grid
+
+Get `LatticeGrid` from the APIs listed here. It has no script constructor.
 
 ### Methods
 
@@ -33700,8 +36526,8 @@ Probe a proven clear whole-number cell. The reading is the whole-number count of
 
 | Exception | Condition |
 | --- | --- |
-| `TypeError` | LatticeGrid.probe() requires numeric x and y coordinates. |
-| `ValueError` | LatticeGrid.probe() requires finite whole-number coordinates inside the 32 by 32 grid. |
+| `TypeError` | `LatticeGrid.probe()` requires numeric x and y coordinates. |
+| `ValueError` | `LatticeGrid.probe()` requires finite whole-number coordinates inside the 32 by 32 grid. |
 
 *Types / Contracts*
 
@@ -33710,6 +36536,8 @@ Probe a proven clear whole-number cell. The reading is the whole-number count of
 Extends `Contract`
 
 **Returned by:** self.contract (relay_hack)
+
+Get `RelayHackContract` from the APIs listed here. It has no script constructor.
 
 ### Related object types
 
@@ -33738,7 +36566,7 @@ Credit reward for completing this contract.
 
 ##### `.status: str`
 
-Contract status: 'available' or 'completed'.
+Contract status: `"available"` or `"completed"`.
 
 - **Returns** `str`
 - **Possible values** `"available"`, `"completed"`
@@ -33754,6 +36582,8 @@ The relay lock to crack.
 ## RelayLock
 
 **Returned by:** .lock
+
+Get `RelayLock` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -33773,7 +36603,7 @@ Range per tumbler (100 = 0-99).
 
 ##### `.intercept(code: list[int]) → list[bool]`
 
-Test a list of exactly 6 whole-number values in the **0-99** range and return one True/False value per tumbler. Wrong argument types raise `TypeError`; wrong list length, non-finite or fractional values, and values outside the range raise `ValueError`.
+Test a list of exactly 6 whole-number values in the **0-99** range and return one `True`/`False` value per tumbler. Wrong argument types raise `TypeError`; wrong list length, non-finite or fractional values, and values outside the range raise `ValueError`.
 
 *Parameters*
 
@@ -33797,6 +36627,8 @@ Test a list of exactly 6 whole-number values in the **0-99** range and return on
 Extends `Contract`
 
 **Returned by:** self.contract (sealed_vault)
+
+Get `SealedVaultContract` from the APIs listed here. It has no script constructor.
 
 ### Related object types
 
@@ -33825,7 +36657,7 @@ Credit reward for completing this contract.
 
 ##### `.status: str`
 
-Contract status: 'available' or 'completed'.
+Contract status: `"available"` or `"completed"`.
 
 - **Returns** `str`
 - **Possible values** `"available"`, `"completed"`
@@ -33841,6 +36673,8 @@ The sealed vault passage system. Its position resets to (0, 0) at the start of e
 ## Vault
 
 **Returned by:** .vault
+
+Get `Vault` from the APIs listed here. It has no script constructor.
 
 ### Related object types
 
@@ -33888,8 +36722,8 @@ Step one cell in `direction`: `"north"`, `"south"`, `"east"`, or `"west"`. A non
 
 | Exception | Condition |
 | --- | --- |
-| `TypeError` | Vault.move() requires a string direction. |
-| `ValueError` | Vault.move() accepts only north, south, east, or west. |
+| `TypeError` | `Vault.move()` requires a string direction. |
+| `ValueError` | `Vault.move()` accepts only `"north"`, `"south"`, `"east"`, or `"west"`. |
 
 ##### `.escape() → VaultEscapeResult`
 
@@ -33911,6 +36745,29 @@ Open the vault from its exit cell.
 ## VaultPosition
 
 **Returned by:** vault.position
+
+Import `VaultPosition` with `from __builtins__ import VaultPosition`. Arguments accept positional and keyword forms. Use `vars()` to obtain a dictionary for storage or messaging.
+
+##### `VaultPosition(row: int, col: int) → VaultPosition`
+
+Create a local `VaultPosition` value for your script. Creating this value does not change the world.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `row` | `int` | Row coordinate. Must be a whole number. Must be at least 0. |
+| `col` | `int` | Column coordinate. Must be a whole number. Must be at least 0. |
+
+- **Returns** `VaultPosition`
+
+*Raises*
+
+| Exception | Condition |
+| --- | --- |
+| `TypeError` | An argument has the wrong type, or the call has missing, excess, duplicate, or unknown arguments. |
+| `ValueError` | A numeric value is outside the permitted range, or the bounds are reversed. |
+| `OverflowError` | An integer cannot be represented safely as a game number. |
 
 ### Properties
 
@@ -33942,6 +36799,8 @@ Extends `Contract`
 
 **Returned by:** self.contract (terminal_breach)
 
+Get `TerminalBreachContract` from the APIs listed here. It has no script constructor.
+
 ### Related object types
 
 - `AlienTerminal`
@@ -33969,7 +36828,7 @@ Credit reward for completing this contract.
 
 ##### `.status: str`
 
-Contract status: 'available' or 'completed'.
+Contract status: `"available"` or `"completed"`.
 
 - **Returns** `str`
 - **Possible values** `"available"`, `"completed"`
@@ -33985,6 +36844,8 @@ The alien security terminal.
 ## AlienTerminal
 
 **Returned by:** .terminal
+
+Get `AlienTerminal` from the APIs listed here. It has no script constructor.
 
 ### Related object types
 
@@ -34025,6 +36886,8 @@ Test a list of exactly 15 whole-number digits in the **1-5** range and return `G
 
 **Returned by:** terminal.guess()
 
+Get `GuessResult` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.correct: int`
@@ -34046,6 +36909,8 @@ Number of correct digits in wrong positions.
 Extends `Contract`
 
 **Returned by:** self.contract (the_loom)
+
+Get `TheLoomContract` from the APIs listed here. It has no script constructor.
 
 ### Related object types
 
@@ -34074,7 +36939,7 @@ Credit reward for completing this contract.
 
 ##### `.status: str`
 
-Contract status: 'available' or 'completed'.
+Contract status: `"available"` or `"completed"`.
 
 - **Returns** `str`
 - **Possible values** `"available"`, `"completed"`
@@ -34097,6 +36962,8 @@ A 42-character woven record made from two equal-length 21-character threads. Rev
 
 **Returned by:** .loom
 
+Get `Loom` from the APIs listed here. It has no script constructor.
+
 ### Methods
 
 ##### `.weave(a: str, b: str) → str`
@@ -34116,8 +36983,8 @@ Braid two strings into one and return it. Each character is one token. Determini
 
 | Exception | Condition |
 | --- | --- |
-| `TypeError` | Loom.weave() requires two strings. |
-| `ValueError` | Loom.weave() accepts at most 30 characters in each input. |
+| `TypeError` | `Loom.weave()` requires two strings. |
+| `ValueError` | `Loom.weave()` accepts at most 30 characters in each input. |
 
 *Types / Contracts*
 
@@ -34126,6 +36993,8 @@ Braid two strings into one and return it. Each character is one token. Determini
 Extends `Contract`
 
 **Returned by:** self.contract (three_echoes)
+
+Get `ThreeEchoesContract` from the APIs listed here. It has no script constructor.
 
 ### Related object types
 
@@ -34154,7 +37023,7 @@ Credit reward for completing this contract.
 
 ##### `.status: str`
 
-Contract status: 'available' or 'completed'.
+Contract status: `"available"` or `"completed"`.
 
 - **Returns** `str`
 - **Possible values** `"available"`, `"completed"`
@@ -34170,6 +37039,8 @@ The intercepted broadcast: three frequency fragments.
 ## ThreeEchoesBroadcast
 
 **Returned by:** .broadcast
+
+Get `ThreeEchoesBroadcast` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -34199,6 +37070,8 @@ Extends `Contract`
 
 **Returned by:** self.contract (xenogenetics)
 
+Get `XenogeneticsContract` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.id: str`
@@ -34222,7 +37095,7 @@ Credit reward for completing this contract.
 
 ##### `.status: str`
 
-Contract status: 'available' or 'completed'.
+Contract status: `"available"` or `"completed"`.
 
 - **Returns** `str`
 - **Possible values** `"available"`, `"completed"`
@@ -34243,7 +37116,9 @@ Contract status: 'available' or 'completed'.
 
 ## ContractScript
 
-**Returned by:** self (in contract scripts)
+**Returned by:** `self` (in contract scripts)
+
+Get `ContractScript` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -34264,6 +37139,8 @@ The contract object with ID, name, reward, and contract-specific API.
 ## LatticeProbeResult
 
 **Returned by:** LatticeGrid.probe()
+
+Get `LatticeProbeResult` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -34291,6 +37168,8 @@ Whole-number neighboring-node count in the **0-8** range when `.status == "ok"`;
 ## VaultEscapeResult
 
 **Returned by:** Vault.escape()
+
+Get `VaultEscapeResult` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -34373,7 +37252,7 @@ Take counts away, the opposite of `update`; a count may go to zero or below.
 
 ##### `.copy() → Counter[K]`
 
-A new Counter with the same counts.
+A new `Counter` with the same counts.
 
 - **Returns** `Counter[K]`
 
@@ -34395,7 +37274,7 @@ The function called to make a missing key's value, or `None`.
 
 ##### `.copy() → defaultdict[K, V]`
 
-A new defaultdict with the same items and factory.
+A new `defaultdict` with the same items and factory.
 
 - **Returns** `defaultdict[K, V]`
 
@@ -34409,7 +37288,7 @@ A new defaultdict with the same items and factory.
 
 ##### `.maxlen: int | None`
 
-The size limit given when the deque was made, or `None`.
+The size limit given when the `deque` was made, or `None`.
 
 - **Returns** `int | None`
 
@@ -34495,7 +37374,7 @@ Remove every item.
 
 ##### `.copy() → deque[T]`
 
-A new deque with the same items and `maxlen`.
+A new `deque` with the same items and `maxlen`.
 
 - **Returns** `deque[T]`
 
@@ -34560,7 +37439,7 @@ Reverse the items in place.
 
 ## dict
 
-**Returned by:** dict literals `{k: v}` · `dict()` · methods returning dicts
+**Returned by:** `dict` literals `{k: v}` · `dict()` · methods returning a `dict`
 
 ### Properties
 
@@ -34630,7 +37509,7 @@ Remove `key` and return its value. Raises if the key isn't present unless a `def
 
 ##### `.popitem() → tuple[K, V]`
 
-Remove and return the last inserted `(key, value)` pair. Raises if the dictionary is empty. Insertion order is deterministic, but use this only when consuming a dict as a stack is what you intend.
+Remove and return the last inserted `(key, value)` pair. Raises if the dictionary is empty. Insertion order is deterministic, but use this only when consuming a `dict` as a stack is what you intend.
 
 - **Returns** `tuple[K, V]`
 
@@ -34649,33 +37528,33 @@ Return `d[key]` if it exists; otherwise set `d[key] = default` and return `defau
 
 ##### `.update(other?: dict[K, V] | Iterable[tuple[K, V]], /, **kwargs: V) → None`
 
-Merge entries into this dict, overwriting matching keys. Accepts another dict, an iterable of `(key, value)` pairs, keyword args, OR a combination: `d.update(other, a=1, b=2)`. Mutates in place.
+Merge entries into this `dict`, overwriting matching keys. Accepts another `dict`, an iterable of `(key, value)` pairs, keyword args, OR a combination: `d.update(other, a=1, b=2)`. Mutates in place.
 
 *Parameters*
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `other` | `dict[K, V] \| Iterable[tuple[K, V]]` | A dict, or an iterable of (key, value) pairs |
+| `other` | `dict[K, V] \| Iterable[tuple[K, V]]` | A `dict`, or an iterable of `(key, value)` pairs |
 | `kwargs` | `V` | More entries, by keyword (`speed=2`) |
 
 - **Returns** `None`
 
 ##### `.fromkeys(iterable: Iterable[object], value: object = None, /) → dict`
 
-A new dict with every item of `iterable` as a key, each set to `value`: `dict.fromkeys(["iron", "copper"], 0)` → `{"iron": 0, "copper": 0}`.
+A new `dict` with every item of `iterable` as a key, each set to `value`: `dict.fromkeys(["iron", "copper"], 0)` → `{"iron": 0, "copper": 0}`.
 
 *Parameters*
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `iterable` | `Iterable[object]` | Keys for the new dict |
+| `iterable` | `Iterable[object]` | Keys for the new `dict` |
 | `value` | `object` | Value for every key (default `None`) |
 
 - **Returns** `dict`
 
 ##### `.copy() → dict[K, V]`
 
-Return a shallow copy of the dictionary. Top-level keys/values are duplicated to a fresh dict; nested mutable values (lists, dicts) are shared with the original.
+Return a shallow copy of the dictionary. Top-level keys/values are duplicated to a fresh `dict`; nested mutable values (`list` and `dict` values) are shared with the original.
 
 - **Returns** `dict[K, V]`
 
@@ -34749,13 +37628,13 @@ Qualified name of the generator function that created this generator.
 
 ##### `.send(value: object) → T`
 
-Resume the generator and make `value` the result of its paused `yield`. Returns the next yielded value. Sending a non-`None` value before the first yield raises `TypeError`; completion raises `StopIteration`.
+Resume the generator and make `value` the result of its paused `yield`. Returns the next yielded value. Sending a non-`None` value before the first `yield` raises `TypeError`; completion raises `StopIteration`.
 
 *Parameters*
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `value` | `object` | Value delivered to the paused yield |
+| `value` | `object` | Value delivered to the paused `yield` |
 
 - **Returns** `T`
 
@@ -34773,7 +37652,7 @@ Raise an exception at the generator's paused `yield`. Returns the next value if 
 
 ##### `.close() → None`
 
-Stop the generator by raising `GeneratorExit` at its paused yield. `finally` cleanup runs before this returns. A generator that yields while closing raises `RuntimeError`.
+Stop the generator by raising `GeneratorExit` at its paused `yield`. `finally` cleanup runs before this returns. A generator that yields while closing raises `RuntimeError`.
 
 - **Returns** `None`
 
@@ -35004,7 +37883,7 @@ Move an existing key to the end, or to the front with `last=False`.
 | Name | Type | Description |
 | --- | --- | --- |
 | `key` | `K` | Key to move |
-| `last` | `bool` | True for the end, False for the front |
+| `last` | `bool` | `True` for the end, `False` for the front |
 
 - **Returns** `None`
 
@@ -35016,13 +37895,13 @@ Remove and return the last `(key, value)` pair, or the first with `last=False`.
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `last` | `bool` | True for the last pair, False for the first |
+| `last` | `bool` | `True` for the last pair, `False` for the first |
 
 - **Returns** `tuple[K, V]`
 
 ##### `.copy() → OrderedDict[K, V]`
 
-A new OrderedDict with the same items.
+A new `OrderedDict` with the same items.
 
 - **Returns** `OrderedDict[K, V]`
 
@@ -35302,7 +38181,7 @@ Return a copy with whitespace (or `chars` if given) trimmed from both ends. Pass
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `chars` | `str \| None` | Characters to strip, or None for whitespace |
+| `chars` | `str \| None` | Characters to strip, or `None` for whitespace |
 
 - **Returns** `str`
 
@@ -35314,7 +38193,7 @@ Like `strip()` but only trims from the left end. Passing `None` explicitly selec
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `chars` | `str \| None` | Characters to strip, or None for whitespace |
+| `chars` | `str \| None` | Characters to strip, or `None` for whitespace |
 
 - **Returns** `str`
 
@@ -35326,7 +38205,7 @@ Like `strip()` but only trims from the right end. Passing `None` explicitly sele
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `chars` | `str \| None` | Characters to strip, or None for whitespace |
+| `chars` | `str \| None` | Characters to strip, or `None` for whitespace |
 
 - **Returns** `str`
 
@@ -35338,8 +38217,8 @@ Split into substrings. With `sep=None`, every Python whitespace character separa
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `sep` | `str \| None` | Non-empty string separator or None for whitespace |
-| `maxsplit` | `int` | Maximum splits (default -1) |
+| `sep` | `str \| None` | Non-empty string separator or `None` for whitespace |
+| `maxsplit` | `int` | Maximum splits (default `-1`) |
 
 - **Returns** `list[str]`
 
@@ -35351,8 +38230,8 @@ Like `split()`, but a `maxsplit` counts from the right, so the unsplit rest is t
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `sep` | `str \| None` | Non-empty string separator or None for whitespace |
-| `maxsplit` | `int` | Maximum splits (default -1) |
+| `sep` | `str \| None` | Non-empty string separator or `None` for whitespace |
+| `maxsplit` | `int` | Maximum splits (default `-1`) |
 
 - **Returns** `list[str]`
 
@@ -35654,13 +38533,13 @@ Replace placeholders with arguments. `{}` takes the next positional argument, `{
 
 ##### `.format_map(mapping: dict[str, object], /) → str`
 
-Like `.format()` with every `{name}` field read from one dict: `"{name} is done".format_map(job)`. A numbered or `{}` field is a `ValueError`.
+Like `.format()` with every `{name}` field read from one `dict`: `"{name} is done".format_map(job)`. A numbered or `{}` field is a `ValueError`.
 
 *Parameters*
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `mapping` | `dict[str, object]` | Dict the named fields read their values from |
+| `mapping` | `dict[str, object]` | The `dict` the named fields read their values from |
 
 - **Returns** `str`
 
@@ -35678,13 +38557,13 @@ Replace each tab with spaces up to the next multiple of `tabsize` columns, count
 
 ##### `.maketrans(x: str | dict[str | int, str | int | None], y: str | None = None, z: str | None = None, /) → dict[float, object]`
 
-Build a table for `translate()`. `str.maketrans("abc", "xyz")` maps each character of the first string to the one at the same place in the second, a third string lists characters to delete, and one dict maps characters to their replacements.
+Build a table for `translate()`. `str.maketrans("abc", "xyz")` maps each character of the first string to the one at the same place in the second, a third string lists characters to delete, and one `dict` maps characters to their replacements.
 
 *Parameters*
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `x` | `str \| dict[str \| int, str \| int \| None]` | Characters to replace, or a dict of replacements |
+| `x` | `str \| dict[str \| int, str \| int \| None]` | Characters to replace, or a `dict` of replacements |
 | `y` | `str \| None` | Replacement characters, as many as in `x` |
 | `z` | `str \| None` | Characters to delete |
 
@@ -35692,7 +38571,7 @@ Build a table for `translate()`. `str.maketrans("abc", "xyz")` maps each charact
 
 ##### `.translate(table: dict[int, str | int | None], /) → str`
 
-Replace characters through a table from `str.maketrans()`, or any dict from code points to a string, a code point, or `None` to delete: `"cab".translate(str.maketrans("abc", "xyz"))` → `"zxy"`.
+Replace characters through a table from `str.maketrans()`, or any `dict` from code points to a string, a code point, or `None` to delete: `"cab".translate(str.maketrans("abc", "xyz"))` → `"zxy"`.
 
 *Parameters*
 
@@ -35798,6 +38677,8 @@ Count occurrences of `item` in the tuple.
 
 **Returned by:** bio_lab.analyze()
 
+Get `AnalyzeResult` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.status: str`
@@ -35824,6 +38705,8 @@ Completed `AnalyzeInfo`, or `None` when analysis was rejected.
 ## BioExtractionResult
 
 **Returned by:** PortableBioExtractor.extract()
+
+Get `BioExtractionResult` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -35852,6 +38735,8 @@ Tons committed to drone cargo by this extraction; **0** for every rejection.
 
 **Returned by:** PortableBioScanner.scan()
 
+Get `BioScanResult` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.status: str`
@@ -35878,6 +38763,8 @@ Completed `LifeFormScanResult`, or `None` when the scan was rejected.
 ## Cell
 
 **Returned by:** self.cell(sector) / self.cells()
+
+Get `Cell` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -35983,7 +38870,9 @@ Whole **forage** banked by this crop. It rises with visible growth while require
 
 ## LifeFormScanResult
 
-**Returned by:** PortableBioScanner.scan().scan after status == "ok" / journal biosite queries
+**Returned by:** `PortableBioScanner.scan().scan` after `status == "ok"` / journal biosite queries
+
+Get `LifeFormScanResult` from the APIs listed here. It has no script constructor.
 
 ### Related object types
 
@@ -36013,7 +38902,9 @@ List of `LifeFormSample` entries: 0-3 items per tile. Empty list means "scanned,
 
 ## LifeFormSample
 
-**Returned by:** PortableBioScanner.scan().scan.life_forms[i] after status == "ok"
+**Returned by:** `PortableBioScanner.scan().scan.life_forms[i]` after `status == "ok"`
+
+Get `LifeFormSample` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -36056,6 +38947,27 @@ Native biome this species belongs to: `"frozen"`, `"coastal"`, `"geothermal"`, `
 
 **Returned by:** SeedRecipe.requirements
 
+Import `PlantRequirement` with `from __builtins__ import PlantRequirement`. Arguments accept positional and keyword forms. Use `vars()` to obtain a dictionary for storage or messaging.
+
+##### `PlantRequirement(kind: str, species: str | None = None) → PlantRequirement`
+
+Create a local `PlantRequirement` value for your script. Creating this value does not change the world.
+
+*Parameters*
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `kind` | `str` | Cultivation condition: `"light"`, `"shade"`, `"water"`, `"salt"`, `"spacer"`, `"cluster"`, `"companion"`, or `"antagonist"`. Every entry in `SeedRecipe.requirements` is required; combined species expose multiple entries. |
+| `species` | `str \| None` | Related species key for relational conditions: the required neighbor for `"companion"`, or the forbidden neighbor for `"antagonist"`. `None` for all other kinds. |
+
+- **Returns** `PlantRequirement`
+
+*Raises*
+
+| Exception | Condition |
+| --- | --- |
+| `TypeError` | An argument has the wrong type, or the call has missing, excess, duplicate, or unknown arguments. |
+
 ### Properties
 
 ##### `.kind: str`
@@ -36076,13 +38988,15 @@ Related species key for relational conditions: the required neighbor for `"compa
 
 ## PortableBioExtractor
 
-**Returned by:** self.bio_extractor (drones)
+**Returned by:** `self.bio_extractor` (drones)
+
+Get `PortableBioExtractor` from the APIs listed here. It has no script constructor.
 
 ### Methods
 
 ##### `.extract() → BioExtractionResult`
 
-Yielding harvest at the discovered permanent biosite under a hovering drone. The drone stays occupied until completion, including across a script stop and restart. The module has a 25 t chamber for one life-form type; Cargo Pods add capacity. Partial depletion persists and cooldown starts only when the site is empty.
+Harvest at the discovered permanent biosite under a hovering drone; the script waits until it finishes. The drone stays occupied until completion, including across a script stop and restart. The module has a 25 t chamber for one life-form type; Cargo Pods add capacity. Partial depletion persists and cooldown starts only when the site is empty.
 
 - **Returns** `BioExtractionResult`
 - **Result fields** `.status`, `.message`
@@ -36105,7 +39019,9 @@ Yielding harvest at the discovered permanent biosite under a hovering drone. The
 
 ## PortableBioScanner
 
-**Returned by:** self.bio_scanner (drones)
+**Returned by:** `self.bio_scanner` (drones)
+
+Get `PortableBioScanner` from the APIs listed here. It has no script constructor.
 
 ### Methods
 
@@ -36131,7 +39047,9 @@ Yielding scan at the hovering drone's current whole-number coordinate. A valid n
 
 ## SeedRecipe
 
-**Returned by:** self.recipes() (Seed Maker)
+**Returned by:** `self.recipes()` (Seed Maker)
+
+Get `SeedRecipe` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -36157,7 +39075,7 @@ Physical seed item id produced by this recipe, such as `"seed_sunpetal"`. Pass t
 
 ##### `.blend: list[str]`
 
-The exact list of 3 life-form ids that yields this seed (e.g. `["ice_algae", "sea_algae", "vent_moss"]`). Order doesn't matter: combine these three again to reproduce the seed.
+The exact list of 3 life-form ids that yields this seed (e.g. `["ice_algae", "sea_algae", "vent_moss"]`). Order doesn't matter: pass these three to `combine()` again to reproduce the seed.
 
 - **Returns** `list[str]`
 
@@ -36191,6 +39109,8 @@ Whole forage units this species yields before diversity, treatment, and field bo
 ## SeedResult
 
 **Returned by:** seed_maker.combine()
+
+Get `SeedResult` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -36227,6 +39147,8 @@ Stable discovered flora species id, or `None` when no seed was produced.
 
 **Returned by:** `functools.lru_cache(fn).cache_info()` · `functools.cache(fn).cache_info()`
 
+Get `CacheInfo` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.hits: int`
@@ -36259,6 +39181,8 @@ How many results are stored right now
 
 **Returned by:** `dataclasses.fields()`
 
+Get `Field` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.name: str`
@@ -36281,25 +39205,25 @@ The zero-argument function that builds this field's default, or `MISSING` when t
 
 ##### `.init: bool`
 
-True when the field is a parameter of the generated constructor
+`True` when the field is a parameter of the generated constructor
 
 - **Returns** `bool`
 
 ##### `.repr: bool`
 
-True when the field appears in the generated text form
+`True` when the field appears in the generated text form
 
 - **Returns** `bool`
 
 ##### `.compare: bool`
 
-True when the field takes part in equality and ordering
+`True` when the field takes part in equality and ordering
 
 - **Returns** `bool`
 
 ##### `.kw_only: bool`
 
-True when the field must be passed by name
+`True` when the field must be passed by name
 
 - **Returns** `bool`
 
@@ -36308,6 +39232,8 @@ True when the field must be passed by name
 ## Match
 
 **Returned by:** `re.search()` · `re.match()` · `re.fullmatch()`
+
+Get `Match` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -36357,20 +39283,20 @@ The compiled `Pattern` that produced this match.
 
 ##### `.group(group: int | str = 0, /, *groups: int | str) → str | None`
 
-Return the matched text for a group, by number or by `(?P<name>...)` name. Group `0` is the whole match, and several groups return a tuple: `m.group(1, "unit")`. Optional groups that did not match return `None`; an unknown group raises. `m[1]` is the same as `m.group(1)`.
+Return the matched text for a group, by number or by `(?P<name>...)` name. Group `0` is the whole match, and several groups return a `tuple`: `m.group(1, "unit")`. Optional groups that did not match return `None`; an unknown group raises. `m[1]` is the same as `m.group(1)`.
 
 *Parameters*
 
 | Name | Type | Description |
 | --- | --- | --- |
 | `group` | `int \| str` | Capture group number or name; default 0 |
-| `groups` | `int \| str` | More groups, which make the result a tuple |
+| `groups` | `int \| str` | More groups, which make the result a `tuple` |
 
 - **Returns** `str | None`
 
 ##### `.groups(default: object = None) → tuple[str | None, ...]`
 
-Return a tuple of captured groups, excluding group `0`. Groups that did not match use `default`, which is `None` if omitted.
+Return a `tuple` of captured groups, excluding group `0`. Groups that did not match use `default`, which is `None` if omitted.
 
 *Parameters*
 
@@ -36418,7 +39344,7 @@ Return `(start, end)` for the group. Unmatched optional groups return `(-1, -1)`
 
 ##### `.__getitem__(group: int | str, /) → str | None`
 
-`m[1]` or `m["name"]`: the same text as `m.group(1)`, or `None` for a group that took no part in the match.
+`m[1]` gives the same text as `m.group(1)`, and `m["name"]` as `m.group("name")`; a group that took no part in the match gives `None`.
 
 *Parameters*
 
@@ -36430,7 +39356,7 @@ Return `(start, end)` for the group. Unmatched optional groups return `(-1, -1)`
 
 ##### `.groupdict(default: object = None) → dict[str, str | None]`
 
-Return a dict of every named group's text, by name. Named groups that did not match use `default`, which is `None` if omitted.
+Return a `dict` of every named group's text, by name. Named groups that did not match use `default`, which is `None` if omitted.
 
 *Parameters*
 
@@ -36458,6 +39384,8 @@ Fill in a replacement template the way `re.sub()` does, from this match: `m.expa
 
 **Returned by:** `re.compile()`
 
+Get `Pattern` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.pattern: str`
@@ -36480,7 +39408,7 @@ How many capture groups the pattern has.
 
 ##### `.groupindex: dict[str, float]`
 
-Dict from each `(?P<name>...)` group name to its number.
+A `dict` from each `(?P<name>...)` group name to its number.
 
 - **Returns** `dict[str, float]`
 
@@ -36603,6 +39531,8 @@ Like `re.split()` with this pattern.
 
 **Returned by:** journal.cataloged_creatures(planet_id)
 
+Get `CatalogedCreature` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.creature_id: str`
@@ -36663,6 +39593,8 @@ Exact revival shopping list as `{reagent_id: quantity}` for this creature's rari
 
 **Returned by:** journal.cataloged_fragments(planet_id)
 
+Get `CatalogedFragment` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.fragment_id: str`
@@ -36674,7 +39606,7 @@ Stable fragment id (e.g. `"gw_cranial_plate"`). Matches the keys in `BioOrder.re
 
 ##### `.name: str`
 
-Player-facing fragment name (e.g. `"Beak"`). Use for readable output; use `.fragment_id` when matching `BioOrder.requires` or moving the item.
+Player-facing fragment name (e.g. "Beak"). Use for readable output; use `.fragment_id` when matching `BioOrder.requires` or moving the item.
 
 - **Returns** `str`
 
@@ -36703,6 +39635,8 @@ Rarity tier: `"common" | "uncommon" | "rare" | "legendary"`. Inherited from the 
 ## Marker
 
 **Returned by:** markers.get() / markers.list()
+
+Get `Marker` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -36754,7 +39688,9 @@ Marker color, such as `"accent"` or `"error"`.
 
 ## BlueprintPlanResult
 
-**Returned by:** construction_blueprint planning commands
+**Returned by:** `construction_blueprint` planning commands
+
+Get `BlueprintPlanResult` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -36763,7 +39699,7 @@ Marker color, such as `"accent"` or `"error"`.
 Stable planning outcome. Branch on this field before reading `.blueprint_ids`.
 
 - **Returns** `str`
-- **Possible values** `"ok"`, `"locked"`, `"invalid_kind"`, `"invalid_rotation"`, `"invalid_medium"`, `"invalid_axis"`, `"invalid_layer"`, `"out_of_bounds"`, `"wrong_target"`, `"unsurveyed_target"`, `"too_hard"`, `"target_claimed"`, `"occupied"`, `"clearance"`, `"invalid_route"`, `"blocked"`, `"already_exists"`, `"already_queued"`, `"ambiguous_target"`, `"nothing_here"`
+- **Possible values** `"not_found"`, `"not_upgrade_item"`, `"wrong_machine_type"`, `"under_construction"`, `"tier_not_ready"`, `"ok"`, `"locked"`, `"invalid_kind"`, `"invalid_rotation"`, `"invalid_medium"`, `"invalid_axis"`, `"invalid_layer"`, `"out_of_bounds"`, `"wrong_target"`, `"unsurveyed_target"`, `"too_hard"`, `"target_claimed"`, `"occupied"`, `"clearance"`, `"invalid_route"`, `"blocked"`, `"already_exists"`, `"already_queued"`, `"ambiguous_target"`, `"nothing_here"`
 
 ##### `.message: str`
 
@@ -36777,11 +39713,72 @@ Newly created blueprint ids. Empty for every outcome except `"ok"`.
 
 - **Returns** `list[str]`
 
+*Types / Power*
+
+## BatteryChargerSlot
+
+**Returned by:** battery_charger.slots(), battery_charger.status()
+
+Get `BatteryChargerSlot` from the APIs listed here. It has no script constructor.
+
+### Properties
+
+##### `.index: int`
+
+Zero-based physical socket index.
+
+- **Returns** `int`
+
+##### `.item_id: str`
+
+Battery item ID, or an empty string for an empty socket.
+
+- **Returns** `str`
+
+##### `.stored_wh: float`
+
+Stored energy in watt-hours.
+
+- **Returns** `float`
+
+##### `.capacity_wh: float`
+
+Battery capacity in watt-hours; zero when empty.
+
+- **Returns** `float`
+
+##### `.level: float`
+
+Stored energy as a fraction of capacity; zero when empty.
+
+- **Returns** `float`
+
+##### `.target: float | None`
+
+Requested target fraction, or `None` when no unfinished job owns the cell.
+
+- **Returns** `float | None`
+
+##### `.state: str`
+
+Current socket state. `ready` means unqueued and removable; inspect `level` for charge.
+
+- **Returns** `str`
+- **Possible values** `"empty"`, `"ready"`, `"handling"`, `"queued"`, `"charging"`, `"paused"`
+
+##### `.rate_w: float`
+
+Current charging power in watts.
+
+- **Returns** `float`
+
 *Types / System*
 
 ## ActionResult
 
 **Returned by:** Gameplay commands with no extra result fields
+
+Get `ActionResult` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -36790,7 +39787,7 @@ Newly created blueprint ids. Empty for every outcome except `"ok"`.
 Stable result code for scripts to check. `.message` explains what happened.
 
 - **Returns** `str`
-- **Possible values** `"ok"`, `"not_mounted"`, `"invalid"`, `"out_of_bounds"`, `"busy"`, `"not_at_site"`, `"not_surveyed"`, `"too_hard"`, `"no_cargo_space"`, `"no_power"`, `"not_enough_power"`, `"not_found"`, `"locked"`, `"already_active"`, `"wrong_position"`, `"insufficient_materials"`, `"paused_no_power"`, `"cargo_present"`, `"blocked"`, `"paused"`, `"canceled"`, `"not_ready"`, `"not_local"`, `"same_endpoint"`, `"unsupported_source"`, `"source_is_vehicle"`, `"unsupported_target"`, `"target_is_vehicle"`, `"incompatible"`, `"duplicate"`, `"invalid_type"`, `"path"`, `"wall"`, `"exit"`, `"in_progress"`, `"ongoing"`, `"win"`, `"loss"`, `"draw"`, `"occupied"`, `"no_game"`, `"rejected"`, `"booting"`, `"already_booted"`, `"activating"`, `"already_online"`, `"boot_required"`, `"initializing"`, `"power_required"`, `"insufficient_credits"`, `"inventory_full"`, `"not_toggleable"`, `"under_construction"`, `"not_connected"`, `"no_script"`, `"script_running"`, `"script_paused"`, `"editor_busy"`, `"variant_not_found"`, `"incompatible_variant"`, `"source_too_large"`, `"already_running"`, `"not_powered"`, `"started"`, `"already_repaired"`, `"no_source"`, `"already_testing"`, `"too_far"`, `"already_here"`, `"overheated"`, `"moving"`, `"dropped"`, `"empty"`, `"invalid_seed"`, `"no_seed"`, `"holding"`, `"not_empty"`, `"base_sector"`, `"no_kit"`, `"invalid_kit"`, `"not_plantable"`, `"insufficient_water"`, `"tank_empty"`, `"already_full"`, `"no_salt"`, `"invalid_input"`, `"no_plant"`, `"already_mature"`, `"tier_conflict"`, `"no_dose"`, `"nothing"`, `"script_present"`, `"partial"`, `"not_mature"`, `"no_forage"`, `"correct"`, `"incorrect"`, `"already_completed_correct"`, `"already_completed_incorrect"`, `"accepted"`, `"wrong_planet"`, `"wrong_contract"`, `"unknown_contract"`, `"key_is_planet"`, `"unknown_key"`, `"station_not_found"`, `"not_at_station"`, `"not_at_service_point"`, `"item_not_in_inventory"`, `"unknown_module"`, `"slot_not_compatible"`, `"slot_occupied"`, `"invalid_slot"`, `"capability_already_mounted"`, `"slot_empty"`, `"holder_not_empty"`, `"invalid_internal_slot"`, `"not_container"`, `"item_not_accepted"`, `"internal_slot_occupied"`, `"internal_slot_empty"`, `"container_not_empty"`, `"charging"`, `"queued"`, `"target_reached"`, `"not_docked"`, `"station_offline"`, `"already_dispatched"`, `"unknown_recipe"`, `"offline"`, `"recipe_locked"`, `"material_mismatch"`, `"material_present"`, `"invalid_channel"`, `"invalid_value"`, `"channel_limit"`, `"invalid_key"`, `"invalid_coords"`, `"invalid_icon"`, `"invalid_color"`, `"invalid_text"`, `"limit_reached"`, `"entry_limit"`, `"unknown_order"`, `"completed"`, `"out_of_range"`, `"scrambled"`, `"drill_not_found"`, `"invalid_target"`, `"wrong_engine_for_module"`, `"cargo_capacity_exceeded"`, `"module_not_mounted"`, `"hot_cargo_requires_plating"`, `"refueling"`, `"no_oil"`, `"not_stranded"`, `"no_rescue"`, `"worker_not_present"`, `"construction_dependency"`, `"not_undeployable"`, `"self_target"`, `"docked_drone"`, `"is_home"`, `"name_empty"`, `"name_too_long"`, `"name_taken"`, `"output_full"`, `"complete"`, `"no_input"`, `"no_active"`, `"cargo_occupied"`, `"no_fragment"`, `"input_occupied"`, `"source_empty"`, `"source_busy"`, `"wrong_outpost"`, `"invalid_source"`, `"invalid_reagent"`, `"invalid_qty"`, `"invalid_properties"`, `"invalid_property_match"`, `"insufficient_input"`, `"recipe_mismatch"`, `"input_empty"`, `"not_analyzed"`, `"invalid_specimen"`, `"chamber_occupied"`, `"not_in_input"`, `"invalid_fragment"`, `"destroyed"`, `"unknown_gene"`, `"invalid_recipe"`, `"wrong_materials"`, `"wrong_fragment"`, `"no_recipe"`, `"conditioned"`, `"burned"`, `"no_run"`, `"species_exists"`, `"unknown_creature"`, `"not_cataloged"`, `"no_target"`, `"wrong_feed"`, `"insufficient_feed"`, `"insufficient_reagents"`, `"no_colony"`, `"not_established"`, `"insufficient_capacity"`, `"unknown_node"`, `"already_purchased"`, `"population_locked"`, `"insufficient_insight"`, `"output_busy"`, `"no_op"`, `"no_material"`
+- **Possible values** `"queued"`, `"target_reached"`, `"empty"`, `"under_construction"`, `"ok"`, `"no_op"`, `"not_mounted"`, `"invalid"`, `"out_of_bounds"`, `"busy"`, `"not_at_site"`, `"not_surveyed"`, `"too_hard"`, `"no_cargo_space"`, `"no_power"`, `"not_enough_power"`, `"not_found"`, `"locked"`, `"already_active"`, `"wrong_position"`, `"insufficient_materials"`, `"paused_no_power"`, `"cargo_present"`, `"blocked"`, `"paused"`, `"canceled"`, `"not_ready"`, `"not_local"`, `"same_endpoint"`, `"unsupported_source"`, `"source_is_vehicle"`, `"unsupported_target"`, `"target_is_vehicle"`, `"incompatible"`, `"duplicate"`, `"invalid_type"`, `"path"`, `"wall"`, `"exit"`, `"in_progress"`, `"ongoing"`, `"win"`, `"loss"`, `"draw"`, `"occupied"`, `"no_game"`, `"rejected"`, `"booting"`, `"already_booted"`, `"activating"`, `"already_online"`, `"boot_required"`, `"initializing"`, `"power_required"`, `"insufficient_credits"`, `"inventory_full"`, `"not_toggleable"`, `"not_connected"`, `"no_script"`, `"script_running"`, `"script_paused"`, `"editor_busy"`, `"variant_not_found"`, `"incompatible_variant"`, `"source_too_large"`, `"already_running"`, `"not_powered"`, `"already_paused"`, `"started"`, `"already_repaired"`, `"no_source"`, `"already_testing"`, `"too_far"`, `"already_here"`, `"overheated"`, `"moving"`, `"dropped"`, `"invalid_seed"`, `"no_seed"`, `"holding"`, `"not_empty"`, `"base_sector"`, `"no_kit"`, `"invalid_kit"`, `"not_plantable"`, `"insufficient_water"`, `"tank_empty"`, `"already_full"`, `"no_salt"`, `"invalid_input"`, `"no_plant"`, `"already_mature"`, `"tier_conflict"`, `"no_dose"`, `"nothing"`, `"script_present"`, `"partial"`, `"not_mature"`, `"no_forage"`, `"correct"`, `"incorrect"`, `"already_completed_correct"`, `"already_completed_incorrect"`, `"accepted"`, `"wrong_planet"`, `"wrong_contract"`, `"unknown_contract"`, `"key_is_planet"`, `"unknown_key"`, `"station_not_found"`, `"not_at_station"`, `"not_at_service_point"`, `"item_not_in_inventory"`, `"unknown_module"`, `"slot_not_compatible"`, `"slot_occupied"`, `"invalid_slot"`, `"capability_already_mounted"`, `"slot_empty"`, `"holder_not_empty"`, `"invalid_internal_slot"`, `"not_container"`, `"item_not_accepted"`, `"internal_slot_occupied"`, `"internal_slot_empty"`, `"container_not_empty"`, `"charging"`, `"not_docked"`, `"station_offline"`, `"already_dispatched"`, `"unknown_recipe"`, `"offline"`, `"recipe_locked"`, `"material_mismatch"`, `"material_present"`, `"invalid_channel"`, `"invalid_value"`, `"channel_limit"`, `"invalid_key"`, `"invalid_coords"`, `"invalid_icon"`, `"invalid_color"`, `"invalid_text"`, `"limit_reached"`, `"entry_limit"`, `"unknown_order"`, `"completed"`, `"out_of_range"`, `"scrambled"`, `"drill_not_found"`, `"invalid_target"`, `"wrong_engine_for_module"`, `"cargo_capacity_exceeded"`, `"module_not_mounted"`, `"hot_cargo_requires_plating"`, `"refueling"`, `"no_oil"`, `"not_stranded"`, `"no_rescue"`, `"worker_not_present"`, `"construction_dependency"`, `"not_upgrade_item"`, `"not_at_outpost"`, `"wrong_machine_type"`, `"tier_too_high"`, `"tier_not_ready"`, `"not_undeployable"`, `"self_target"`, `"docked_drone"`, `"is_home"`, `"name_empty"`, `"name_too_long"`, `"name_taken"`, `"output_full"`, `"complete"`, `"no_input"`, `"no_active"`, `"cargo_occupied"`, `"no_fragment"`, `"input_occupied"`, `"source_empty"`, `"source_busy"`, `"wrong_outpost"`, `"invalid_source"`, `"invalid_reagent"`, `"invalid_qty"`, `"invalid_properties"`, `"invalid_property_match"`, `"insufficient_input"`, `"recipe_mismatch"`, `"input_empty"`, `"not_analyzed"`, `"invalid_specimen"`, `"chamber_occupied"`, `"not_in_input"`, `"invalid_fragment"`, `"destroyed"`, `"unknown_gene"`, `"invalid_recipe"`, `"wrong_materials"`, `"wrong_fragment"`, `"no_recipe"`, `"conditioned"`, `"burned"`, `"no_run"`, `"species_exists"`, `"unknown_creature"`, `"not_cataloged"`, `"no_target"`, `"wrong_feed"`, `"insufficient_feed"`, `"insufficient_reagents"`, `"no_colony"`, `"not_established"`, `"insufficient_capacity"`, `"unknown_node"`, `"already_purchased"`, `"population_locked"`, `"insufficient_insight"`, `"output_busy"`, `"no_material"`
 
 ##### `.message: str`
 
@@ -36803,6 +39800,8 @@ Player-readable explanation of the exact command outcome. Suitable for logs and 
 ## CommandResult
 
 **Returned by:** Component.next_command()
+
+Get `CommandResult` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -36831,6 +39830,8 @@ Consumed `ScriptCommand`, or `None` when the queue was empty.
 
 **Returned by:** Queue, discard, clear, and bulk-count commands
 
+Get `CountResult` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.status: str`
@@ -36856,7 +39857,9 @@ Whole-number entries or units affected by the command.
 
 ## CropJob
 
-**Returned by:** Crop Automator current_job() and get_queue()
+**Returned by:** Crop Automator `current_job()` and `get_queue()`
+
+Get `CropJob` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -36909,7 +39912,9 @@ Exact physical blocker, or `None` while working or queued.
 
 ## CropJobResult
 
-**Returned by:** Crop Automator next_result()
+**Returned by:** Crop Automator `next_result()`
+
+Get `CropJobResult` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -36969,6 +39974,8 @@ Whole Forage units a harvest could not fit and threw away. Non-zero only with `"
 
 **Returned by:** Crop Automator job submission
 
+Get `JobReceipt` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.status: str`
@@ -37000,7 +40007,9 @@ One-based execution position at submission time, including the active job, or `N
 
 ## AnalyzeInfo
 
-**Returned by:** bio_lab.analyze().info after status == "ok"
+**Returned by:** `bio_lab.analyze().info` after `status == "ok"`
+
+Get `AnalyzeInfo` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -37026,7 +40035,7 @@ Rarity tier: `"common" | "uncommon" | "rare" | "legendary"`.
 
 ##### `.required_recipe: dict[str, int]`
 
-Required reagents to extract a sample: dict `{reagent_id: qty}`. Iterate `.items()` and call `lab.load(rid, qty)` for each pair, then `lab.extract()`.
+Required reagents to extract a sample: `dict` `{reagent_id: qty}`. Iterate `.items()` and call `lab.load(rid, qty)` for each pair, then `lab.extract()`.
 
 - **Returns** `dict[str, int]`
 
@@ -37047,6 +40056,8 @@ Straight-line distance in meters from this outpost (set at collect time).
 ## BioCasterRecipe
 
 **Returned by:** bio_caster.list_recipes() / bio_caster.find_recipe(fragment_id)
+
+Get `BioCasterRecipe` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -37081,6 +40092,8 @@ Inclusive target temperature range `[low, high]` in °C for this recipe.
 
 **Returned by:** bio_exchange.orders() / bio_exchange.active_order() / get_component("bio_exchange_1").orders()
 
+Get `BioOrder` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.id: str`
@@ -37104,7 +40117,7 @@ Biome the required fragments belong to (e.g. `"frozen"`). Orders for biomes you 
 
 ##### `.requires: dict[str, int]`
 
-The fragment shopping list: dict `{fragment_id: count}`. Iterate `.items()` to see what to deliver and how many of each.
+The fragment shopping list: `dict` `{fragment_id: count}`. Iterate `.items()` to see what to deliver and how many of each.
 
 - **Returns** `dict[str, int]`
 
@@ -37116,14 +40129,14 @@ Credits paid when every requirement is met. Paid once: orders are one-time.
 
 ##### `.status: str`
 
-Status relative to this Bio Exchange: `"available"` (not currently selected here), `"active"` (selected here), or `"complete"` (completed globally). Global completion takes priority over selection; an available order may already have delivery progress.
+Status relative to this Bio Exchange: `"available"` (not currently selected here), `"active"` (selected here), or `"complete"` (completed globally). Global completion takes priority over selection; an order with status `"available"` may already have delivery progress.
 
 - **Returns** `str`
 - **Possible values** `"available"`, `"active"`, `"complete"`
 
 ##### `.delivered: dict[str, int]`
 
-Per-fragment delivery progress: dict `{fragment_id: count}`, shared across every Bio Exchange serving this order. Compare against `.requires` to see what's left to deliver.
+Per-fragment delivery progress: `dict` `{fragment_id: count}`, shared across every Bio Exchange serving this order. Compare against `.requires` to see what's left to deliver.
 
 - **Returns** `dict[str, int]`
 
@@ -37156,6 +40169,8 @@ Required gene sets for geothermal orders as `{fragment_id: [attribute_id, ...]}`
 ## ChamberFragment
 
 **Returned by:** dna_sequencer.chamber
+
+Get `ChamberFragment` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -37190,6 +40205,8 @@ The genes the chambered fragment currently carries (e.g. `["cold_tolerance", "pr
 
 **Returned by:** bio_luminizer.chamber
 
+Get `ChamberSample` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.fragment_id: str`
@@ -37216,6 +40233,8 @@ The sample's current glow `[r,g,b]` (0-255): the dim start color before tuning. 
 ## FragmentLocation
 
 **Returned by:** bio_collector.scan()
+
+Get `FragmentLocation` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -37261,7 +40280,9 @@ Rarity tier once `.cataloged` is `True`; `None` for still-unknown dots. Scan res
 
 ## HabitatBonusNode
 
-**Returned by:** Habitat.get_bonus_tree().nodes and Habitat.get_active_bonuses()
+**Returned by:** `Habitat.get_bonus_tree().nodes` and `Habitat.get_active_bonuses()`
+
+Get `HabitatBonusNode` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -37352,6 +40373,8 @@ All currently unmet requirements: at most `"population"` and `"insight"`.
 
 **Returned by:** Habitat.get_bonus_tree()
 
+Get `HabitatBonusTree` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.species: str`
@@ -37383,6 +40406,8 @@ The species-only adaptation and all-species breakthrough in stable order, includ
 ## HabitatInsight
 
 **Returned by:** Habitat.get_insight()
+
+Get `HabitatInsight` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -37422,6 +40447,8 @@ Whether this colony is producing positive Insight at its current growth rate.
 
 **Returned by:** bio_collector.cargo / bio_lab.specimen
 
+Get `Specimen` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.coords: list[float]`
@@ -37452,7 +40479,7 @@ Fragment id (e.g. `"gw_cranial_plate"`). Bio Collector cargo reveals it once the
 
 ##### `.name: str | None`
 
-Player-facing fragment name (e.g. `"Beak"`). `None` while the fragment identity is still unknown.
+Player-facing fragment name (e.g. "Beak"). `None` while the fragment identity is still unknown.
 
 - **Returns** `str | None`
 
@@ -37465,7 +40492,7 @@ Rarity tier: `"common" | "uncommon" | "rare" | "legendary"`. `None` until analyz
 
 ##### `.recipe: dict[str, int] | None`
 
-Required reagent recipe: dict `{reagent_id: qty}`. `None` until analyzed.
+Required reagent recipe: `dict` `{reagent_id: qty}`. `None` until analyzed.
 
 - **Returns** `dict[str, int] | None`
 
@@ -37489,9 +40516,71 @@ The genes this **geothermal** specimen carries (e.g. `["heat_resistance", "acid_
 
 *Types / Terraforming*
 
+## TerraformPillar
+
+**Returned by:** terraforming.pillars() / terraforming.get_pillar()
+
+Get `TerraformPillar` from the APIs listed here. It has no script constructor.
+
+### Properties
+
+##### `.id: str`
+
+Stable pillar id: `"temperature"`, `"oxygen"`, `"pressure"`, `"biomass"`, `"plants"`, or `"wildlife"`.
+
+- **Returns** `str`
+- **Possible values** `"temperature"`, `"oxygen"`, `"pressure"`, `"biomass"`, `"plants"`, `"wildlife"`
+
+##### `.value: float`
+
+Current pillar amount in `unit` at the time of the query. Temperature uses heat rather than degrees Celsius, so it is directly comparable with `target` and `next_target`.
+
+- **Returns** `float`
+
+##### `.target: float`
+
+Final completion threshold in the same `unit` as `value`. Comes from the pillar's last milestone.
+
+- **Returns** `float`
+
+##### `.unit: str`
+
+Unit shared by `value`, `target`, and `next_target`: `"heat"`, `"ppt"`, `"kPa"`, `"t"`, `"km²"`, or `"individuals"`.
+
+- **Returns** `str`
+- **Possible values** `"heat"`, `"ppt"`, `"kPa"`, `"t"`, `"km²"`, `"individuals"`
+
+##### `.progress: float`
+
+Pillar completion percentage on a **0-100** scale. Uses the same five advancement bands as the Terraform Index breakdown; it is not simply `value / target * 100`.
+
+- **Returns** `float`
+
+##### `.complete: bool`
+
+`True` when the pillar has reached its final target, using the game's completion tolerance. This is the authoritative check, including when a displayed percentage rounds to 100.
+
+- **Returns** `bool`
+
+##### `.phase: int`
+
+Current milestone number, **1-6**. The starting milestone is 1; the final completed milestone is 6.
+
+- **Returns** `int`
+
+##### `.next_target: float | None`
+
+The next milestone threshold in `unit`, or `None` when the pillar is complete. All fields are snapshots; query the component again for fresh values.
+
+- **Returns** `float | None`
+
+*Types / Terraforming*
+
 ## WasteDumpResult
 
 **Returned by:** oxygen_generator.dump_waste()
+
+Get `WasteDumpResult` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -37514,11 +40603,42 @@ Efficiency penalty applied by this dump, in the **0-1** range.
 
 - **Returns** `float`
 
+*Types / Vehicles & Modules*
+
+## BatterySwapResult
+
+**Returned by:** Pioneer.swap_batteries()
+
+Get `BatterySwapResult` from the APIs listed here. It has no script constructor.
+
+### Properties
+
+##### `.status: str`
+
+Stable outcome code for script control flow.
+
+- **Returns** `str`
+- **Possible values** `"ok"`, `"no_op"`, `"not_found"`, `"under_construction"`, `"busy"`, `"not_at_service_point"`, `"invalid_slots"`, `"no_compatible_battery"`, `"insufficient_charged_batteries"`
+
+##### `.message: str`
+
+Localized explanation of this outcome.
+
+- **Returns** `str`
+
+##### `.swapped_count: int`
+
+Number of exchanged batteries; zero on rejection or no operation.
+
+- **Returns** `int`
+
 *Types / Weather & Sky*
 
 ## SignalReceiver
 
 **Returned by:** weather_station.signal_receiver
+
+Get `SignalReceiver` from the APIs listed here. It has no script constructor.
 
 ### Methods
 
@@ -37533,6 +40653,8 @@ Raw transmissions audible to this powered station right now. More than one event
 ## SignalTransmission
 
 **Returned by:** SignalReceiver.transmissions()
+
+Get `SignalTransmission` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -37597,6 +40719,8 @@ Physical Weather Station hearing this copy.
 
 **Returned by:** WeatherReport.active()
 
+Get `Storm` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.id: str`
@@ -37621,7 +40745,7 @@ Cell-center y at this report's observation time, m.
 
 ##### `.kind() → str`
 
-`"dust"` or `"thunder"`. Dust events transmit a Raw Uranium aftermath message. Thunder charges eligible Lightning Rods and may produce a Storm Glass message.
+`"dust"` or `"thunder"`. Dust events transmit a message encoding where their Raw Uranium aftermath lies. Thunder charges eligible Lightning Rods and may transmit a message encoding where its Storm Glass aftermath lies.
 
 - **Returns** `str`
 - **Possible values** `"dust"`, `"thunder"`
@@ -37675,11 +40799,13 @@ Hours until the cell's edge reaches the point. **0** when the point is already i
 
 **Returned by:** WeatherReport.forecast()
 
+Get `WeatherEventForecast` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.id: str`
 
-Stable event id shared with the active Storm and later signal transmissions.
+Stable event id shared with the active `Storm` and later signal transmissions.
 
 - **Returns** `str`
 
@@ -37715,6 +40841,8 @@ Observed forecast range `[low, high]`, each **0-1**.
 ## WeatherReport
 
 **Returned by:** weather_station.observe() / weather_station.last_report()
+
+Get `WeatherReport` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -37767,6 +40895,8 @@ Local `WeatherEventForecast` entries expected to enter coverage within **8 world
 ## WeatherSignalBoard
 
 **Returned by:** weather_station.signal_board
+
+Get `WeatherSignalBoard` from the APIs listed here. It has no script constructor.
 
 ### Methods
 
@@ -37865,6 +40995,8 @@ This station's current board publication metadata.
 
 **Returned by:** weather_station.signal_board.status()
 
+Get `WeatherSignalBoardStatus` from the APIs listed here. It has no script constructor.
+
 ### Properties
 
 ##### `.has_input: bool`
@@ -37897,6 +41029,8 @@ Event shown on this station's board, or an empty string with no input.
 ## WeatherStrike
 
 **Returned by:** weather_station.strikes()
+
+Get `WeatherStrike` from the APIs listed here. It has no script constructor.
 
 ### Properties
 
@@ -37934,7 +41068,9 @@ Whether an eligible Lightning Rod banked this strike.
 
 ## Zone
 
-**Returned by:** WeatherReport.coverage() and WeatherEventForecast.corridor()
+**Returned by:** `WeatherReport.coverage()` and `WeatherEventForecast.corridor()`
+
+Get `Zone` from the APIs listed here. It has no script constructor.
 
 ### Methods
 

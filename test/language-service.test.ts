@@ -123,11 +123,18 @@ void test("language server failure cannot become a clean validation", async (con
   );
 });
 
-void test("state-changing targets cannot follow a registered symlink outside the workspace", async () => {
+void test("state-changing targets cannot follow a registered symlink outside the workspace", async (context) => {
   const root = await createWorkspace();
   const outside = await mkdtemp(path.join(os.tmpdir(), "code-terraform-outside-"));
   await writeFile(path.join(outside, "external.py"), "pass\n");
-  await symlink(path.join(outside, "external.py"), path.join(root, "linked.py"));
+  try {
+    await symlink(path.join(outside, "external.py"), path.join(root, "linked.py"));
+  } catch (error) {
+    // Windows needs Developer Mode or admin rights to create symlinks.
+    if ((error as NodeJS.ErrnoException).code !== "EPERM") throw error;
+    context.skip("creating symlinks is not permitted here");
+    return;
+  }
   await writeFile(
     path.join(root, "codeterraform-workspace.json"),
     JSON.stringify({

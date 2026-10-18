@@ -2,7 +2,7 @@
 
 *Player Documentation*
 
-Build 58191a1
+Build 9f7a682
 
 ## Contents
 
@@ -2866,9 +2866,9 @@ while True:
 
 Variants are named script snapshots you can reuse across a fleet without copying code by hand.
 
-### Main and named variants
+### `Main` and named variants
 
-Every script starts with **Main**. Main is this machine's own fallback code; it is not shared and cannot be renamed or deleted.
+Every script starts with **`Main`**. `Main` is this machine's own fallback code; it is not shared and cannot be renamed or deleted.
 
 A machine can expose two named catalogs:
 
@@ -2879,23 +2879,26 @@ The Variants tab always lists exact-type variants first and compatible-family va
 
 ### Editing the active variant
 
-The Code tab edits whichever variant is active. Changes to **Main** stay with this script. Changes to a named variant update its shared catalog entry, while other scripts keep their loaded copies until you explicitly update them. An older loaded copy is marked **outdated**; click **Update** to load the latest catalog version, or **Keep mine** to save that copy as a separate named variant.
+The Code tab edits whichever variant is active. Changes to **`Main`** stay with this script. Changes to a named variant update its shared catalog entry, while other scripts keep their loaded copies until you explicitly update them. An older loaded copy is marked **outdated**; click **Update** to load the latest catalog version, or open **⋯ > Keep mine** to save that copy as a separate named variant.
 
 Use **Duplicate Variant** or **Create Variant from Selection…** to publish the current code as a new named catalog entry. Duplicate names across the visible catalogs are blocked so variant selection stays unambiguous.
 
-### Use and Apply to all
+### Use, Update outdated copies and Apply to all
 
 **Use** loads a catalog variant into this machine's running code and makes it active here.
 
-**Apply to all** respects the catalog that owns the variant. An exact-type variant targets that precise type. A family variant targets every explicitly compatible tier with the same script slot. If the selected named variant is active here and you edited it, **Apply to all** uses the updated catalog source.
+A variant's **⋯** menu holds the actions that reach other machines:
+
+- **Update outdated copies** loads the latest saved code only on machines already using that variant. Up-to-date copies and machines using other variants stay as they are.
+- **Apply to all compatible machines** switches every matching machine to the variant, including machines using another variant. It respects the catalog that owns the variant: an exact-type variant targets that precise type, and a family variant targets every explicitly compatible tier with the same script slot. If the selected named variant is active here and you edited it, it applies the updated catalog source.
 
 When the applied source changes, a running target restarts automatically with the new code. A manually paused target stays paused, a power-paused target waits for power and then resumes, and a stopped target stays stopped. A target that already has the same source keeps its current evaluator without a restart.
 
-Apply to all is a one-time copy, not a permanent shared link. Future edits to a named variant update its catalog entry but do not change other scripts' loaded copies. Use Apply to all again when you intentionally want those scripts to load the improved version. Changes to Main remain private to the script that owns it.
+Applying is a one-time copy, not a permanent shared link. Future edits to a named variant update its catalog entry but do not change other scripts' loaded copies, which are then marked **outdated**. Use **⋯ > Update outdated copies** when you want those scripts to load the improved version. Changes to `Main` remain private to the script that owns it.
 
 ### Catalog changes
 
-Renaming or deleting a named variant changes only its owning catalog. When a saved variant is deleted, scripts using it keep their current working code and lifecycle, then detach to Main. A running script keeps its evaluator, a paused script stays paused, and a stopped script stays stopped.
+Renaming or deleting a named variant changes only its owning catalog. When a saved variant is deleted, scripts using it keep their current working code and lifecycle, then detach to `Main`. A running script keeps its evaluator, a paused script stays paused, and a stopped script stays stopped.
 
 A top-of-file `"""docstring"""` or first-line `#` comment becomes the variant description shown in the list. Function docstrings are separate: they appear in hover and autocomplete, and the **Docstrings** page lists the supported formatting.
 
@@ -2905,11 +2908,11 @@ Compatible family sharing is explicit machine metadata, not a guess based on nam
 
 ### Unassigned scripts
 
-Undeploying or deconstructing a machine, or deleting a Control Room card, stops its script. Authored code stays in **Computer > Scripts > Unassigned**, with its notes, private Main, selected variant, and run history. **Current** shows assigned scripts by default; **All** includes both views.
+Undeploying or deconstructing a machine, or deleting a Control Room card, stops its script. Authored code stays in **Computer > Scripts > Unassigned**, with its notes, private `Main`, selected variant, and run history. **Current** shows assigned scripts by default; **All** includes both views.
 
 Unassigned scripts cannot run. Use their actions menu to **Copy to machine** (**Copy to panel** for a card's script), **Copy to Playground**, or **Delete**. You can select several unassigned scripts for deletion. Deletion removes their private data but keeps shared machine variants.
 
-**Copy to machine** copies into a compatible machine slot, whose script keeps the slot's existing ID. It stops the target and preserves the previous code in Variants before replacing Main. Compatibility requires a recorded former machine type and slot; older unassigned scripts without that information can still be reviewed and copied to Playground. **Copy to panel** works the same way on any card you choose, since every card's script uses the same `panel` drawing API.
+**Copy to machine** copies into a compatible machine slot, whose script keeps the slot's existing ID. It stops the target and preserves the previous code in Variants before replacing `Main`. Compatibility requires a recorded former machine type and slot; older unassigned scripts without that information can still be reviewed and copied to Playground. **Copy to panel** works the same way on any card you choose, since every card's script uses the same `panel` drawing API.
 
 **Copy to Playground** creates a new named document without replacing Scratch or running the code. The original script stays available with all its metadata. Copied code is unchanged, including machine IDs and `self` references.
 
@@ -5012,6 +5015,10 @@ print(rover.nav.get_position())
 ```
 
 Use the exact id from the machine card. Type names like `"bio_collector"` describe a kind of machine; they are not the same thing as the deployed machine id `"bio_collector_1"`.
+
+### Item IDs and component IDs
+
+The Shop and inventory show an **Item ID**, such as `battery`. It identifies a kind of item and is used by `shop.buy("battery", 1)` and `inventory.count("battery")`. A deployed battery has its own **Component ID**, such as `battery_1`, used by `get_component("battery_1")`. Use the actual ID shown on its machine card. Equipment in inventory has an Item ID but no deployed Component ID. **Component type** links to the API shared by machines of that type.
 
 ### Each call is a new instance
 
@@ -10737,7 +10744,7 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 ##### `.planet() → Nocturna`
 
-Returns the current planet component. Use `gps.planet().id` for stable ids such as `"nocturna"` when calling Journal APIs, and `gps.planet().get_name()` for the display name `"Nocturna"`.
+Returns the current planet component. Use `gps.planet().id` for stable ids such as `"nocturna"` when calling Journal APIs, and `gps.planet().get_name()` for the localized display name, `"Nocturna"` in English.
 
 - **Returns** `Nocturna`. Use `.id` for stable journal ids and `.get_name()` for display.
 
@@ -11955,10 +11962,20 @@ Total battery capacity in watt-hours (**Wh**). Queryable rather than hardcoded s
 
 Charges loose **Portable Batteries (50 Wh)** and **Heavy Portable Batteries (100 Wh)** from the local grid. Mk I has **4 shared slots**, **1 charging bay**, and a **30 W** budget. Place at Base or a founded outpost. Park a Pioneer in its service area for a timed battery exchange. Charging is script-controlled; idle draw is 0 W.
 
+### Mk I
+
 | Field | Value |
 | --- | --- |
 | Type | Mining |
+| Power in | 30 W total while charging, for 1 active bay |
+| Idle power | 0 W when neither charging nor rescuing |
 | Tiers | Mk II |
+
+### Mk II
+
+| Field | Value |
+| --- | --- |
+| Power in | 60 W total while charging, shared across up to 2 active bays |
 
 ### How to obtain
 
@@ -12296,7 +12313,7 @@ Burns oil into strong power that bridges solar gaps. Oil wells pulse between act
 | Field | Value |
 | --- | --- |
 | Type | Power |
-| Power out | +700 W (feeds the grid) |
+| Power out | Up to 700 W (feeds the grid) |
 | Consumes | Oil, buffer 10 t |
 
 ### How to obtain
@@ -12412,7 +12429,7 @@ Generates up to **5,000 W** from Fuel Rods and cooling water. One rod lasts **72
 | Field | Value |
 | --- | --- |
 | Type | Power |
-| Power out | +5,000 W (feeds the grid) |
+| Power out | Up to 5,000 W (feeds the grid) |
 | Consumes | Water, buffer 3 t |
 | Input buffer | Units: 3 |
 
@@ -12548,7 +12565,7 @@ Turns sunlight into up to **50 W** for the grid when a script tracks the Sun. Po
 | Field | Value |
 | --- | --- |
 | Type | Power |
-| Power out | +50 W (feeds the grid) |
+| Power out | Up to 50 W (feeds the grid) |
 
 ### How to obtain
 
@@ -12650,7 +12667,7 @@ Produces up to 108 W from 90 t/h Steam. Its script-owned throttle scales both co
 | Field | Value |
 | --- | --- |
 | Type | Power |
-| Power out | +108 W (feeds the grid) |
+| Power out | Up to 108 W (feeds the grid) |
 | Consumes | Steam, up to 90 t per hour, buffer 100 t |
 
 ### How to obtain
@@ -12769,11 +12786,30 @@ Read commands you send from the editor's **Commands** tab while this script runs
 
 Grid-powered fleet charging: Mk I provides **1 bay / 30 W**, Mk II **2 bays / 120 W**, and Mk III **4 bays / 240 W**. Idle bays pool onto one vehicle; several vehicles share the budget. A script queues charging or dispatches rescue.
 
+### Mk I
+
 | Field | Value |
 | --- | --- |
 | Type | Mining |
-| Power in | Variable (draws from grid) |
+| Power in | 30 W total while charging, for 1 active bay |
+| Idle power | 0 W when neither charging nor rescuing |
+| Rescue power | +12 W during a rescue mission while the station is powered |
+| Maximum draw | 42 W with charging and rescue together |
 | Tiers | Mk II and Mk III |
+
+### Mk II
+
+| Field | Value |
+| --- | --- |
+| Power in | 120 W total while charging, shared across up to 2 active bays |
+| Maximum draw | 132 W with charging and rescue together |
+
+### Mk III
+
+| Field | Value |
+| --- | --- |
+| Power in | 240 W total while charging, shared across up to 4 active bays |
+| Maximum draw | 252 W with charging and rescue together |
 
 ### How to obtain
 
@@ -13081,7 +13117,7 @@ Forges a volcanic fragment by holding the crucible in a target temperature band 
 | Field | Value |
 | --- | --- |
 | Type | Atmosphere |
-| Power in | -15 W (draws from grid) |
+| Power in | 15 W whenever powered, including while idle |
 | Consumes | Steam, buffer 20 t |
 | Consumes | Water, buffer 20 t |
 | Output buffer | Units: 30 |
@@ -13415,7 +13451,7 @@ Automates the Collect step of the biology loop, fetching a field specimen into i
 | Field | Value |
 | --- | --- |
 | Type | Atmosphere |
-| Power in | -5 W (draws from grid) |
+| Power in | 5 W whenever powered, including while idle |
 
 ### How to obtain
 
@@ -13537,7 +13573,7 @@ Inspects a deep-biome fragment against a fixed rulebook, quizzing your script on
 | Field | Value |
 | --- | --- |
 | Type | Atmosphere |
-| Power in | -25 W (draws from grid) |
+| Power in | 25 W whenever powered, including while idle |
 | Input buffer | Units: 10 |
 | Output buffer | Units: 10 |
 
@@ -13750,7 +13786,7 @@ Delivers biology samples to fulfill a Bio Order, the biology counterpart to the 
 | Field | Value |
 | --- | --- |
 | Type | Atmosphere |
-| Power in | -8 W (draws from grid) |
+| Power in | 8 W whenever powered, including while idle |
 | Input buffer | Units: 10 |
 | Output buffer | Units: 10 |
 
@@ -13922,7 +13958,7 @@ Automates the Analyze and Extract steps of the biology loop, studying a specimen
 | Field | Value |
 | --- | --- |
 | Type | Atmosphere |
-| Power in | -5 W (draws from grid) |
+| Power in | 5 W whenever powered, including while idle |
 | Input buffer | Units: 30 |
 | Stockpile | 30 units (mixed) |
 
@@ -14148,7 +14184,7 @@ Tints a coastal fragment's glow to a target color using three built-in colored l
 | Field | Value |
 | --- | --- |
 | Type | Atmosphere |
-| Power in | -12 W (draws from grid) |
+| Power in | 12 W whenever powered, including while idle |
 | Input buffer | Units: 10 |
 | Output buffer | Units: 10 |
 
@@ -14344,7 +14380,7 @@ Splices genes into geothermal fragments so they carry what an order needs. You w
 | Field | Value |
 | --- | --- |
 | Type | Atmosphere |
-| Power in | -20 W (draws from grid) |
+| Power in | 20 W whenever powered, including while idle |
 | Input buffer | Units: 10 |
 | Output buffer | Units: 10 |
 
@@ -14515,15 +14551,24 @@ Read commands you send from the editor's **Commands** tab while this script runs
 
 Crafts the creature feeds that Habitat colonies eat, working like the Fabricator from a recipe you choose. Each creature's recipe unlocks through a Biolab order, so it only makes what you've unlocked. Each machine is upgraded to Mk II with its own Fabricator-made pack, unlocked at 250,000 Wildlife: 1.5× crafting and input Auto Feeder speed, with 2× operating power. Crafting can advance while the feeder cools down.
 
+### Mk I
+
 | Field | Value |
 | --- | --- |
 | Type | Biosphere |
-| Power in | Variable (draws from grid) |
+| Power in | 30-42 W while processing, depending on recipe |
+| Idle power | 0 W when not processing |
 | Produces | Depends on the selected recipe |
 | Output buffer | Units: 50 |
 | Stockpile | 200 units (mixed) |
-| Recipes | 16 available |
+| Recipes | 16 available, with exact power requirements |
 | Tiers | Mk II |
+
+### Mk II
+
+| Field | Value |
+| --- | --- |
+| Power in | 60-84 W while processing, depending on recipe |
 
 ### How to obtain
 
@@ -14717,13 +14762,23 @@ Read commands you send from the editor's **Commands** tab while this script runs
 
 Revives one species from Biology reagents staged in this Habitat's dedicated local input, then breeds it into a colony. One living colony is allowed per species. Established colonies keep their progress when moved between Habitats.
 
+### Mk I
+
 | Field | Value |
 | --- | --- |
 | Type | Biosphere |
-| Power in | Variable (draws from grid) |
+| Power in | 40-64 W, depending on population |
+| Power scaling | 40 W empty + 2 W per 1,000 individuals, capped at 64 W total |
 | Input buffer | Units: 50 |
 | Stockpile | 25 units (mixed) |
 | Tiers | Mk II |
+
+### Mk II
+
+| Field | Value |
+| --- | --- |
+| Power in | 144-168 W, depending on population |
+| Power scaling | 144 W empty + 2 W per 1,000 individuals, capped at 168 W total |
 
 ### How to obtain
 
@@ -15223,7 +15278,8 @@ Warms the planet surface by producing heat. The best power setting shifts with t
 | Field | Value |
 | --- | --- |
 | Type | Atmosphere |
-| Power in | Variable (draws from grid) |
+| Power in | 0-10 W: `set_power` value × 1, while scripted and fueled |
+| Idle power | 0 W without a running script or without required fuel |
 | Produces | up to 0.252 heat / day at peak efficiency |
 | Input buffer | Units: 4 |
 | Tiers | Mk II, Mk III, and Mk IV |
@@ -15232,12 +15288,14 @@ Warms the planet surface by producing heat. The best power setting shifts with t
 
 | Field | Value |
 | --- | --- |
+| Power in | 0-50 W: `set_power` value × 5, while scripted and fueled |
 | Produces | up to 1.184 heat / day at peak efficiency |
 
 ### Mk III
 
 | Field | Value |
 | --- | --- |
+| Power in | 0-200 W: `set_power` value × 20, while scripted and fueled |
 | Produces | up to 52.416 heat / day at peak efficiency |
 | Consumes | Steam, up to 12 t per hour, buffer 8 t |
 
@@ -15245,6 +15303,7 @@ Warms the planet surface by producing heat. The best power setting shifts with t
 
 | Field | Value |
 | --- | --- |
+| Power in | 0-1,000 W: `set_power` value × 100, while scripted and fueled |
 | Produces | up to 129.780 heat / day at peak efficiency |
 | Consumes | Fuel Rod, 0.1 per day |
 
@@ -15387,7 +15446,8 @@ Draws CO2 from the atmosphere and turns it into breathable oxygen, one of the co
 | Field | Value |
 | --- | --- |
 | Type | Atmosphere |
-| Power in | -8 W (draws from grid) |
+| Power in | 8 W while a script runs and required fuel is available |
+| Idle power | 0 W without a running script or without required fuel |
 | Produces | up to 0.240 ppt / day at peak efficiency |
 | Input buffer | Units: 4 |
 | Tiers | Mk II, Mk III, and Mk IV |
@@ -15396,14 +15456,14 @@ Draws CO2 from the atmosphere and turns it into breathable oxygen, one of the co
 
 | Field | Value |
 | --- | --- |
-| Power in | -40 W (draws from grid) |
+| Power in | 40 W while a script runs and required fuel is available |
 | Produces | up to 1.200 ppt / day at peak efficiency |
 
 ### Mk III
 
 | Field | Value |
 | --- | --- |
-| Power in | -160 W (draws from grid) |
+| Power in | 160 W while a script runs and required fuel is available |
 | Produces | up to 48.000 ppt / day at peak efficiency |
 | Consumes | Water, up to 8 t per hour, buffer 5 t |
 
@@ -15411,7 +15471,7 @@ Draws CO2 from the atmosphere and turns it into breathable oxygen, one of the co
 
 | Field | Value |
 | --- | --- |
-| Power in | -800 W (draws from grid) |
+| Power in | 800 W while a script runs and required fuel is available |
 | Produces | up to 120.000 ppt / day at peak efficiency |
 | Consumes | Fuel Rod, 0.1 per day |
 
@@ -15573,7 +15633,8 @@ Compresses the thin atmosphere to raise surface pressure. It runs best when a sc
 | Field | Value |
 | --- | --- |
 | Type | Atmosphere |
-| Power in | -7 W (draws from grid) |
+| Power in | 7 W while a script runs and required fuel is available |
+| Idle power | 0 W without a running script or without required fuel |
 | Produces | up to 0.012 kPa / day at peak efficiency |
 | Input buffer | Units: 4 |
 | Tiers | Mk II, Mk III, and Mk IV |
@@ -15582,14 +15643,14 @@ Compresses the thin atmosphere to raise surface pressure. It runs best when a sc
 
 | Field | Value |
 | --- | --- |
-| Power in | -35 W (draws from grid) |
+| Power in | 35 W while a script runs and required fuel is available |
 | Produces | up to 0.300 kPa / day at peak efficiency |
 
 ### Mk III
 
 | Field | Value |
 | --- | --- |
-| Power in | -140 W (draws from grid) |
+| Power in | 140 W while a script runs and required fuel is available |
 | Produces | up to 2.400 kPa / day at peak efficiency |
 | Consumes | Water, up to 5 t per hour, buffer 5 t |
 
@@ -15597,7 +15658,7 @@ Compresses the thin atmosphere to raise surface pressure. It runs best when a sc
 
 | Field | Value |
 | --- | --- |
-| Power in | -700 W (draws from grid) |
+| Power in | 700 W while a script runs and required fuel is available |
 | Produces | up to 6.000 kPa / day at peak efficiency |
 | Consumes | Fuel Rod, 0.1 per day |
 
@@ -15743,10 +15804,11 @@ Refines raw exotic feedstock into creature-grade gas or liquid, using tar as a r
 | Field | Value |
 | --- | --- |
 | Type | Biosphere |
-| Power in | Variable (draws from grid) |
+| Power in | 30-48 W while processing, depending on recipe |
+| Idle power | 0 W when not processing |
 | Produces | Depends on the selected recipe |
 | Input buffer | Units: 50 |
-| Recipes | 4 available |
+| Recipes | 4 available, with exact power requirements |
 
 ### How to obtain
 
@@ -16018,18 +16080,33 @@ Read the Terraform Index in whole TP, capped at 1,000,000. Completing one pillar
 
 Assembles finished parts from several refined materials at once. A script picks a recipe, gathers each ingredient into its shared stockpile, and drains the finished items out.
 
+### Mk I
+
 | Field | Value |
 | --- | --- |
 | Type | Mining |
-| Power in | Variable (draws from grid) |
+| Power in | 25-220 W while processing, depending on recipe |
+| Idle power | 0 W when not processing |
 | Consumes | Steam, buffer 10 t |
 | Consumes | Water, buffer 10 t |
 | Consumes | Oil, buffer 10 t |
 | Output buffer | Units: 20 |
 | Byproduct buffer | Units: 20 |
 | Stockpile | 200 units (mixed) |
-| Recipes | 75 available |
+| Recipes | 75 available, with exact power requirements |
 | Tiers | Mk II and Mk III |
+
+### Mk II
+
+| Field | Value |
+| --- | --- |
+| Power in | 37.5-330 W while processing, depending on recipe |
+
+### Mk III
+
+| Field | Value |
+| --- | --- |
+| Power in | 75-660 W while processing, depending on recipe |
 
 ### How to obtain
 
@@ -16250,11 +16327,12 @@ Presses Raw Uranium and lead plates into Fuel Rods or Nuclear Batteries, working
 | Field | Value |
 | --- | --- |
 | Type | Mining |
-| Power in | Variable (draws from grid) |
+| Power in | 1,200-1,800 W while processing, depending on recipe |
+| Idle power | 0 W when not processing |
 | Produces | Depends on the selected recipe |
 | Output buffer | Units: 5 |
 | Stockpile | 40 units (mixed) |
-| Recipes | 2 available |
+| Recipes | 2 available, with exact power requirements |
 
 ### How to obtain
 
@@ -17447,12 +17525,29 @@ Requires **Auto Feeders** research. Move up to whole-number `count` units of `it
 
 Mk I static drill for deposits up to hardness 1 (Iron, Silicon): 25 t/h at standard purity and 10 W while extracting.
 
+### Mining Drill
+
 | Field | Value |
 | --- | --- |
 | Type | Mining |
 | Built on | Mineral sites |
-| Power in | -10 W (draws from grid) |
+| Power in | 10 W while mining a compatible site |
+| Idle power | 0 W without a compatible site or with a full stockpile |
 | Stockpile | 2,000 units (mixed) |
+
+### Industrial Mining Drill
+
+| Field | Value |
+| --- | --- |
+| Power in | 35 W while mining a compatible site |
+| Stockpile | 3,000 units (mixed) |
+
+### Heavy Mining Drill
+
+| Field | Value |
+| --- | --- |
+| Power in | 100 W while mining a compatible site |
+| Stockpile | 5,000 units (mixed) |
 
 ### How to obtain
 
@@ -17534,15 +17629,30 @@ Read commands you send from the editor's **Commands** tab while this script runs
 
 Refines raw ore into metal stock, one unit at a time, following a recipe you choose. A script sets the recipe, feeds ore in from a bin, and drains the finished metal out to another.
 
+### Mk I
+
 | Field | Value |
 | --- | --- |
 | Type | Mining |
-| Power in | Variable (draws from grid) |
+| Power in | 20-45 W while processing, depending on recipe |
+| Idle power | 0 W when not processing |
 | Produces | Depends on the selected recipe |
 | Input buffer | Units: 50 |
 | Output buffer | Units: 50 |
-| Recipes | 7 available |
+| Recipes | 7 available, with exact power requirements |
 | Tiers | Mk II and Mk III |
+
+### Mk II
+
+| Field | Value |
+| --- | --- |
+| Power in | 30-67.5 W while processing, depending on recipe |
+
+### Mk III
+
+| Field | Value |
+| --- | --- |
+| Power in | 60-135 W while processing, depending on recipe |
 
 ### How to obtain
 
@@ -18132,7 +18242,8 @@ Permanently destroys one script-selected waste stream: items, liquids, or gases.
 | Field | Value |
 | --- | --- |
 | Type | Mining |
-| Power in | Variable (draws from grid) |
+| Power in | 40 W while enabled, including while waiting for inputs |
+| Idle power | 5 W while disabled but powered |
 | Stockpile | 200 units (mixed) |
 
 ### How to obtain
@@ -19326,7 +19437,7 @@ Human-readable display name. Prefer `.id` for scripts that need to survive renam
 
 ##### `.battery: Battery`
 
-How much charge the Rover has left. `self.battery.level()` returns a **0-1** fraction, `self.battery.wh()` raw watt-hours, `self.battery.capacity()` the **100 Wh** max. Below **0.1** you're close to getting stranded, `charging_station.dispatch_rescue()` can fetch you, but it's slow. `.holders()` returns an empty list (sealed rig). See `Battery`.
+How much charge the Rover has left. `self.battery.level()` returns a **0-1** fraction, `self.battery.wh()` raw watt-hours, `self.battery.capacity()` the **100 Wh** max. Below **0.1** you're close to getting stranded, `charging_station.dispatch_rescue()` sends a rescue drone to recharge the Rover in place, but it's slow. `.holders()` returns an empty list (sealed rig). See `Battery`.
 
 - **Returns** `Battery`
 
@@ -19870,11 +19981,27 @@ Remove archived entries. With no prefix it clears the whole archive; with a pref
 
 1-bay logistics endpoint at an outpost. Cargo I/O.
 
+### Drone Depot
+
 | Field | Value |
 | --- | --- |
 | Type | Mining |
-| Power in | -2 W (draws from grid) |
+| Power in | 2 W whenever powered, including while idle |
 | Stockpile | 50 units (mixed) |
+
+### Drone Depot (Medium)
+
+| Field | Value |
+| --- | --- |
+| Power in | 4 W whenever powered, including while idle |
+| Stockpile | 100 units (mixed) |
+
+### Drone Depot (Large)
+
+| Field | Value |
+| --- | --- |
+| Power in | 8 W whenever powered, including while idle |
+| Stockpile | 200 units (mixed) |
 
 ### How to obtain
 
@@ -19989,7 +20116,10 @@ Charges electric drones in the field and recovers heli drones for queued refueli
 | Field | Value |
 | --- | --- |
 | Type | Mining |
-| Power in | Variable (draws from grid) |
+| Power in | 3 W base + 30 W per active charging bay (up to 1) |
+| Idle power | 3 W when neither charging nor rescuing |
+| Rescue power | +20 W during a rescue mission while the station is powered |
+| Maximum draw | 53 W with charging and rescue together |
 | Consumes | Oil, buffer 100 t |
 
 ### How to obtain
@@ -20676,7 +20806,7 @@ Ships finished goods to Earth at **25 units/h** before throughput research. A sc
 | Field | Value |
 | --- | --- |
 | Type | Logistics |
-| Power in | -15 W (draws from grid) |
+| Power in | 15 W whenever powered, including while idle |
 
 ### How to obtain
 
@@ -21119,7 +21249,7 @@ Captures gas from a cyclic exotic deposit during its active phase. Connect `self
 | --- | --- |
 | Type | Fluids |
 | Built on | Exotic deposits |
-| Power in | -30 W (draws from grid) |
+| Power in | 30 W whenever powered, including while idle |
 
 ### How to obtain
 
@@ -21242,7 +21372,7 @@ Captures liquid from a cyclic exotic spring during its active phase. Connect `se
 | --- | --- |
 | Type | Fluids |
 | Built on | Exotic deposits |
-| Power in | -35 W (draws from grid) |
+| Power in | 35 W whenever powered, including while idle |
 
 ### How to obtain
 
@@ -21712,7 +21842,7 @@ Extracts oil from a surveyed well at a throttle your script sets. Oil wells run 
 | --- | --- |
 | Type | Fluids |
 | Built on | Oil wells |
-| Power in | Up to -5 W at full throttle (draws from grid) |
+| Power in | 0-5 W, proportional to throttle even when blocked |
 | Produces | Oil, buffer 10 t |
 | Tiers | Mk II |
 
@@ -21720,7 +21850,7 @@ Extracts oil from a surveyed well at a throttle your script sets. Oil wells run 
 
 | Field | Value |
 | --- | --- |
-| Power in | Up to -100 W at full throttle (draws from grid) |
+| Power in | 0-100 W, proportional to throttle even when blocked |
 
 ### How to obtain
 
@@ -22496,7 +22626,7 @@ Converts incoming steam into clean water at a 1:1 mass ratio. Scripted throttle 
 | Field | Value |
 | --- | --- |
 | Type | Fluids |
-| Power in | Variable (draws from grid) |
+| Power in | 0-150 W, proportional to throttle even when blocked |
 | Consumes | Steam, up to 250 t per hour, buffer 250 t |
 | Produces | Water, up to 250 t per hour, buffer 250 t |
 
@@ -22633,7 +22763,7 @@ Captures Steam from a thermal vent. If its chamber reaches 100%, every stored to
 | --- | --- |
 | Type | Fluids |
 | Built on | Thermal vents |
-| Power in | -3 W (draws from grid) |
+| Power in | 3 W whenever powered, including while idle |
 | Produces | Steam, buffer 1,000 t |
 
 ### How to obtain
@@ -22808,7 +22938,7 @@ Extracts water from a surveyed well at a throttle your script sets. Its Planet M
 | --- | --- |
 | Type | Fluids |
 | Built on | Water wells |
-| Power in | Up to -4 W at full throttle (draws from grid) |
+| Power in | 0-4 W, proportional to throttle even when blocked |
 | Produces | Water, buffer 10 t |
 | Output buffer | Units: 20 |
 
@@ -22929,16 +23059,26 @@ Read commands you send from the editor's **Commands** tab while this script runs
 
 Blends biome essences into biomass. The global Biomass phase sets the minimum diversity, while every additional well-balanced essence can raise output. Mk II raises output 4.5× while essence demand rises only 2.4×, at five times the power draw.
 
+### Mk I
+
 | Field | Value |
 | --- | --- |
 | Type | Biosphere |
-| Power in | Variable (draws from grid) |
+| Power in | 10-50 W, depending on essence inputs |
+| Power scaling | 10 W base + 8 W per non-empty essence input (up to 5) |
 | Consumes | Frozen Essence, buffer 30 t |
 | Consumes | Coastal Essence, buffer 30 t |
 | Consumes | Geothermal Essence, buffer 30 t |
 | Consumes | Volcanic Essence, buffer 30 t |
 | Consumes | Deep Essence, buffer 30 t |
 | Tiers | Mk II |
+
+### Mk II
+
+| Field | Value |
+| --- | --- |
+| Power in | 50-250 W, depending on essence inputs |
+| Power scaling | 50 W base + 40 W per non-empty essence input (up to 5) |
 
 ### How to obtain
 
@@ -23081,7 +23221,7 @@ Queues harvest, plant, and treatment jobs across up to 24 other cells in a cente
 | Field | Value |
 | --- | --- |
 | Type | Biosphere |
-| Power in | -60 W (draws from grid) |
+| Power in | 60 W whenever powered, including while idle |
 | Output buffer | Units: 50,000 |
 | Stockpile | 400 units (mixed) |
 
@@ -23406,7 +23546,8 @@ Salts the four orthogonally adjacent field cells (directly above, below, left, a
 | Field | Value |
 | --- | --- |
 | Type | Biosphere |
-| Power in | Variable (draws from grid) |
+| Power in | 5 W while enabled, including while waiting for inputs |
+| Idle power | 0 W while disabled but powered |
 | Input buffer | Units: 50 |
 
 ### How to obtain
@@ -23542,7 +23683,7 @@ Renders native life-form samples down into their biome's essence fluid. It only 
 | Field | Value |
 | --- | --- |
 | Type | Biosphere |
-| Power in | Variable (draws from grid) |
+| Power in | 30 W whenever powered, including while idle |
 | Produces | One biome-matched port: Frozen Essence, Coastal Essence, Geothermal Essence, Volcanic Essence, and Deep Essence, buffer 50 t |
 | Input buffer | Units: 50 |
 
@@ -23656,11 +23797,32 @@ Read commands you send from the editor's **Commands** tab while this script runs
 
 Lights the four orthogonally adjacent field cells (directly above, below, left, and right) while powered and enabled. Scripts find it with `outpost.harvesting_machines()`.
 
+### Mk I
+
 | Field | Value |
 | --- | --- |
 | Type | Biosphere |
-| Power in | Variable (draws from grid) |
+| Power in | 5 W while enabled, including while waiting for inputs |
+| Idle power | 0 W while disabled but powered |
 | Tiers | Mk II, Mk III, and Mk IV |
+
+### Mk II
+
+| Field | Value |
+| --- | --- |
+| Power in | 25 W while enabled, including while waiting for inputs |
+
+### Mk III
+
+| Field | Value |
+| --- | --- |
+| Power in | 100 W while enabled, including while waiting for inputs |
+
+### Mk IV
+
+| Field | Value |
+| --- | --- |
+| Power in | 500 W while enabled, including while waiting for inputs |
 
 ### How to obtain
 
@@ -23785,7 +23947,8 @@ The sole converter from harvested physical Forage to permanent Plants km². Load
 | Field | Value |
 | --- | --- |
 | Type | Biosphere |
-| Power in | Variable (draws from grid) |
+| Power in | 180 W while enabled, including while waiting for inputs |
+| Idle power | 0 W while disabled but powered |
 | Consumes | Water, buffer 60 t |
 | Stockpile | 1,243 units (mixed) |
 | Tiers | Mk II |
@@ -23794,6 +23957,7 @@ The sole converter from harvested physical Forage to permanent Plants km². Load
 
 | Field | Value |
 | --- | --- |
+| Power in | 900 W while enabled, including while waiting for inputs |
 | Consumes | Water, buffer 330 t |
 | Stockpile | 6,654 units (mixed) |
 
@@ -23996,7 +24160,8 @@ An outpost processing building that combines three life-form samples into a viab
 | Field | Value |
 | --- | --- |
 | Type | Biosphere |
-| Power in | Variable (draws from grid) |
+| Power in | 45 W during an active combine trial |
+| Idle power | 5 W with no active trial, including while paused |
 | Output buffer | Units: 1 |
 | Stockpile | 3 units (mixed) |
 
@@ -24140,12 +24305,33 @@ Read commands you send from the editor's **Commands** tab while this script runs
 
 Waters the four orthogonally adjacent field cells (directly above, below, left, and right) while powered, supplied, and enabled. Scripts find it with `outpost.harvesting_machines()`.
 
+### Mk I
+
 | Field | Value |
 | --- | --- |
 | Type | Biosphere |
-| Power in | Variable (draws from grid) |
+| Power in | 5 W while enabled, including while waiting for inputs |
+| Idle power | 0 W while disabled but powered |
 | Consumes | Water, buffer 10 t |
 | Tiers | Mk II, Mk III, and Mk IV |
+
+### Mk II
+
+| Field | Value |
+| --- | --- |
+| Power in | 25 W while enabled, including while waiting for inputs |
+
+### Mk III
+
+| Field | Value |
+| --- | --- |
+| Power in | 100 W while enabled, including while waiting for inputs |
+
+### Mk IV
+
+| Field | Value |
+| --- | --- |
+| Power in | 500 W while enabled, including while waiting for inputs |
 
 ### How to obtain
 
@@ -24325,7 +24511,7 @@ A programmable local storm station and live receiver. It measures immutable loca
 | Field | Value |
 | --- | --- |
 | Type | Sensors |
-| Power in | -50 W (draws from grid) |
+| Power in | 50 W whenever powered, including while idle |
 
 ### How to obtain
 
@@ -24633,7 +24819,7 @@ Blueprint unlocks by completing the order **Helios, Thermal Cap Kit Order**.
 | Power | Mk I: 42 W, Mk II: 63 W, Mk III: 126 W |
 | Production tier | T1 |
 
-##### Iron + Titanium + Glass → Tank Lining `craft_tank_lining` *(Unlocked)*
+##### Iron Ingot + Titanium Ingot + Glass → Tank Lining `craft_tank_lining` *(Unlocked)*
 
 2× Iron Ingot, 1× Titanium Ingot, 1× Glass, and 2 t Water → 1× Tank Lining
 Blueprint unlocks by completing the order **Helios, Bulk Iron Run**.
@@ -24655,7 +24841,7 @@ Blueprint unlocks with the **Hydrology Survey** research.
 | Power | Mk I: 35 W, Mk II: 52.5 W, Mk III: 105 W |
 | Production tier | T2 |
 
-##### Iron + Titanium + Valve + Panel → Oil Pump `craft_oil_pump` *(Unlocked)*
+##### Iron Ingot + Titanium Ingot + Valve + Panel → Oil Pump `craft_oil_pump` *(Unlocked)*
 
 2× Iron Ingot, 1× Titanium Ingot, 1× Pressure Valve, and 1× Circuit Panel → 1× Oil Pump
 Blueprint unlocks with the **Petroleum Survey** research.
@@ -24864,7 +25050,7 @@ Blueprint unlocks by completing the order **Vestibule, Refueling Pad Order**.
 | Power | Mk I: 50 W, Mk II: 75 W, Mk III: 150 W |
 | Production tier | T3 |
 
-##### Titanium + Glass → Cargo Pod (Small) `craft_cargo_pod_small` *(Unlocked)*
+##### Titanium Ingot + Glass → Cargo Pod (Small) `craft_cargo_pod_small` *(Unlocked)*
 
 1× Titanium Ingot, 1× Glass, and 1 t Steam → 1× Cargo Pod (Small)
 Blueprint unlocks by completing the order **Helios, Pilot Drone Fleet Order**.
@@ -24875,7 +25061,7 @@ Blueprint unlocks by completing the order **Helios, Pilot Drone Fleet Order**.
 | Power | Mk I: 35 W, Mk II: 52.5 W, Mk III: 105 W |
 | Production tier | T1 |
 
-##### Titanium + Glass + Panel → Cargo Pod (Medium) `craft_cargo_pod_medium` *(Unlocked)*
+##### Titanium Ingot + Glass + Panel → Cargo Pod (Medium) `craft_cargo_pod_medium` *(Unlocked)*
 
 2× Titanium Ingot, 1× Glass, 1× Circuit Panel, and 2 t Steam → 1× Cargo Pod (Medium)
 Blueprint unlocks by completing the order **Helios, Mid-Cargo Build**.
@@ -24886,7 +25072,7 @@ Blueprint unlocks by completing the order **Helios, Mid-Cargo Build**.
 | Power | Mk I: 40 W, Mk II: 60 W, Mk III: 120 W |
 | Production tier | T2 |
 
-##### Titanium + Glass + Panel → Cargo Pod (Large) `craft_cargo_pod_large` *(Unlocked)*
+##### Titanium Ingot + Glass + Panel → Cargo Pod (Large) `craft_cargo_pod_large` *(Unlocked)*
 
 3× Titanium Ingot, 2× Glass, 1× Circuit Panel, and 3 t Steam → 1× Cargo Pod (Large)
 Blueprint unlocks by completing the order **Helios, Cargo Megaorder**.
@@ -25029,7 +25215,7 @@ Blueprint unlocks with the **Waste Processing** research.
 | Power | Mk I: 40 W, Mk II: 60 W, Mk III: 120 W |
 | Production tier | T2 |
 
-##### Titanium + Gas Pipe Segments → Exotic Gas Cap Kit `craft_exotic_gas_cap_kit` *(Not yet unlocked)*
+##### Titanium Ingot + Gas Pipe Segments → Exotic Gas Cap Kit `craft_exotic_gas_cap_kit` *(Not yet unlocked)*
 
 2× Titanium Ingot and 2× Gas Pipe Segment → 1× Exotic Gas Cap Kit
 Blueprint unlocks with the **Exotic Fluids** research.
@@ -25040,7 +25226,7 @@ Blueprint unlocks with the **Exotic Fluids** research.
 | Power | Mk I: 40 W, Mk II: 60 W, Mk III: 120 W |
 | Production tier | T2 |
 
-##### Titanium + Liquid Pipe Segments + Valve → Exotic Spring Tap Kit `craft_exotic_spring_tap_kit` *(Not yet unlocked)*
+##### Titanium Ingot + Liquid Pipe Segments + Valve → Exotic Spring Tap Kit `craft_exotic_spring_tap_kit` *(Not yet unlocked)*
 
 2× Titanium Ingot, 2× Liquid Pipe Segment, and 1× Pressure Valve → 1× Exotic Spring Tap Kit
 Blueprint unlocks with the **Exotic Fluids** research.
@@ -26554,7 +26740,7 @@ Drone cargo hold carrying **100 units**. The light freight option for a Small ch
 
 | Field | Value |
 | --- | --- |
-| Produced by | Titanium + Glass → Cargo Pod (Small) |
+| Produced by | Titanium Ingot + Glass → Cargo Pod (Small) |
 | Requested by | Helios, Cargo Pod Run |
 
 ##### Cargo Pod (Medium) `cargo_pod_medium`
@@ -26563,7 +26749,7 @@ Drone cargo hold carrying **250 units**, for sustained outpost-to-outpost freigh
 
 | Field | Value |
 | --- | --- |
-| Produced by | Titanium + Glass + Panel → Cargo Pod (Medium) |
+| Produced by | Titanium Ingot + Glass + Panel → Cargo Pod (Medium) |
 | Requested by | Helios, Mid-Cargo Order, Helios, Mid-Drone Build, and Helios, Cargo Megaorder |
 
 ##### Cargo Pod (Large) `cargo_pod_large`
@@ -26572,7 +26758,7 @@ Drone cargo hold carrying **500 units**. Heavy haulage, best on a chassis with s
 
 | Field | Value |
 | --- | --- |
-| Produced by | Titanium + Glass + Panel → Cargo Pod (Large) |
+| Produced by | Titanium Ingot + Glass + Panel → Cargo Pod (Large) |
 | Requested by | Helios, Heavy Drone Build |
 
 ##### Battery Pack `battery_pack`
@@ -26650,7 +26836,7 @@ Extracts oil from a surveyed oil well.
 
 | Field | Value |
 | --- | --- |
-| Produced by | Iron + Titanium + Valve + Panel → Oil Pump |
+| Produced by | Iron Ingot + Titanium Ingot + Valve + Panel → Oil Pump |
 | Deploys | Oil Pump |
 
 ##### Steam Condenser `steam_condenser`
@@ -26699,7 +26885,7 @@ Deploys an Exotic Gas Cap that collects gas from an exotic vent.
 
 | Field | Value |
 | --- | --- |
-| Produced by | Titanium + Gas Pipe Segments → Exotic Gas Cap Kit |
+| Produced by | Titanium Ingot + Gas Pipe Segments → Exotic Gas Cap Kit |
 | Deploys | Exotic Gas Cap |
 
 ##### Exotic Spring Tap Kit `exotic_spring_tap_kit`
@@ -26708,7 +26894,7 @@ Deploys an Exotic Spring Tap that collects liquid from an exotic spring.
 
 | Field | Value |
 | --- | --- |
-| Produced by | Titanium + Liquid Pipe Segments + Valve → Exotic Spring Tap Kit |
+| Produced by | Titanium Ingot + Liquid Pipe Segments + Valve → Exotic Spring Tap Kit |
 | Deploys | Exotic Spring Tap |
 
 *Database / Items*
@@ -26810,7 +26996,7 @@ Smelted iron stock. The universal structural input: frames, segments, valves, an
 | Field | Value |
 | --- | --- |
 | Produced by | Iron Ore → Iron Ingot |
-| Used in | Iron → Gas Pipe Segment, Iron + Silicon → Liquid Pipe Segment, Iron + Titanium → Power Line Segment, Iron + Glass → Pressure Valve, Iron Ingot + Titanium Ingot → Machine Frame, Iron + Glass → Circuit Panel, Cobalt Ingot + Iron Ingot + Glass → Battery Cell, Iron + Titanium + Glass → Tank Lining, Iron + Glass + Liquid Pipe Segment → Water Pump, Iron + Titanium + Valve + Panel → Oil Pump, Iron + Oil → Lubricant + Tar, and Frame + Iron + Panel → Waste Processor Kit |
+| Used in | Iron → Gas Pipe Segment, Iron + Silicon → Liquid Pipe Segment, Iron + Titanium → Power Line Segment, Iron + Glass → Pressure Valve, Iron Ingot + Titanium Ingot → Machine Frame, Iron + Glass → Circuit Panel, Cobalt Ingot + Iron Ingot + Glass → Battery Cell, Iron Ingot + Titanium Ingot + Glass → Tank Lining, Iron + Glass + Liquid Pipe Segment → Water Pump, Iron Ingot + Titanium Ingot + Valve + Panel → Oil Pump, Iron + Oil → Lubricant + Tar, and Frame + Iron + Panel → Waste Processor Kit |
 | Requested by | Helios, Iron Bootstrap, Helios, Iron Production, Helios, Mixed Alloy Order, Helios, Battery Order, Helios, Bulk Iron Run, Helios, Bulk Frame Run, Vestibule, Utility Conduit Stock, and Helios, Lead Survey Stock |
 
 ##### Glass `glass`
@@ -26820,7 +27006,7 @@ Smelted silicon sheet stock for panels, housings, and optics.
 | Field | Value |
 | --- | --- |
 | Produced by | Silicon → Glass |
-| Used in | Iron + Glass → Pressure Valve, Iron + Glass → Circuit Panel, Circuit Panel + Titanium Ingot + Glass → Control Unit, Cobalt Ingot + Iron Ingot + Glass → Battery Cell, Iron + Titanium + Glass → Tank Lining, Iron + Glass + Liquid Pipe Segment → Water Pump, Glass + Oil → Plastic + Tar, Titanium + Glass → Cargo Pod (Small), Titanium + Glass + Panel → Cargo Pod (Medium), Titanium + Glass + Panel → Cargo Pod (Large), Titanium Ingot + Glass + Cell → Battery Pack, Frame + Panel + Glass → Grow Lamp Kit, Tar + Glass → Fertilizer, Tar + Glass + Panel → Fertilizer Mk II, Tar + Glass + Capacitor + Rare Earth Core → Fertilizer Mk III, and Panel + Glass + Rare Earth Core → Grow Lamp Pack Mk II |
+| Used in | Iron + Glass → Pressure Valve, Iron + Glass → Circuit Panel, Circuit Panel + Titanium Ingot + Glass → Control Unit, Cobalt Ingot + Iron Ingot + Glass → Battery Cell, Iron Ingot + Titanium Ingot + Glass → Tank Lining, Iron + Glass + Liquid Pipe Segment → Water Pump, Glass + Oil → Plastic + Tar, Titanium Ingot + Glass → Cargo Pod (Small), Titanium Ingot + Glass + Panel → Cargo Pod (Medium), Titanium Ingot + Glass + Panel → Cargo Pod (Large), Titanium Ingot + Glass + Cell → Battery Pack, Frame + Panel + Glass → Grow Lamp Kit, Tar + Glass → Fertilizer, Tar + Glass + Panel → Fertilizer Mk II, Tar + Glass + Capacitor + Rare Earth Core → Fertilizer Mk III, and Panel + Glass + Rare Earth Core → Grow Lamp Pack Mk II |
 | Requested by | Spire, Optical Glass, Spire, Pressure Hardware, Spire, Optics Stockpile, and Spire, Silicon Megahaul |
 
 ##### Titanium Ingot `titanium_ingot`
@@ -26830,7 +27016,7 @@ High-strength, lightweight stock for rotors, thrusters, and pressure hardware.
 | Field | Value |
 | --- | --- |
 | Produced by | Titanium → Titanium Ingot |
-| Used in | Iron + Titanium → Power Line Segment, Iron Ingot + Titanium Ingot → Machine Frame, Circuit Panel + Titanium Ingot + Glass → Control Unit, Titanium Ingot + Gas Pipe Segments → Thermal Cap Kit, Titanium Ingot + Cobalt Ingot + Rare Earth Core → Turbine Rotor, Iron + Titanium + Glass → Tank Lining, Iron + Titanium + Valve + Panel → Oil Pump, Rare Earth Core + Titanium Ingot + Control → Drone (Small), Rare Earth Core + Titanium Ingot + Control → Drone (Medium), Rare Earth Core + Titanium Ingot + Control → Drone (Large), Titanium + Glass → Cargo Pod (Small), Titanium + Glass + Panel → Cargo Pod (Medium), Titanium + Glass + Panel → Cargo Pod (Large), Titanium Ingot + Glass + Cell → Battery Pack, Titanium Ingot + Lubricant + Rubber → Oil Tank (Small), Titanium Ingot + Lubricant + Rubber + Lining → Oil Tank (Medium), Titanium Ingot + Lubricant + Rubber + Tank Lining → Oil Tank (Large), Pipes + Valves + Rare Earth Core + Titanium Ingot + Tar → Coolant Loop, Titanium + Gas Pipe Segments → Exotic Gas Cap Kit, and Titanium + Liquid Pipe Segments + Valve → Exotic Spring Tap Kit |
+| Used in | Iron + Titanium → Power Line Segment, Iron Ingot + Titanium Ingot → Machine Frame, Circuit Panel + Titanium Ingot + Glass → Control Unit, Titanium Ingot + Gas Pipe Segments → Thermal Cap Kit, Titanium Ingot + Cobalt Ingot + Rare Earth Core → Turbine Rotor, Iron Ingot + Titanium Ingot + Glass → Tank Lining, Iron Ingot + Titanium Ingot + Valve + Panel → Oil Pump, Rare Earth Core + Titanium Ingot + Control → Drone (Small), Rare Earth Core + Titanium Ingot + Control → Drone (Medium), Rare Earth Core + Titanium Ingot + Control → Drone (Large), Titanium Ingot + Glass → Cargo Pod (Small), Titanium Ingot + Glass + Panel → Cargo Pod (Medium), Titanium Ingot + Glass + Panel → Cargo Pod (Large), Titanium Ingot + Glass + Cell → Battery Pack, Titanium Ingot + Lubricant + Rubber → Oil Tank (Small), Titanium Ingot + Lubricant + Rubber + Lining → Oil Tank (Medium), Titanium Ingot + Lubricant + Rubber + Tank Lining → Oil Tank (Large), Pipes + Valves + Rare Earth Core + Titanium Ingot + Tar → Coolant Loop, Titanium Ingot + Gas Pipe Segments → Exotic Gas Cap Kit, and Titanium Ingot + Liquid Pipe Segments + Valve → Exotic Spring Tap Kit |
 | Requested by | Helios, Titanium Run, Helios, Mixed Alloy Order, and Helios, Lead Survey Stock |
 
 ##### Cobalt Ingot `cobalt_ingot`
@@ -26886,7 +27072,7 @@ A 10 m run of gas pipe. A Pioneer's Constructor consumes one per planned segment
 | Field | Value |
 | --- | --- |
 | Produced by | Iron → Gas Pipe Segment |
-| Used in | Gas Segments + Valve → Gas Bridge, Titanium Ingot + Gas Pipe Segments → Thermal Cap Kit, Frame + Control + Gas Pipe Segments + Liquid Pipe Segments → Drone Depot Kit, and Titanium + Gas Pipe Segments → Exotic Gas Cap Kit |
+| Used in | Gas Segments + Valve → Gas Bridge, Titanium Ingot + Gas Pipe Segments → Thermal Cap Kit, Frame + Control + Gas Pipe Segments + Liquid Pipe Segments → Drone Depot Kit, and Titanium Ingot + Gas Pipe Segments → Exotic Gas Cap Kit |
 | Requested by | Vestibule, Gas Pipe Order, Vestibule, Pipe Network Run, and Vestibule, Pipe Order |
 
 ##### Liquid Pipe Segment `liquid_pipe_segment`
@@ -26896,7 +27082,7 @@ A 10 m run of liquid pipe. A Pioneer's Constructor consumes one per planned segm
 | Field | Value |
 | --- | --- |
 | Produced by | Iron + Silicon → Liquid Pipe Segment |
-| Used in | Liquid Segments + Valve → Liquid Bridge, Iron + Glass + Liquid Pipe Segment → Water Pump, Frame + Control + Gas Pipe Segments + Liquid Pipe Segments → Drone Depot Kit, Frame + Control + Panel + Cell + Liquid Pipe Segment → Drone Service Station Kit, Pipes + Valves + Rare Earth Core + Titanium Ingot + Tar → Coolant Loop, Frames + Controls + Panels + Liquid Pipe Segments → Plant Terraformer Kit, Frame + Pipes + Valve → Sprinkler Kit, and Titanium + Liquid Pipe Segments + Valve → Exotic Spring Tap Kit |
+| Used in | Liquid Segments + Valve → Liquid Bridge, Iron + Glass + Liquid Pipe Segment → Water Pump, Frame + Control + Gas Pipe Segments + Liquid Pipe Segments → Drone Depot Kit, Frame + Control + Panel + Cell + Liquid Pipe Segment → Drone Service Station Kit, Pipes + Valves + Rare Earth Core + Titanium Ingot + Tar → Coolant Loop, Frames + Controls + Panels + Liquid Pipe Segments → Plant Terraformer Kit, Frame + Pipes + Valve → Sprinkler Kit, and Titanium Ingot + Liquid Pipe Segments + Valve → Exotic Spring Tap Kit |
 | Requested by | Vestibule, Liquid Pipe Order, Vestibule, Pressure Network Trial, Vestibule, Pipe Network Run, Vestibule, Pipe Order, Vestibule, Pipe & Lubricant Order, Vestibule, Refueling Hardware Build, and Vestibule, Continental Pipe Build |
 
 ##### Power Line Segment `power_line_segment`
@@ -26939,7 +27125,7 @@ Machined flow-control valve used across pumps, tanks, and atmospheric hardware.
 | Field | Value |
 | --- | --- |
 | Produced by | Iron + Glass → Pressure Valve |
-| Used in | Fabricate Smelter Mk II Upgrade Pack, Fabricate Oil Pump Mk II Upgrade Pack, Fabricate Smelter Mk III Upgrade Pack, Gas Segments + Valve → Gas Bridge, Liquid Segments + Valve → Liquid Bridge, Iron + Titanium + Valve + Panel → Oil Pump, Pipes + Valves + Rare Earth Core + Titanium Ingot + Tar → Coolant Loop, Frame + Pipes + Valve → Sprinkler Kit, Titanium + Liquid Pipe Segments + Valve → Exotic Spring Tap Kit, Controls + Panels + Rare Earth Core + Valves → Plant Terraformer Pack Mk II, Plastic + Coolant Loop + Valves → Sprinkler Pack Mk II, and Frames + Controls + Panels + Valves → Feed Maker Pack Mk II |
+| Used in | Fabricate Smelter Mk II Upgrade Pack, Fabricate Oil Pump Mk II Upgrade Pack, Fabricate Smelter Mk III Upgrade Pack, Gas Segments + Valve → Gas Bridge, Liquid Segments + Valve → Liquid Bridge, Iron Ingot + Titanium Ingot + Valve + Panel → Oil Pump, Pipes + Valves + Rare Earth Core + Titanium Ingot + Tar → Coolant Loop, Frame + Pipes + Valve → Sprinkler Kit, Titanium Ingot + Liquid Pipe Segments + Valve → Exotic Spring Tap Kit, Controls + Panels + Rare Earth Core + Valves → Plant Terraformer Pack Mk II, Plastic + Coolant Loop + Valves → Sprinkler Pack Mk II, and Frames + Controls + Panels + Valves → Feed Maker Pack Mk II |
 | Requested by | Spire, Pressure Hardware and Vestibule, Pressure Network Trial |
 
 ##### Machine Frame `machine_frame`
@@ -26959,7 +27145,7 @@ Printed control circuitry for machine logic and instrumentation.
 | Field | Value |
 | --- | --- |
 | Produced by | Iron + Glass → Circuit Panel |
-| Used in | Fabricate Fabricator Mk II Upgrade Pack, Fabricate Fabricator Mk III Upgrade Pack, Power Segments + Circuit → Power Bridge, Circuit Panel + Titanium Ingot + Glass → Control Unit, Iron + Titanium + Valve + Panel → Oil Pump, Frame + Control + Panel → Drone Depot Kit (Medium), Frame + Control + Panel → Drone Depot Kit (Large), Frame + Control + Panel + Cell + Liquid Pipe Segment → Drone Service Station Kit, Frame + Control + Panel → Mining Drill Kit, Frame + Control + Panel + Rotor → Industrial Mining Drill Kit, Frame + Control + Panel + Rotors → Heavy Mining Drill Kit, Titanium + Glass + Panel → Cargo Pod (Medium), Titanium + Glass + Panel → Cargo Pod (Large), Frame + Control + Panel → Seed Maker Kit, Frames + Controls + Panels + Liquid Pipe Segments → Plant Terraformer Kit, Frame + Panel + Glass → Grow Lamp Kit, Frame + Control + Panel → Dispenser Kit, Frame + Iron + Panel → Waste Processor Kit, Tar + Glass + Panel → Fertilizer Mk II, Controls + Panels + Rare Earth Core + Valves → Plant Terraformer Pack Mk II, Panel + Glass + Rare Earth Core → Grow Lamp Pack Mk II, Controls + Panels + Coolant Loop → Sprinkler Pack Mk III, Frames + Controls + Panels + Valves → Feed Maker Pack Mk II, Oxygen Upgrade Pack Mk IV, Heat Upgrade Pack Mk IV, Pressure Upgrade Pack Mk IV, and Lightning Rod |
+| Used in | Fabricate Fabricator Mk II Upgrade Pack, Fabricate Fabricator Mk III Upgrade Pack, Power Segments + Circuit → Power Bridge, Circuit Panel + Titanium Ingot + Glass → Control Unit, Iron Ingot + Titanium Ingot + Valve + Panel → Oil Pump, Frame + Control + Panel → Drone Depot Kit (Medium), Frame + Control + Panel → Drone Depot Kit (Large), Frame + Control + Panel + Cell + Liquid Pipe Segment → Drone Service Station Kit, Frame + Control + Panel → Mining Drill Kit, Frame + Control + Panel + Rotor → Industrial Mining Drill Kit, Frame + Control + Panel + Rotors → Heavy Mining Drill Kit, Titanium Ingot + Glass + Panel → Cargo Pod (Medium), Titanium Ingot + Glass + Panel → Cargo Pod (Large), Frame + Control + Panel → Seed Maker Kit, Frames + Controls + Panels + Liquid Pipe Segments → Plant Terraformer Kit, Frame + Panel + Glass → Grow Lamp Kit, Frame + Control + Panel → Dispenser Kit, Frame + Iron + Panel → Waste Processor Kit, Tar + Glass + Panel → Fertilizer Mk II, Controls + Panels + Rare Earth Core + Valves → Plant Terraformer Pack Mk II, Panel + Glass + Rare Earth Core → Grow Lamp Pack Mk II, Controls + Panels + Coolant Loop → Sprinkler Pack Mk III, Frames + Controls + Panels + Valves → Feed Maker Pack Mk II, Oxygen Upgrade Pack Mk IV, Heat Upgrade Pack Mk IV, Pressure Upgrade Pack Mk IV, and Lightning Rod |
 | Requested by | Spire, Circuit Order, Spire, Avionics Run, Spire, Avionics Megabuild, Spire, Polymer Optics Run, Spire, Optics Stockpile, and Spire, Avionics Megastock |
 
 ##### Control Unit `control_unit`
@@ -27008,7 +27194,7 @@ Corrosion-proof lining for gas and liquid tanks.
 
 | Field | Value |
 | --- | --- |
-| Produced by | Iron + Titanium + Glass → Tank Lining |
+| Produced by | Iron Ingot + Titanium Ingot + Glass → Tank Lining |
 | Used in | Titanium Ingot + Lubricant + Rubber + Lining → Oil Tank (Medium) and Titanium Ingot + Lubricant + Rubber + Tank Lining → Oil Tank (Large) |
 | Requested by | Helios, Drone Chassis Build, Helios, Reservoir Build, and Helios, Mid-Cargo Build |
 
@@ -27902,7 +28088,7 @@ Segmented dorsal shell preserved in glacial ice. Central ridge and lateral spine
 | Requested by | Frozen Reef Census and Glaciation Index |
 | Analyzed at | Bio Lab |
 
-##### Mandible Claw `vc_mandible_claw`
+##### Crab Pincer `vc_mandible_claw`
 
 Pincer chela recovered from a brackish wash. Serrated occlusal edge intact; barnacle colonies fused to the wrist hinge.
 
@@ -28785,7 +28971,7 @@ Superheated vapor from the planet's thermal vents. Captured by a `thermal_cap`, 
 | --- | --- |
 | Type | Gas |
 | Produced by | Thermal Cap |
-| Consumed by | Fabricator, Steam Turbine, Steam Condenser, and Bio Caster and Titanium Ingot + Cobalt Ingot + Rare Earth Core → Turbine Rotor, Rare Earth Core + Rotor → Electric Thruster, Titanium + Glass → Cargo Pod (Small), Titanium + Glass + Panel → Cargo Pod (Medium), Titanium + Glass + Panel → Cargo Pod (Large), and Neutronium Bar + Cells + Controls + Rare Earth Core + Tar → Neutron Capacitor |
+| Consumed by | Fabricator, Steam Turbine, Steam Condenser, and Bio Caster and Titanium Ingot + Cobalt Ingot + Rare Earth Core → Turbine Rotor, Rare Earth Core + Rotor → Electric Thruster, Titanium Ingot + Glass → Cargo Pod (Small), Titanium Ingot + Glass + Panel → Cargo Pod (Medium), Titanium Ingot + Glass + Panel → Cargo Pod (Large), and Neutronium Bar + Cells + Controls + Rare Earth Core + Tar → Neutron Capacitor |
 | Tier input | Heat Generator Mk III, 12 t/h |
 
 ##### Water `water`
@@ -28796,7 +28982,7 @@ Fresh liquid water raised from underground wells by a `water_pump`, or recovered
 | --- | --- |
 | Type | Liquid |
 | Produced by | Steam Condenser and Water Pump |
-| Consumed by | Fabricator, Bio Caster, Plant Terraformer, Sprinkler, and Reactor and Fabricate Smelter Mk II Upgrade Pack, Fabricate Fabricator Mk II Upgrade Pack, Fabricate Oil Pump Mk II Upgrade Pack, Fabricate Smelter Mk III Upgrade Pack, Fabricate Fabricator Mk III Upgrade Pack, Iron Ingot + Titanium Ingot → Machine Frame, Iron + Glass → Circuit Panel, Circuit Panel + Titanium Ingot + Glass → Control Unit, Cobalt Ingot + Iron Ingot + Glass → Battery Cell, Iron + Titanium + Glass → Tank Lining, Plastic + Forage + Water → Reinforced Biopolymer, Reinforced Biopolymer + Forage + Water → Bio Enrichment Compound, Frame + Control + Gas Pipe Segments + Liquid Pipe Segments → Drone Depot Kit, Frame + Control + Panel → Drone Depot Kit (Medium), Frame + Control + Panel → Drone Depot Kit (Large), Frame + Control + Panel → Mining Drill Kit, Frame + Control + Panel + Rotor → Industrial Mining Drill Kit, Frame + Control + Panel + Rotors → Heavy Mining Drill Kit, Rare Earth Core + Titanium Ingot + Control → Drone (Small), Rare Earth Core + Titanium Ingot + Control → Drone (Medium), Rare Earth Core + Titanium Ingot + Control → Drone (Large), Rare Earth Core + Control + Lubricant + Rubber → Heli Thruster, Titanium Ingot + Lubricant + Rubber → Oil Tank (Small), Titanium Ingot + Lubricant + Rubber + Lining → Oil Tank (Medium), Titanium Ingot + Lubricant + Rubber + Tank Lining → Oil Tank (Large), Pipes + Valves + Rare Earth Core + Titanium Ingot + Tar → Coolant Loop, Neutronium Bar + Cells + Controls + Rare Earth Core + Tar → Neutron Capacitor, Frame + Control + Panel → Seed Maker Kit, Frames + Controls + Panels + Liquid Pipe Segments → Plant Terraformer Kit, Frame + Pipes + Valve → Sprinkler Kit, Tar + Glass → Fertilizer, Tar + Glass + Panel → Fertilizer Mk II, Tar + Glass + Capacitor + Rare Earth Core → Fertilizer Mk III, Plastic + Rare Earth Core → Growth Accelerant, Capacitor + Controls + Rare Earth Core + Coolant Loop → Yield Amplifier, Controls + Panels + Rare Earth Core + Valves → Plant Terraformer Pack Mk II, Capacitor + Rare Earth Core + Controls → Grow Lamp Pack Mk III, Controls + Panels + Coolant Loop → Sprinkler Pack Mk III, Frames + Controls + Panels + Valves → Feed Maker Pack Mk II, and Capacitors + Rare Earth Core + Controls + Coolant Loop → Habitat Pack Mk II |
+| Consumed by | Fabricator, Bio Caster, Plant Terraformer, Sprinkler, and Reactor and Fabricate Smelter Mk II Upgrade Pack, Fabricate Fabricator Mk II Upgrade Pack, Fabricate Oil Pump Mk II Upgrade Pack, Fabricate Smelter Mk III Upgrade Pack, Fabricate Fabricator Mk III Upgrade Pack, Iron Ingot + Titanium Ingot → Machine Frame, Iron + Glass → Circuit Panel, Circuit Panel + Titanium Ingot + Glass → Control Unit, Cobalt Ingot + Iron Ingot + Glass → Battery Cell, Iron Ingot + Titanium Ingot + Glass → Tank Lining, Plastic + Forage + Water → Reinforced Biopolymer, Reinforced Biopolymer + Forage + Water → Bio Enrichment Compound, Frame + Control + Gas Pipe Segments + Liquid Pipe Segments → Drone Depot Kit, Frame + Control + Panel → Drone Depot Kit (Medium), Frame + Control + Panel → Drone Depot Kit (Large), Frame + Control + Panel → Mining Drill Kit, Frame + Control + Panel + Rotor → Industrial Mining Drill Kit, Frame + Control + Panel + Rotors → Heavy Mining Drill Kit, Rare Earth Core + Titanium Ingot + Control → Drone (Small), Rare Earth Core + Titanium Ingot + Control → Drone (Medium), Rare Earth Core + Titanium Ingot + Control → Drone (Large), Rare Earth Core + Control + Lubricant + Rubber → Heli Thruster, Titanium Ingot + Lubricant + Rubber → Oil Tank (Small), Titanium Ingot + Lubricant + Rubber + Lining → Oil Tank (Medium), Titanium Ingot + Lubricant + Rubber + Tank Lining → Oil Tank (Large), Pipes + Valves + Rare Earth Core + Titanium Ingot + Tar → Coolant Loop, Neutronium Bar + Cells + Controls + Rare Earth Core + Tar → Neutron Capacitor, Frame + Control + Panel → Seed Maker Kit, Frames + Controls + Panels + Liquid Pipe Segments → Plant Terraformer Kit, Frame + Pipes + Valve → Sprinkler Kit, Tar + Glass → Fertilizer, Tar + Glass + Panel → Fertilizer Mk II, Tar + Glass + Capacitor + Rare Earth Core → Fertilizer Mk III, Plastic + Rare Earth Core → Growth Accelerant, Capacitor + Controls + Rare Earth Core + Coolant Loop → Yield Amplifier, Controls + Panels + Rare Earth Core + Valves → Plant Terraformer Pack Mk II, Capacitor + Rare Earth Core + Controls → Grow Lamp Pack Mk III, Controls + Panels + Coolant Loop → Sprinkler Pack Mk III, Frames + Controls + Panels + Valves → Feed Maker Pack Mk II, and Capacitors + Rare Earth Core + Controls + Coolant Loop → Habitat Pack Mk II |
 | Tier input | Oxygen Generator Mk III, 8 t/h and Pressure Generator Mk III, 5 t/h |
 
 ##### Oil `oil`
@@ -31211,7 +31397,7 @@ Maximum capacity in Wh.
 
 ##### `.holders() → list[Holder]`
 
-List of every Battery Holder currently mounted on the vehicle. Empty for the Rover (sealed battery).
+List of every Battery Holder currently mounted on the vehicle. Each holder's `.index` identifies its mounting slot on the chassis. Empty for the Rover (sealed battery).
 
 - **Returns** `list[Holder]`
 
@@ -31224,6 +31410,12 @@ List of every Battery Holder currently mounted on the vehicle. Empty for the Rov
 Get `Holder` from the APIs listed here. It has no script constructor.
 
 ### Properties
+
+##### `.index: int`
+
+Zero-based mounting-slot position on the Pioneer, matching `MountSlot.index` from `self.modules()`. Use `(holder.index, internal_index)` to select a battery for `swap_batteries()`. This is the chassis slot, not the holder's position in `self.battery.holders()`.
+
+- **Returns** `int`
 
 ##### `.id: str`
 
@@ -34101,7 +34293,7 @@ Name of the assigned variant.
 
 ##### `.editor_busy: bool`
 
-`True` while an editor has pending changes or an unresolved conflict, or a recovered source draft differs from the current code.
+`True` while an editor has pending changes or an unresolved conflict. Copies kept in Recovered edits do not block variant changes.
 
 - **Returns** `bool`
 
@@ -39406,11 +39598,11 @@ How many capture groups the pattern has.
 
 - **Returns** `int`
 
-##### `.groupindex: dict[str, float]`
+##### `.groupindex: dict[str, int]`
 
 A `dict` from each `(?P<name>...)` group name to its number.
 
-- **Returns** `dict[str, float]`
+- **Returns** `dict[str, int]`
 
 ### Methods
 
@@ -40160,7 +40352,7 @@ Coastal infusion orders only: the exact glow `[r,g,b]` (0-255) the required frag
 
 ##### `.required_genes: dict[str, list[str]] | None`
 
-Required gene sets for geothermal orders as `{fragment_id: [attribute_id, ...]}`, or `None` for other orders. Each fragment must carry exactly its listed **1-3** genes. Engineer it with the DNA Sequencer; raw fragments and fragments with extra genes are not accepted.
+Required gene sets for geothermal orders as `{fragment_id: [attribute_id, ...]}`, or `None` for other orders. `.requires` lists every fragment type and quantity to deliver; `.required_genes` lists only the types that need splicing. Every sample of a listed type must be engineered with the DNA Sequencer to carry exactly its listed **1-3** genes; raw samples and samples with extra genes are not accepted for that type. Types listed in `.requires` but omitted from `.required_genes` can be delivered raw.
 
 - **Returns** `dict[str, list[str]] | None`
 

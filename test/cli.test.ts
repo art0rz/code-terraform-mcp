@@ -26,7 +26,6 @@ void test("compiled CLI exposes help without loading a manual", async () => {
 
 void test("compiled server and bundled relay support an MCP handshake", async (context) => {
   const directory = await mkdtemp(path.join(os.tmpdir(), "code-terraform-cli-"));
-  context.after(() => rm(directory, { recursive: true, force: true }));
   const manual = path.join(directory, "manual.md");
   await writeFile(manual, sampleManual);
   const transport = new StdioClientTransport({
@@ -37,6 +36,8 @@ void test("compiled server and bundled relay support an MCP handshake", async (c
   });
   const client = new Client({ name: "compiled-cli-test", version: "1.0.0" });
   context.after(() => client.close());
+  // After hooks run in registration order; Windows cannot remove the server's cwd while it runs.
+  context.after(() => rm(directory, { recursive: true, force: true }));
   await client.connect(transport);
   const { tools } = await client.listTools();
   assert.ok(tools.some((tool) => tool.name === "search_manual"));

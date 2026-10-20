@@ -160,6 +160,7 @@ void test("MCP handshake lists and calls the manual and language tools", async (
   assert.equal(searched.isError, undefined);
   assert.equal(at(searched, "structuredContent", "resultCount"), 1);
   assert.equal(at(searched, "structuredContent", "results", 0, "id"), 0);
+  assert.ok(Number(at(searched, "structuredContent", "results", 0, "characters")) > 0);
 
   const fetched = await client.callTool({
     name: "get_manual_entry",
@@ -171,6 +172,32 @@ void test("MCP handshake lists and calls the manual and language tools", async (
     z.string().parse(at(fetched, "structuredContent", "entry", "markdown")),
     /self\.charge\(\)/,
   );
+
+  const outlined = await client.callTool({
+    name: "get_manual_entry",
+    arguments: { identifier: 1, outline: true },
+  });
+  assert.equal(at(outlined, "structuredContent", "outline", 1, "heading"), "charge: float");
+  assert.equal(at(outlined, "structuredContent", "entry", "markdown"), undefined);
+  assert.match(
+    z.string().parse(at(outlined, "content", 0, "text")),
+    /\n {2}- charge: float \(line \d+/,
+  );
+
+  const section = await client.callTool({
+    name: "get_manual_entry",
+    arguments: { identifier: 1, heading: "methods" },
+  });
+  assert.equal(at(section, "structuredContent", "section", "heading"), "Methods");
+  const sectionText = z.string().parse(at(section, "content", 0, "text"));
+  assert.match(sectionText, /self\.discharge\(\)/);
+  assert.doesNotMatch(sectionText, /Stored energy/);
+
+  const conflicting = await client.callTool({
+    name: "get_manual_entry",
+    arguments: { identifier: 1, heading: "methods", outline: true },
+  });
+  assert.equal(conflicting.isError, true);
 
   const sections = await client.callTool({ name: "list_manual_sections", arguments: {} });
   assert.equal(at(sections, "structuredContent", "entryCount"), 3);

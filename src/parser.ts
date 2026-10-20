@@ -32,11 +32,21 @@ function extractBuild(markdown: string) {
   return match[1]!;
 }
 
-function extractHeadings(body: string) {
-  const headings = [];
+export interface BodyHeading {
+  /** Heading text without Markdown emphasis or code markers. */
+  text: string;
+  /** Markdown heading level, 3 to 6 (`##` starts a new entry). */
+  level: number;
+  /** Zero-based line index within the entry body. */
+  line: number;
+}
+
+/** Headings of an entry body, skipping fenced code blocks. */
+export function scanHeadings(body: string) {
+  const headings: BodyHeading[] = [];
   let fence: { character: string; length: number } | undefined;
 
-  for (const line of body.split("\n")) {
+  for (const [index, line] of body.split("\n").entries()) {
     const fenceMatch = line.match(/^\s*(`{3,}|~{3,})/);
     if (fenceMatch) {
       const marker = fenceMatch[1]!;
@@ -49,9 +59,13 @@ function extractHeadings(body: string) {
     }
     if (fence) continue;
 
-    const heading = line.match(/^#{3,6}\s+(.+?)\s*#*$/);
+    const heading = line.match(/^(#{3,6})\s+(.+?)\s*#*$/);
     if (heading) {
-      headings.push(heading[1]!.replace(/[`*_]/g, "").trim());
+      headings.push({
+        text: heading[2]!.replace(/[`*_]/g, "").trim(),
+        level: heading[1]!.length,
+        line: index,
+      });
     }
   }
 
@@ -65,6 +79,11 @@ function extractInlineTerms(body: string) {
     if (value) terms.add(value);
   }
   return [...terms];
+}
+
+/** Entry Markdown as served: hierarchy marker, entry heading, then the given body. */
+export function entryMarkdown(hierarchy: string, rawTitle: string, body: string) {
+  return [`*${hierarchy}*`, "", `## ${rawTitle}`, "", body].join("\n").trim();
 }
 
 function makeUrl(section: string, group: string, title: string, id: number, usedUrls: Set<string>) {
@@ -112,11 +131,13 @@ export function parseManual(markdown: string, sourcePath = "manual.md") {
     const hierarchy = lines[start.markerIndex]!.slice(1, -1).trim();
     const [section = "", ...groupParts] = hierarchy.split(" / ").map((part) => part.trim());
     const group = groupParts.join(" / ");
+    let bodyIndex = start.headingIndex + 1;
+    while (bodyIndex < endIndex && lines[bodyIndex]!.trim() === "") bodyIndex += 1;
     const body = lines
       .slice(start.headingIndex + 1, endIndex)
       .join("\n")
       .trim();
-    const headings = extractHeadings(body);
+    const headings = scanHeadings(body).map((heading) => heading.text);
     const inlineTerms = extractInlineTerms(body);
     const url = makeUrl(section, group, title, id, usedUrls);
 
@@ -131,9 +152,12 @@ export function parseManual(markdown: string, sourcePath = "manual.md") {
       headings,
       inlineTerms,
       url,
+      rawTitle,
       sourceLineStart: start.headingIndex + 1,
       sourceLineEnd: endIndex,
-      markdown: [`*${hierarchy}*`, "", `## ${rawTitle}`, "", body].join("\n").trim(),
+      // One-based source line of the body's first line; body line N sits at bodyLineStart + N.
+      bodyLineStart: bodyIndex + 1,
+      markdown: entryMarkdown(hierarchy, rawTitle, body),
       search: {
         title: normalizeSearchText(title),
         hierarchy: normalizeSearchText(hierarchy),

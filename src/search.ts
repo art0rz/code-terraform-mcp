@@ -106,6 +106,7 @@ export function searchManual(
       group: entry.group,
       url: entry.url,
       score,
+      characters: entry.markdown.length,
       snippet: snippetFor(entry, phrase, tokens),
     }));
 }

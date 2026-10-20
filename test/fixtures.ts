@@ -26,6 +26,26 @@ The battery exposes its current \`charge\` and capacity.
 
 Use \`self.charge\` to read the stored energy.
 
+##### \`charge: float\`
+
+Stored energy in kilojoules.
+
+\`\`\`python
+### not a heading inside a fence
+\`\`\`
+
+##### \`capacity: float\`
+
+Maximum stored energy.
+
+### Methods
+
+Call \`self.discharge()\` to drain it.
+
+##### \`discharge(amount: float)\`
+
+Drains up to \`amount\` kilojoules.
+
 *Types / Storage*
 
 ## Battery *(Type)*

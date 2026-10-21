@@ -10,8 +10,8 @@ When a live save workspace is configured, the server also launches the game's bu
 
 | Tool                                                           | Purpose                                                                                                                                                                          |
 | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `search_manual`                                                | Search titles, hierarchy, headings, inline API symbols, and body text.                                                                                                           |
-| `get_manual_entry`                                             | Read the complete Markdown for one result.                                                                                                                                       |
+| `search_manual`                                                | Search titles, hierarchy, headings, inline API symbols, and body text. Results include each entry's size.                                                                        |
+| `get_manual_entry`                                             | Read one result whole, one heading's section, or only its outline (headings and section sizes).                                                                                  |
 | `list_manual_sections`                                         | Browse sections, groups, and entry counts.                                                                                                                                       |
 | `get_manual_build`                                             | Check the loaded build, source path, size, and timestamps.                                                                                                                       |
 | `list_script_targets`                                          | List registered scripts and Libraries, including component owner types.                                                                                                          |
@@ -110,12 +110,35 @@ After adding the server, restart or refresh the local Codex client, then use `/m
 
 - “Search the Code: Terraform manual for charging a rover, then show the relevant API.”
 - “What properties does the Battery component expose?”
+- “Show the outline of the Built-in Functions entry, then read only its Math section.”
 - “Which manual build are you using?”
 - “List the manual's component groups.”
 - “Validate this Pioneer script against `pioneer_3`.”
 - “What does `self.nav` expose on this Pioneer?”
 
 The server instructions encourage clients to search first, fetch full manual entries for authoritative guidance, and validate generated game scripts before presenting them.
+
+## Reading large entries
+
+Most entries are short, but some are long: in the bundled manual, `Built-in Functions` is about 70 KB and `Research` about 45 KB, and the 52 entries over 8 KB make up about half the manual's text. Returning such an entry whole costs an agent tens of thousands of tokens when it needs one method.
+
+`get_manual_entry` therefore reads an entry in three ways:
+
+| Arguments                                 | Returns                                                                                                   |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `{ "identifier": 12 }`                    | The whole entry, as before.                                                                               |
+| `{ "identifier": 12, "outline": true }`   | Only the headings, each with its nesting depth, source line, and section size. No body text.              |
+| `{ "identifier": 12, "heading": "Math" }` | One heading's section with its subsections, under the entry heading and the section's enclosing headings. |
+
+A section runs from its heading to the next heading of the same or a higher level. Headings inside fenced code blocks are ignored, like in search. `heading` matching ignores case, punctuation, and code markers. An exact heading text wins, then a match on the heading's leading words (so `abs` picks the `abs(number: float, /) → float` signature, not `isclose(..., abs_tol ...)`), then a partial match anywhere in the heading. The first tier with any match must have exactly one. An ambiguous or unknown heading returns an error that lists the candidate headings, so the caller can retry with the exact text. `heading` and `outline` cannot be combined.
+
+`search_manual` reports each result's size as `characters`, and its text summary marks entries of 8 KB or more, so an agent knows when to ask for the outline first. A typical flow:
+
+1. `search_manual` returns `Built-in Functions` with `characters` around 70,000, and its text summary marks the entry `(… KB; outline first)`.
+2. `get_manual_entry` with `{ "identifier": <id>, "outline": true }` lists `Math` and the function signatures under it, about 236 lines.
+3. `get_manual_entry` with `{ "identifier": <id>, "heading": "abs" }` returns only the `abs()` section, under its `### Math` heading.
+
+Section results report `section.sourceLineStart` and `section.sourceLineEnd` (one-based, inclusive) into the manual file, like the entry's own source lines.
 
 ## Game-aware analysis
 
@@ -180,6 +203,7 @@ src/
 ├── manual-store.ts   # File resolution, caching, and live reload
 ├── parser.ts         # Markdown-to-entry parser
 ├── search.ts         # Ranking, filtering, snippets, and lookup
+├── sections.ts       # Entry outlines and single-section reads
 ├── server.ts         # MCP server and tool schemas
 ├── stdio-proxy.py    # Transparent stdio relay for the bundled Node server
 └── workspace-store.ts # Registered-target and workspace validation

@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { listSections, resolveEntry, searchManual } from "./search.js";
+import { entryOutline, resolveSection } from "./sections.js";
 import { registerExtraTools } from "./extra-tools.js";
 import { logger } from "./logger.js";
 
@@ -30,8 +31,16 @@ const searchResultSchema = z.object({
   group: z.string(),
   url: z.string(),
   score: z.number(),
+  characters: z.number().int(),
   snippet: z.string(),
 });
+
+// Entries at least this long are flagged in search text, so an agent reads the outline first.
+const LARGE_ENTRY_CHARACTERS = 8 * 1024;
+
+function kilobytes(characters: number) {
+  return `${(characters / 1024).toFixed(1)} KB`;
+}
 
 const positionInputSchema = {
   line: z.number().int().min(1).describe("One-based source line."),
@@ -63,7 +72,7 @@ function searchSummary(query: string, results: ReturnType<typeof searchManual>) 
   if (results.length === 0) return `No manual entries matched “${query}”.`;
   const lines = results.map(
     (result) =>
-      `- [${result.id}] ${result.title} — ${result.section}${result.group ? ` / ${result.group}` : ""}\n  ${result.snippet}`,
+      `- [${result.id}] ${result.title} — ${result.section}${result.group ? ` / ${result.group}` : ""}${result.characters >= LARGE_ENTRY_CHARACTERS ? ` (${kilobytes(result.characters)}; outline first)` : ""}\n  ${result.snippet}`,
   );
   return `Found ${results.length} manual ${results.length === 1 ? "entry" : "entries"} for “${query}”:\n\n${lines.join("\n")}`;
 }
@@ -76,7 +85,7 @@ export function createServer(store: Pick<ManualStore, "load">, options: Services
     { name: "code-terraform-docs", version: "1.2.0" },
     {
       instructions:
-        "Use search_manual and get_manual_entry for authoritative Code: Terraform APIs and mechanics. Use list_script_targets to select a registered owner context. Source analysis is in-memory. get_game_status and list_fleet read game-published state. Run, Stop, Library, and debug control tools change the live game; call them only when the user requests those actions. Debug sessions persist until debug_end or server shutdown.",
+        "Use search_manual and get_manual_entry for authoritative Code: Terraform APIs and mechanics. For a large entry, call get_manual_entry with outline: true, then with heading to read one section. Use list_script_targets to select a registered owner context. Source analysis is in-memory. get_game_status and list_fleet read game-published state. Run, Stop, Library, and debug control tools change the live game; call them only when the user requests those actions. Debug sessions persist until debug_end or server shutdown.",
     },
   );
 
@@ -85,7 +94,7 @@ export function createServer(store: Pick<ManualStore, "load">, options: Services
     {
       title: "Search the Code: Terraform manual",
       description:
-        "Search the local game manual by concept, API symbol, method, component, type, heading, or prose. Returns ranked entry IDs and snippets; call get_manual_entry for the full authoritative text.",
+        "Search the local game manual by concept, API symbol, method, component, type, heading, or prose. Returns ranked entry IDs, entry sizes, and snippets; call get_manual_entry for the authoritative text.",
       inputSchema: {
         query: z.string().min(1).describe("Words, an API symbol, or a question to search for."),
         section: z
@@ -134,11 +143,24 @@ export function createServer(store: Pick<ManualStore, "load">, options: Services
     {
       title: "Read a Code: Terraform manual entry",
       description:
-        "Read the complete authoritative Markdown for one manual entry. Prefer a numeric ID returned by search_manual; titles and generated URLs are also accepted when unambiguous.",
+        "Read the authoritative Markdown for one manual entry: the whole entry, one heading's section, or only the outline. Large entries (search_manual reports their size) cost far fewer tokens as outline: true followed by heading. Prefer a numeric ID returned by search_manual; titles and generated URLs are also accepted when unambiguous.",
       inputSchema: {
         identifier: z
           .union([z.number().int().nonnegative(), z.string().min(1)])
           .describe("Numeric entry ID, exact title, slug, or generated URL."),
+        heading: z
+          .string()
+          .min(1)
+          .optional()
+          .describe(
+            "Return only this heading's section, subsections included, under its enclosing headings. Exact heading text wins; a unique partial match also works. Case, punctuation, and code markers are ignored.",
+          ),
+        outline: z
+          .boolean()
+          .optional()
+          .describe(
+            "Return the entry's headings with source lines and section sizes instead of its text.",
+          ),
       },
       outputSchema: {
         build: z.string(),
@@ -153,15 +175,42 @@ export function createServer(store: Pick<ManualStore, "load">, options: Services
           url: z.string(),
           sourceLineStart: z.number().int(),
           sourceLineEnd: z.number().int(),
-          markdown: z.string(),
+          characters: z.number().int(),
+          // Omitted for an outline request.
+          markdown: z.string().optional(),
         }),
+        section: z
+          .object({
+            heading: z.string(),
+            level: z.number().int(),
+            path: z.array(z.string()),
+            sourceLineStart: z.number().int(),
+            sourceLineEnd: z.number().int(),
+            characters: z.number().int(),
+          })
+          .optional(),
+        outline: z
+          .array(
+            z.object({
+              heading: z.string(),
+              level: z.number().int(),
+              depth: z.number().int(),
+              sourceLine: z.number().int(),
+              characters: z.number().int(),
+            }),
+          )
+          .optional(),
       },
       annotations: readOnlyAnnotations,
     },
-    async ({ identifier }) => {
+    async ({ identifier, heading, outline }) => {
       try {
+        if (heading !== undefined && outline) {
+          throw new Error("Pass either heading or outline: true, not both.");
+        }
         const manual = await store.load();
         const entry = resolveEntry(manual, identifier);
+        const header = `Manual build ${manual.build} · entry ${entry.id}`;
         const metadata = {
           id: entry.id,
           title: entry.title,
@@ -173,17 +222,51 @@ export function createServer(store: Pick<ManualStore, "load">, options: Services
           url: entry.url,
           sourceLineStart: entry.sourceLineStart,
           sourceLineEnd: entry.sourceLineEnd,
-          // Clients that surface only structuredContent (the Claude desktop app) would otherwise never see the entry text.
-          markdown: entry.markdown,
+          characters: entry.markdown.length,
         };
-        return {
-          structuredContent: { build: manual.build, entry: metadata },
-          content: [
-            {
-              type: "text",
-              text: `Manual build ${manual.build} · entry ${entry.id}\n\n${entry.markdown}`,
+
+        if (outline) {
+          const items = entryOutline(entry);
+          const lines = items.map(
+            (item) =>
+              `${"  ".repeat(item.depth)}- ${item.heading} (line ${item.sourceLine}, ${kilobytes(item.characters)})`,
+          );
+          const text = items.length
+            ? lines.join("\n")
+            : "This entry has no headings; read it whole without outline.";
+          return {
+            structuredContent: { build: manual.build, entry: metadata, outline: items },
+            content: [
+              {
+                type: "text",
+                text: `${header} · ${entry.title} (${kilobytes(entry.markdown.length)}) outline\n\n${text}`,
+              },
+            ],
+          };
+        }
+
+        if (heading !== undefined) {
+          const { markdown, ...section } = resolveSection(entry, heading);
+          return {
+            structuredContent: {
+              build: manual.build,
+              // Clients that surface only structuredContent (the Claude desktop app) would otherwise never see the text.
+              entry: { ...metadata, markdown },
+              section: { ...section, characters: markdown.length },
             },
-          ],
+            content: [
+              { type: "text", text: `${header} · section "${section.heading}"\n\n${markdown}` },
+            ],
+          };
+        }
+
+        return {
+          structuredContent: {
+            build: manual.build,
+            // Clients that surface only structuredContent (the Claude desktop app) would otherwise never see the entry text.
+            entry: { ...metadata, markdown: entry.markdown },
+          },
+          content: [{ type: "text", text: `${header}\n\n${entry.markdown}` }],
         };
       } catch (error) {
         return errorResult("get_manual_entry", error);

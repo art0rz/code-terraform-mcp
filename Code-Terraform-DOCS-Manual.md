@@ -2,7 +2,7 @@
 
 *Player Documentation*
 
-Build 9f7a682
+Build ca19829
 
 ## Contents
 
@@ -13992,7 +13992,7 @@ The outpost where this building is deployed. The returned `OutpostRef` includes 
 
 ##### `self.specimen: Specimen | None`
 
-The `Specimen` in the lab chamber right now, exposed as `self.specimen`, or `None`. Read `self.specimen.stage` to distinguish `"collected"` from `"analyzed"`. Before analysis its identifying fields are hidden; after analysis its `fragment_id`, `rarity`, and `recipe` are populated.
+The `Specimen` in the lab chamber right now, exposed as `self.specimen`, or `None`. Read `self.specimen.stage` to distinguish `"collected"` from `"analyzed"`; `extract()` needs `"analyzed"`. Its `fragment_id`, `name`, `rarity`, and `recipe` are `None` until its fragment is cataloged, the same as in a Bio Collector's cargo.
 
 - **Returns** `Specimen | None`. The specimen in the chamber, at `.stage` `"collected"` or `"analyzed"`, or `None` if empty.
 
@@ -15304,7 +15304,7 @@ Warms the planet surface by producing heat. The best power setting shifts with t
 | Field | Value |
 | --- | --- |
 | Power in | 0-1,000 W: `set_power` value × 100, while scripted and fueled |
-| Produces | up to 129.780 heat / day at peak efficiency |
+| Produces | up to 324.576 heat / day at peak efficiency |
 | Consumes | Fuel Rod, 0.1 per day |
 
 ### How to obtain
@@ -15472,7 +15472,7 @@ Draws CO2 from the atmosphere and turns it into breathable oxygen, one of the co
 | Field | Value |
 | --- | --- |
 | Power in | 800 W while a script runs and required fuel is available |
-| Produces | up to 120.000 ppt / day at peak efficiency |
+| Produces | up to 300.000 ppt / day at peak efficiency |
 | Consumes | Fuel Rod, 0.1 per day |
 
 ### How to obtain
@@ -15659,7 +15659,7 @@ Compresses the thin atmosphere to raise surface pressure. It runs best when a sc
 | Field | Value |
 | --- | --- |
 | Power in | 700 W while a script runs and required fuel is available |
-| Produces | up to 6.000 kPa / day at peak efficiency |
+| Produces | up to 15.000 kPa / day at peak efficiency |
 | Consumes | Fuel Rod, 0.1 per day |
 
 ### How to obtain
@@ -24874,7 +24874,7 @@ Blueprint unlocks by completing the order **Spire, Magnetic Stator Build**.
 | Power | Mk I: 32 W, Mk II: 48 W, Mk III: 96 W |
 | Production tier | T1 |
 
-##### Cobalt + Oil → Rubber + Tar `craft_rubber` *(Unlocked)*
+##### Cobalt Ingot + Oil → Rubber + Tar `craft_rubber` *(Unlocked)*
 
 1× Cobalt Ingot and 2 t Oil → 1× Rubber and + byproduct 1× Tar
 Blueprint unlocks by completing the order **Vestibule, Pipe Network Run**.
@@ -25039,7 +25039,7 @@ Blueprint unlocks by completing the order **Spire, Rare Earth Order**.
 | Power | Mk I: 45 W, Mk II: 67.5 W, Mk III: 135 W |
 | Production tier | T2 |
 
-##### Rare Earth Core + Control + Lubricant + Rubber → Heli Thruster `craft_heli_thruster` *(Not yet unlocked)*
+##### Rare Earth Core + Control + Lubricant + Rubber → Heli Thruster `craft_heli_thruster` *(Unlocked)*
 
 2× Rare Earth Core, 1× Control Unit, 2× Lubricant, 1× Rubber, and 2 t Water → 1× Heli Thruster
 Blueprint unlocks by completing the order **Vestibule, Refueling Pad Order**.
@@ -25964,7 +25964,7 @@ Upgrades a Pressure Generator to Mk III: **200×** Mk I output, **20×** Mk I po
 
 ##### Oxygen Upgrade Pack Mk IV `oxygen_upgrade_pack_mk4`
 
-Upgrades one Oxygen Generator to Mk IV: **500× Mk I output** and **100× Mk I power draw** under the same operating conditions. Replaces Water with a magazine holding **4 Fuel Rods**, supplied from a connected Lead Cask. Each rod lasts about **240 hours** of operation. Production stops when the loaded rod is spent and the magazine is empty.
+Upgrades one Oxygen Generator to Mk IV: **1,250× Mk I output** and **100× Mk I power draw** under the same operating conditions. Replaces Water with a magazine holding **4 Fuel Rods**, supplied from a connected Lead Cask. Each rod lasts about **240 hours** of operation. Production stops when the loaded rod is spent and the magazine is empty.
 
 | Field | Value |
 | --- | --- |
@@ -25973,7 +25973,7 @@ Upgrades one Oxygen Generator to Mk IV: **500× Mk I output** and **100× Mk I p
 
 ##### Heat Upgrade Pack Mk IV `heat_upgrade_pack_mk4`
 
-Upgrades one Heat Generator to Mk IV: **515× Mk I output** and **100× Mk I power draw** under the same operating conditions. Replaces Steam with a magazine holding **4 Fuel Rods**, supplied from a connected Lead Cask. Each rod lasts about **240 hours** of operation. Production stops when the loaded rod is spent and the magazine is empty.
+Upgrades one Heat Generator to Mk IV: **1,288× Mk I output** and **100× Mk I power draw** under the same operating conditions. Replaces Steam with a magazine holding **4 Fuel Rods**, supplied from a connected Lead Cask. Each rod lasts about **240 hours** of operation. Production stops when the loaded rod is spent and the magazine is empty.
 
 | Field | Value |
 | --- | --- |
@@ -25982,7 +25982,7 @@ Upgrades one Heat Generator to Mk IV: **515× Mk I output** and **100× Mk I pow
 
 ##### Pressure Upgrade Pack Mk IV `pressure_upgrade_pack_mk4`
 
-Upgrades one Pressure Generator to Mk IV: **500× Mk I output** and **100× Mk I power draw** under the same operating conditions. Replaces Water with a magazine holding **4 Fuel Rods**, supplied from a connected Lead Cask. Each rod lasts about **240 hours** of operation. Production stops when the loaded rod is spent and the magazine is empty.
+Upgrades one Pressure Generator to Mk IV: **1,250× Mk I output** and **100× Mk I power draw** under the same operating conditions. Replaces Water with a magazine holding **4 Fuel Rods**, supplied from a connected Lead Cask. Each rod lasts about **240 hours** of operation. Production stops when the loaded rod is spent and the magazine is empty.
 
 | Field | Value |
 | --- | --- |
@@ -27026,7 +27026,7 @@ Battery-grade stock. Every `battery_cell` is built around it.
 | Field | Value |
 | --- | --- |
 | Produced by | Cobalt → Cobalt Ingot |
-| Used in | Fabricate Oil Pump Mk II Upgrade Pack, Cobalt Ingot + Iron Ingot + Glass → Battery Cell, Titanium Ingot + Cobalt Ingot + Rare Earth Core → Turbine Rotor, Cobalt + Oil → Rubber + Tar, Oxygen Upgrade Pack Mk IV, Heat Upgrade Pack Mk IV, and Pressure Upgrade Pack Mk IV |
+| Used in | Fabricate Oil Pump Mk II Upgrade Pack, Cobalt Ingot + Iron Ingot + Glass → Battery Cell, Titanium Ingot + Cobalt Ingot + Rare Earth Core → Turbine Rotor, Cobalt Ingot + Oil → Rubber + Tar, Oxygen Upgrade Pack Mk IV, Heat Upgrade Pack Mk IV, and Pressure Upgrade Pack Mk IV |
 | Requested by | Spire, Cobalt Run, Spire, Magnetic Stator Build, and Spire, Cobalt Stockpile |
 
 ##### Rare Earth Core `rare_earth_core`
@@ -27224,7 +27224,7 @@ Flexible oil-derived stock for gaskets and seals.
 
 | Field | Value |
 | --- | --- |
-| Produced by | Cobalt + Oil → Rubber + Tar |
+| Produced by | Cobalt Ingot + Oil → Rubber + Tar |
 | Used in | Rare Earth Core + Control + Lubricant + Rubber → Heli Thruster, Titanium Ingot + Lubricant + Rubber → Oil Tank (Small), Titanium Ingot + Lubricant + Rubber + Lining → Oil Tank (Medium), and Titanium Ingot + Lubricant + Rubber + Tank Lining → Oil Tank (Large) |
 | Requested by | Vestibule, Polymer Stockpile, Vestibule, Bulk Polymer Run, Vestibule, Polymer Run, Vestibule, Refueling Hardware Build, Vestibule, Polymer Bulk Order, Vestibule, Polymer Megaorder, and Vestibule, Flexible Habitat Liners |
 
@@ -27235,7 +27235,7 @@ Heavy oil residue used in fertilizer, advanced components, and the `refiner`. Oi
 | Field | Value |
 | --- | --- |
 | Produced by | Heavy Oil Cracking: Oil → Tar |
-| Byproduct of | Iron + Oil → Lubricant + Tar, Glass + Oil → Plastic + Tar, and Cobalt + Oil → Rubber + Tar |
+| Byproduct of | Iron + Oil → Lubricant + Tar, Glass + Oil → Plastic + Tar, and Cobalt Ingot + Oil → Rubber + Tar |
 | Used in | Pipes + Valves + Rare Earth Core + Titanium Ingot + Tar → Coolant Loop, Neutronium Bar + Cells + Controls + Rare Earth Core + Tar → Neutron Capacitor, Tar + Glass → Fertilizer, Tar + Glass + Panel → Fertilizer Mk II, Tar + Glass + Capacitor + Rare Earth Core → Fertilizer Mk III, Raw Sulfur Gas + Tar → Sulfur Gas, Raw Cryofluid + Tar → Cryofluid, Raw Chlorine + Tar → Chlorine, and Raw Quicksilver + Tar → Quicksilver |
 
 ##### Reinforced Biopolymer `reinforced_biopolymer`
@@ -28993,7 +28993,7 @@ Heavy crude drawn from oil wells by an `oil_pump`. Burned by the `oil_generator`
 | --- | --- |
 | Type | Liquid |
 | Produced by | Oil Pump |
-| Consumed by | Fabricator, Oil Generator, and Drone Service Station and Iron + Oil → Lubricant + Tar, Glass + Oil → Plastic + Tar, Cobalt + Oil → Rubber + Tar, and Heavy Oil Cracking: Oil → Tar |
+| Consumed by | Fabricator, Oil Generator, and Drone Service Station and Iron + Oil → Lubricant + Tar, Glass + Oil → Plastic + Tar, Cobalt Ingot + Oil → Rubber + Tar, and Heavy Oil Cracking: Oil → Tar |
 
 ### Biome Essences
 
